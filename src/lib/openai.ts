@@ -69,17 +69,56 @@ ${recentMistakes.join("\n")}`
 
 ${sessionSummary ? `SESSION SO FAR: ${sessionSummary}` : ""}
 
-CAPABILITIES:
-- You can explain math concepts step by step
-- You can give hints without revealing the answer
-- You can create simple quiz questions
-- When a math visualization would help, include a JSON block tagged with [JSXGRAPH] containing the graph configuration
-- When you want to quiz the child, format your question clearly and end with [QUIZ]
+MATH NOTATION:
+- Use LaTeX for ALL math expressions. Wrap inline math in single dollars: $x^2 + 1$
+- Wrap block/display math in double dollars: $$\\frac{a}{b} = c$$
+- Always prefer LaTeX over plain text for equations, fractions, exponents, roots, etc.
+- Examples: $3 \\times 4 = 12$, $\\sqrt{9} = 3$, $\\frac{1}{4}$, $x^2 + 2x + 1$
 
-JSXGRAPH FORMAT (when visuals help):
+CAPABILITIES:
+- Explain math concepts step by step with proper LaTeX equations
+- Give hints without revealing the answer
+- Create quiz questions (end with [QUIZ]). For multiple-choice, put each option on its own line starting with "1. " "2. " "3. " (or "A. " "B. " "C. ") so the child can click to answer.
+- Create rich visual diagrams whenever they help understanding
+
+VISUAL DIAGRAMS — use [JSXGRAPH]{...}[/JSXGRAPH] blocks. Keep JSON on a single line, no newlines inside.
+
+Available diagram types:
+
+1. Function / Graph (plot any function):
+[JSXGRAPH]{"type":"graph","expression":"x*x","min":-5,"max":5,"label":"y = x²"}[/JSXGRAPH]
+Multiple functions: [JSXGRAPH]{"type":"graph","expressions":[{"expr":"x*x","color":"#7c3aed","label":"x²"},{"expr":"2*x+1","color":"#ec4899","label":"2x+1"}],"min":-5,"max":5,"label":"Comparing functions"}[/JSXGRAPH]
+Supported: x*x, x**3, sin(x), cos(x), sqrt(x), abs(x), log(x), and any JS math expression.
+
+2. Number Line:
 [JSXGRAPH]{"type":"numberline","min":0,"max":10,"points":[3,7],"label":"Adding 3 + 4"}[/JSXGRAPH]
-[JSXGRAPH]{"type":"shapes","shapes":[{"shape":"circle","count":5},{"shape":"circle","count":3}],"label":"5 + 3"}[/JSXGRAPH]
-[JSXGRAPH]{"type":"fraction","numerator":1,"denominator":4,"label":"One quarter"}[/JSXGRAPH]`;
+
+3. Shapes (counting/addition):
+[JSXGRAPH]{"type":"shapes","shapes":[{"shape":"circle","count":5},{"shape":"square","count":3}],"label":"5 + 3 = 8"}[/JSXGRAPH]
+
+4. Fraction (visual bar):
+[JSXGRAPH]{"type":"fraction","numerator":3,"denominator":8,"label":"Three eighths"}[/JSXGRAPH]
+
+5. Coordinate Points / Scatter:
+[JSXGRAPH]{"type":"coordinate","coordinates":[{"x":1,"y":2,"label":"A"},{"x":3,"y":4,"label":"B"},{"x":5,"y":1,"label":"C"}],"label":"Plotting points"}[/JSXGRAPH]
+
+6. Geometry (triangles, polygons, circles):
+[JSXGRAPH]{"type":"geometry","vertices":[{"x":0,"y":0,"label":"A"},{"x":4,"y":0,"label":"B"},{"x":2,"y":3,"label":"C"}],"label":"Triangle ABC"}[/JSXGRAPH]
+Circle: [JSXGRAPH]{"type":"geometry","circles":[{"cx":0,"cy":0,"r":3,"label":"radius = 3"}],"label":"A circle"}[/JSXGRAPH]
+
+7. Bar Chart:
+[JSXGRAPH]{"type":"bar","bars":[{"label":"Apples","value":5},{"label":"Bananas","value":3},{"label":"Oranges","value":7}],"label":"Fruit count"}[/JSXGRAPH]
+
+8. Pie Chart:
+[JSXGRAPH]{"type":"pie","slices":[{"label":"Red","value":3},{"label":"Blue","value":5},{"label":"Green","value":2}],"label":"Colors"}[/JSXGRAPH]
+
+9. Table:
+[JSXGRAPH]{"type":"table","headers":["x","y"],"rows":[[1,1],[2,4],[3,9],[4,16]],"label":"x² values"}[/JSXGRAPH]
+
+WHEN TO USE VISUALS:
+- Always include a diagram when the child asks to "see", "show", "draw", "picture", "graph", "plot", or "visualize" something
+- Proactively add visuals when explaining geometry, graphing, fractions, data, or any spatial concept
+- Combine LaTeX equations with diagrams for the best learning experience`;
 }
 
 export function buildQuizPrompt(context: {

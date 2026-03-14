@@ -44,6 +44,7 @@ Required:
 1. Create a new Supabase project
 2. Run the SQL in `supabase/schema.sql` in the SQL editor
 3. Create a storage bucket called `documents` (public)
+4. **Optional (dev):** To avoid "email rate limit exceeded" when testing signup, go to **Authentication → Providers → Email** and turn off **Confirm email**. Re-enable it for production.
 
 ### 4. Run the dev server
 

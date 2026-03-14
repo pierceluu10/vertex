@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { completeOnboarding } from "./actions";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 
 type Step = "child" | "preferences" | "complete";
@@ -26,15 +25,22 @@ export default function OnboardingPage() {
     setLoading(true);
     setError(null);
 
-    const result = await completeOnboarding({
-      childName,
-      childAge,
-      childGrade,
-      preferredPace,
+    const res = await fetch("/api/onboarding/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        childName,
+        childAge,
+        childGrade,
+        preferredPace,
+      }),
     });
 
-    if (!result.success) {
-      setError(result.error);
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setError(data.error ?? "Something went wrong.");
       setLoading(false);
       return;
     }

@@ -6,14 +6,103 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Lightbulb, HelpCircle, ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { createClient } from "@/lib/supabase/client";
 import { ParentAvatar } from "@/components/session/parent-avatar";
-import { MathVisual } from "@/components/session/math-visual";
+import { MathVisual, type MathVisualConfig } from "@/components/session/math-visual";
+import { MessageContent } from "@/components/session/message-content";
 import { useAttention } from "@/hooks/use-attention";
 import { getInterventionMessage } from "@/lib/attention";
 import type { Message, Child, AdaptiveState } from "@/types";
 import { createInitialAdaptiveState, handleCorrectAnswer, handleIncorrectAnswer, handleDistraction } from "@/lib/adaptive";
+
+/** Parse multiple-choice options from quiz message text (e.g. "1. Option A" or "A. Option A"). */
+function parseQuizChoices(content: string): { label: string; text: string }[] | null {
+  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const options: { label: string; text: string }[] = [];
+  for (const line of lines) {
+    const numbered = line.match(/^\s*(\d+)[.)]\s*(.+)$/);
+    const lettered = line.match(/^\s*([A-Da-d])[.)]\s*(.+)$/);
+    if (numbered) {
+      options.push({ label: numbered[1], text: `${numbered[1]}. ${numbered[2].trim()}` });
+    } else if (lettered) {
+      const letter = lettered[1].toUpperCase();
+      options.push({ label: letter, text: `${letter}. ${lettered[2].trim()}` });
+    }
+  }
+  return options.length >= 2 ? options : null;
+}
+
+function QuizReplyForm({
+  onSend,
+  disabled,
+  placeholder,
+  choices,
+}: {
+  onSend: (text: string) => void;
+  disabled: boolean;
+  placeholder: string;
+  choices?: { label: string; text: string }[] | null;
+}) {
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!disabled && !choices?.length) inputRef.current?.focus();
+  }, [disabled, choices?.length]);
+
+  if (choices && choices.length > 0) {
+    return (
+      <div className="mt-3 pt-3 border-t border-violet-200/60">
+        <p className="text-xs font-medium text-violet-600 mb-2">Choose an answer:</p>
+        <div className="flex flex-col gap-2">
+          {choices.map((choice, i) => (
+            <Button
+              key={i}
+              type="button"
+              variant="outline"
+              disabled={disabled}
+              className="h-auto min-h-9 py-2 px-3 justify-start text-left font-normal bg-white border-violet-200 hover:bg-violet-50 hover:border-violet-300 text-foreground rounded-lg"
+              onClick={() => onSend(choice.text)}
+            >
+              {choice.text}
+            </Button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      className="mt-3 pt-3 border-t border-violet-200/60 flex gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const trimmed = value.trim();
+        if (!trimmed || disabled) return;
+        onSend(trimmed);
+        setValue("");
+      }}
+    >
+      <Input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="flex-1 h-9 rounded-lg bg-white border-violet-200 text-sm focus-visible:ring-violet-400"
+      />
+      <Button
+        type="submit"
+        size="sm"
+        disabled={disabled || !value.trim()}
+        className="h-9 bg-violet-600 hover:bg-violet-700 text-white rounded-lg px-3 shrink-0"
+      >
+        Submit
+      </Button>
+    </form>
+  );
+}
 
 interface DisplayMessage {
   id: string;
@@ -147,10 +236,10 @@ export default function SessionPage() {
   function parseJsxGraph(content: string): { cleanContent: string; graphs: unknown[] } {
     const graphs: unknown[] = [];
     const cleanContent = content.replace(
-      /\[JSXGRAPH\](.*?)\[\/JSXGRAPH\]/g,
+      /\[JSXGRAPH\]([\s\S]*?)\[\/JSXGRAPH\]/g,
       (_, json) => {
         try {
-          graphs.push(JSON.parse(json));
+          graphs.push(JSON.parse(json.trim()));
         } catch {
           // ignore malformed
         }
@@ -309,62 +398,74 @@ export default function SessionPage() {
       </header>
 
       {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Chat area */}
-        <div className="flex-1 flex flex-col">
-          <ScrollArea className="flex-1 px-4 py-4" ref={scrollRef}>
+        <div className="flex-1 flex flex-col min-h-0">
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4"
+          >
             <div className="max-w-2xl mx-auto space-y-4">
               <AnimatePresence>
-                {messages.map((msg) => (
-                  <motion.div
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${
-                      msg.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                        msg.role === "user"
-                          ? "bg-violet-600 text-white rounded-br-sm"
-                          : msg.type === "reminder"
-                          ? "bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-bl-sm"
-                          : msg.type === "quiz"
-                          ? "bg-violet-50 border border-violet-200 text-foreground rounded-bl-sm"
-                          : "bg-white border border-violet-100/50 text-foreground shadow-sm rounded-bl-sm"
+                {messages.map((msg, idx) => {
+                  const isQuizUnanswered =
+                    msg.role === "assistant" &&
+                    msg.type === "quiz" &&
+                    messages[idx + 1]?.role !== "user";
+                  return (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex ${
+                        msg.role === "user" ? "justify-end" : "justify-start"
                       }`}
                     >
-                      {msg.type === "quiz" && (
-                        <div className="flex items-center gap-1 mb-1">
-                          <Sparkles className="h-3 w-3 text-violet-500" />
-                          <span className="text-xs font-medium text-violet-600">
-                            Quiz
-                          </span>
-                        </div>
-                      )}
-                      {msg.type === "hint" && msg.role === "assistant" && (
-                        <div className="flex items-center gap-1 mb-1">
-                          <Lightbulb className="h-3 w-3 text-yellow-500" />
-                          <span className="text-xs font-medium text-yellow-600">
-                            Hint
-                          </span>
-                        </div>
-                      )}
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {msg.content}
-                      </p>
-                      {msg.jsxGraph ? (
-                        (msg.jsxGraph as MathVisualConfig[]).map((config, i) => (
-                          <MathVisual
-                            key={i}
-                            config={config}
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                          msg.role === "user"
+                            ? "bg-violet-600 text-white rounded-br-sm"
+                            : msg.type === "reminder"
+                            ? "bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-bl-sm"
+                            : msg.type === "quiz"
+                            ? "bg-violet-50 border border-violet-200 text-foreground rounded-bl-sm"
+                            : "bg-white border border-violet-100/50 text-foreground shadow-sm rounded-bl-sm"
+                        }`}
+                      >
+                        {msg.type === "quiz" && (
+                          <div className="flex items-center gap-1 mb-1">
+                            <Sparkles className="h-3 w-3 text-violet-500" />
+                            <span className="text-xs font-medium text-violet-600">
+                              Quiz
+                            </span>
+                          </div>
+                        )}
+                        {msg.type === "hint" && msg.role === "assistant" && (
+                          <div className="flex items-center gap-1 mb-1">
+                            <Lightbulb className="h-3 w-3 text-yellow-500" />
+                            <span className="text-xs font-medium text-yellow-600">
+                              Hint
+                            </span>
+                          </div>
+                        )}
+                        <MessageContent content={msg.content} />
+                        {msg.jsxGraph
+                          ? (msg.jsxGraph as MathVisualConfig[]).map((graph, i) => (
+                              <MathVisual key={i} config={graph} />
+                            ))
+                          : null}
+                        {isQuizUnanswered && (
+                          <QuizReplyForm
+                            onSend={sendMessage}
+                            disabled={loading}
+                            placeholder="Type your answer here..."
+                            choices={parseQuizChoices(msg.content)}
                           />
-                        ))
-                      ) : null}
-                    </div>
-                  </motion.div>
-                ))}
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
 
               {loading && (
@@ -392,7 +493,7 @@ export default function SessionPage() {
                 </motion.div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Input area */}
           <div className="border-t border-violet-100/50 bg-white/80 backdrop-blur-sm px-4 py-3 shrink-0">
@@ -469,13 +570,3 @@ export default function SessionPage() {
   );
 }
 
-type MathVisualConfig = {
-  type: string;
-  min?: number;
-  max?: number;
-  points?: number[];
-  label?: string;
-  shapes?: Array<{ shape: string; count: number }>;
-  numerator?: number;
-  denominator?: number;
-};

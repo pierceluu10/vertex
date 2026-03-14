@@ -33,7 +33,12 @@ export default function SignUpPage() {
     });
 
     if (authError) {
-      setError(authError.message);
+      const message =
+        authError.message.toLowerCase().includes("rate limit") ||
+        authError.message.toLowerCase().includes("rate_limit")
+          ? "Too many sign-up attempts. Please wait a few minutes and try again, or sign in if you already have an account."
+          : authError.message;
+      setError(message);
       setLoading(false);
       return;
     }
@@ -46,7 +51,9 @@ export default function SignUpPage() {
       });
 
       if (profileError) {
-        console.error("Profile creation error:", profileError);
+        setError(profileError.message);
+        setLoading(false);
+        return;
       }
 
       router.push("/onboarding");
