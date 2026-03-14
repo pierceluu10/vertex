@@ -47,6 +47,7 @@ export default function ParentProfilePage() {
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileUploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -137,7 +138,10 @@ export default function ParentProfilePage() {
       videoPreviewRef.current.srcObject = streamRef.current;
       videoPreviewRef.current.play().catch(() => {});
     }
-  }, [recordingState]);
+    if (recordingState === "recorded" && recordedBlob && videoPlaybackRef.current) {
+      videoPlaybackRef.current.src = URL.createObjectURL(recordedBlob);
+    }
+  }, [recordingState, recordedBlob]);
 
   useEffect(() => {
     if ((recordingState === "recorded" || recordingState === "uploading") && recordedBlob && videoPlaybackRef.current) {
@@ -165,10 +169,6 @@ export default function ParentProfilePage() {
       const blob = new Blob(chunksRef.current, { type: "video/webm" });
       setRecordedBlob(blob);
       setRecordingState("recorded");
-
-      if (videoPlaybackRef.current) {
-        videoPlaybackRef.current.src = URL.createObjectURL(blob);
-      }
     };
 
     recorder.start(1000);
@@ -215,12 +215,25 @@ export default function ParentProfilePage() {
     setRecordingTime(0);
   }
 
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      alert("Please select a video file (MP4, WebM, or MOV).");
+      return;
+    }
+    setRecordedBlob(file);
+    setRecordingState("recorded");
+    e.target.value = "";
+  }
+
   async function uploadRecording() {
     if (!recordedBlob) return;
     setRecordingState("uploading");
 
     const formData = new FormData();
-    formData.append("video", recordedBlob, "avatar-recording.webm");
+    const name = recordedBlob instanceof File ? recordedBlob.name : "avatar-recording.webm";
+    formData.append("video", recordedBlob, name);
 
     try {
       const res = await fetch("/api/heygen/avatar", { method: "POST", body: formData });
@@ -389,18 +402,39 @@ export default function ParentProfilePage() {
 
           {recordingState === "idle" && (
             <div style={{ textAlign: "center", padding: "32px 0" }}>
-              <p style={{ fontSize: 13, color: "#8a7f6e", marginBottom: 16, maxWidth: 400, margin: "0 auto 16px" }}>
+              <p style={{ fontSize: 13, color: "#8a7f6e", marginBottom: 8, maxWidth: 420, margin: "0 auto 8px" }}>
                 Look directly at the camera and speak naturally for 30 seconds to 2 minutes.
                 This will be used to generate your personalized AI tutor avatar.
               </p>
-              <button onClick={startCamera} style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "14px 28px", background: "#c8416a", color: "#fff",
-                border: "none", borderRadius: 3, fontSize: 12, letterSpacing: "0.15em",
-                textTransform: "uppercase" as const, cursor: "pointer",
-              }}>
-                <Video size={16} /> Open Camera
-              </button>
+              <p style={{ fontSize: 11, color: "#afa598", marginBottom: 20 }}>
+                Supported formats: MP4, WebM, or MOV
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
+                <button onClick={startCamera} style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "14px 24px", background: "#c8416a", color: "#fff",
+                  border: "none", borderRadius: 3, fontSize: 12, letterSpacing: "0.15em",
+                  textTransform: "uppercase" as const, cursor: "pointer",
+                }}>
+                  <Video size={16} /> Record Now
+                </button>
+                <label style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "14px 24px", background: "transparent", color: "#c8416a",
+                  border: "1.5px solid rgba(200,65,106,0.4)", borderRadius: 3,
+                  fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase" as const,
+                  cursor: "pointer",
+                }}>
+                  <Upload size={16} /> Upload Video
+                  <input
+                    ref={fileUploadRef}
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    style={{ display: "none" }}
+                    onChange={handleFileSelect}
+                  />
+                </label>
+              </div>
             </div>
           )}
 

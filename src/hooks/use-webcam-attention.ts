@@ -8,6 +8,7 @@ export interface WebcamAttentionState {
   headTurned: boolean;
   webcamEnabled: boolean;
   permissionDenied: boolean;
+  stream: MediaStream | null;
 }
 
 export function useWebcamAttention(
@@ -20,6 +21,7 @@ export function useWebcamAttention(
     headTurned: false,
     webcamEnabled: false,
     permissionDenied: false,
+    stream: null,
   });
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -34,7 +36,21 @@ export function useWebcamAttention(
   const LOOKING_AWAY_GRACE_MS = 4000;
   const CHECK_INTERVAL_MS = 1500;
 
+  const stopWebcam = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    videoRef.current = null;
+    setState((prev) => ({ ...prev, webcamEnabled: false, stream: null }));
+  }, []);
+
   const startWebcam = useCallback(async () => {
+    if (streamRef.current) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 320, height: 240, facingMode: "user" },
@@ -52,9 +68,14 @@ export function useWebcamAttention(
       canvas.height = 240;
       canvasRef.current = canvas;
 
-      setState((prev) => ({ ...prev, webcamEnabled: true, permissionDenied: false }));
+      setState((prev) => ({
+        ...prev,
+        webcamEnabled: true,
+        permissionDenied: false,
+        stream,
+      }));
     } catch {
-      setState((prev) => ({ ...prev, permissionDenied: true, webcamEnabled: false }));
+      setState((prev) => ({ ...prev, permissionDenied: true, webcamEnabled: false, stream: null }));
     }
   }, []);
 
@@ -135,20 +156,16 @@ export function useWebcamAttention(
   }, [onFaceEvent, state.facePresent]);
 
   useEffect(() => {
-    if (!enabled) return;
-    startWebcam();
+    if (enabled) {
+      startWebcam();
+    } else {
+      stopWebcam();
+    }
 
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      stopWebcam();
     };
-  }, [enabled, startWebcam]);
+  }, [enabled, startWebcam, stopWebcam]);
 
   useEffect(() => {
     if (!state.webcamEnabled) return;

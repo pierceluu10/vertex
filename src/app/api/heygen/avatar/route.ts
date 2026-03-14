@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
-  const apiKey = process.env.HEYGEN_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "HeyGen API key not configured" }, { status: 500 });
-  }
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = createClientFromRequest(request);
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const supabase = await createServiceClient();
 
   try {
     const formData = await request.formData();
@@ -24,32 +21,37 @@ export async function POST(request: Request) {
     const videoBuffer = Buffer.from(await video.arrayBuffer());
     const fileName = `avatars/${user.id}/${Date.now()}-${video.name}`;
 
-    const serviceSupabase = await createServiceClient();
-    const { error: uploadError } = await serviceSupabase.storage
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some((b) => b.name === "avatars");
+
+    if (!bucketExists) {
+      const { error: createError } = await supabase.storage.createBucket("avatars", {
+        public: true,
+        fileSizeLimit: 100 * 1024 * 1024,
+        allowedMimeTypes: ["video/*"],
+      });
+      if (createError && !createError.message.includes("already exists")) {
+        console.error("Bucket creation error:", createError);
+        return NextResponse.json({ error: "Storage setup failed" }, { status: 500 });
+      }
+    }
+
+    const { error: uploadError } = await supabase.storage
       .from("documents")
       .upload(fileName, videoBuffer, {
-        contentType: video.type,
+        contentType: video.type || "video/webm",
         upsert: true,
       });
 
     if (uploadError) {
-      const message =
-        uploadError.message?.toLowerCase().includes("bucket") ||
-        uploadError.message?.toLowerCase().includes("not found")
-          ? "Upload failed: Storage bucket not found. In Supabase Dashboard go to Storage → New bucket, create a bucket named 'documents' (public), then try again."
-          : uploadError.message?.toLowerCase().includes("row-level security") || uploadError.message?.toLowerCase().includes("policy")
-          ? "Upload failed: Storage permissions error. The app now uses elevated permissions for this upload; if you still see this, check that the 'documents' bucket exists and is public."
-          : "Upload failed: " + uploadError.message;
-      return NextResponse.json({ error: message }, { status: 500 });
+      return NextResponse.json({ error: "Upload failed: " + uploadError.message }, { status: 500 });
     }
 
-    const { data: { publicUrl } } = serviceSupabase.storage.from("documents").getPublicUrl(fileName);
+    const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(fileName);
 
     const { error: dbError } = await serviceSupabase
       .from("parents")
-      .update({
-        avatar_url: publicUrl,
-      })
+      .update({ avatar_url: publicUrl })
       .eq("id", user.id);
 
     if (dbError) {
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
       heygenAvatarId = avatarData.data?.photo_avatar_id || avatarData.data?.avatar_id || null;
 
       if (heygenAvatarId) {
-        await serviceSupabase
+        await supabase
           .from("parents")
           .update({ heygen_avatar_id: heygenAvatarId })
           .eq("id", user.id);
@@ -88,7 +90,6 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       videoUrl: publicUrl,
-      heygenAvatarId,
     });
   } catch (error) {
     console.error("Avatar upload error:", error);

@@ -6,6 +6,8 @@ interface HeyGenAvatarProps {
   onAvatarReady?: () => void;
   onAvatarSpeaking?: (speaking: boolean) => void;
   onUserMessage?: (transcript: string) => void;
+  onUserSpeaking?: (text: string) => void;
+  onAvatarMessage?: (text: string) => void;
   speakQueue?: string | null;
   onSpeakComplete?: () => void;
   className?: string;
@@ -18,6 +20,8 @@ export function HeyGenAvatar({
   onAvatarReady,
   onAvatarSpeaking,
   onUserMessage,
+  onUserSpeaking,
+  onAvatarMessage,
   speakQueue,
   onSpeakComplete,
   className,
@@ -70,6 +74,18 @@ export function HeyGenAvatar({
         onSpeakComplete?.();
       });
 
+      avatar.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (msg: { detail: { message: string } }) => {
+        if (msg?.detail?.message) {
+          onAvatarMessage?.(msg.detail.message);
+        }
+      });
+
+      avatar.on(StreamingEvents.USER_TALKING_MESSAGE, (msg: { detail: { message: string } }) => {
+        if (msg?.detail?.message) {
+          onUserSpeaking?.(msg.detail.message);
+        }
+      });
+
       avatar.on(StreamingEvents.USER_END_MESSAGE, (msg: { detail: { message: string } }) => {
         if (msg?.detail?.message) {
           onUserMessage?.(msg.detail.message);
@@ -100,7 +116,7 @@ export function HeyGenAvatar({
       setStatus("error");
       initializingRef.current = false;
     }
-  }, [onAvatarReady, onAvatarSpeaking, onUserMessage, onSpeakComplete]);
+  }, [onAvatarReady, onAvatarSpeaking, onUserMessage, onUserSpeaking, onAvatarMessage, onSpeakComplete]);
 
   useEffect(() => {
     initAvatar();
