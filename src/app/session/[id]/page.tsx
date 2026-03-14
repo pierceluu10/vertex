@@ -40,8 +40,10 @@ export default function SessionPage() {
   const [speakText, setSpeakText] = useState<string | null>(null);
   const [micEnabled, setMicEnabled] = useState(false);
   const [webcamOn, setWebcamOn] = useState(true);
+  const [liveTranscript, setLiveTranscript] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const selfVideoRef = useRef<HTMLVideoElement>(null);
 
   const handleIntervention = useCallback(
     (type: string) => {
@@ -67,6 +69,17 @@ export default function SessionPage() {
   );
 
   const attention = useAttention(sessionId, handleIntervention, webcamOn);
+
+  // Attach webcam stream to the self-view video element
+  useEffect(() => {
+    if (selfVideoRef.current && attention.webcam?.stream) {
+      selfVideoRef.current.srcObject = attention.webcam.stream;
+      selfVideoRef.current.play().catch(() => {});
+    }
+    if (selfVideoRef.current && !attention.webcam?.stream) {
+      selfVideoRef.current.srcObject = null;
+    }
+  }, [attention.webcam?.stream]);
 
   useEffect(() => {
     async function loadSession() {
@@ -228,8 +241,13 @@ export default function SessionPage() {
 
   function handleUserVoiceMessage(transcript: string) {
     if (transcript.trim()) {
+      setLiveTranscript("");
       sendMessage(transcript);
     }
+  }
+
+  function handleUserSpeaking(text: string) {
+    setLiveTranscript(text);
   }
 
   async function endSession() {
@@ -374,6 +392,22 @@ export default function SessionPage() {
                 </div>
               ))}
 
+              {liveTranscript && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+                  <div style={{
+                    maxWidth: "80%", padding: "10px 14px", borderRadius: 6,
+                    fontSize: 14, lineHeight: 1.65, borderBottomRightRadius: 2,
+                    background: "rgba(200,65,106,0.3)", color: "#fff",
+                    fontStyle: "italic", opacity: 0.8,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Mic size={12} />
+                      <span>{liveTranscript}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {loading && (
                 <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 12 }}>
                   <div style={{
@@ -428,69 +462,119 @@ export default function SessionPage() {
           </div>
         </div>
 
-        {/* Avatar sidebar */}
+        {/* Video sidebar — Zoom-style layout */}
         <div style={{
-          width: 240, borderLeft: "1px solid rgba(55,45,25,0.10)",
+          width: 280, borderLeft: "1px solid rgba(55,45,25,0.10)",
           background: "rgba(248,243,232,0.5)", display: "flex", flexDirection: "column",
-          alignItems: "center", padding: "20px 16px", gap: 16, flexShrink: 0,
+          flexShrink: 0,
         }}>
-          <HeyGenAvatar
-            className=""
-            onAvatarReady={() => {}}
-            onAvatarSpeaking={setIsSpeaking}
-            onUserMessage={handleUserVoiceMessage}
-            speakQueue={speakText}
-            onSpeakComplete={() => setSpeakText(null)}
-          />
+          {/* Parent avatar (main feed) */}
+          <div style={{ position: "relative", flex: 1 }}>
+            <HeyGenAvatar
+              className=""
+              onAvatarReady={() => {}}
+              onAvatarSpeaking={setIsSpeaking}
+              onUserMessage={handleUserVoiceMessage}
+              onUserSpeaking={handleUserSpeaking}
+              speakQueue={speakText}
+              onSpeakComplete={() => setSpeakText(null)}
+            />
 
-          <div style={{ textAlign: "center" }}>
             <div style={{
-              fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" as const,
-              color: "#8a7f6e", marginBottom: 4,
+              position: "absolute", bottom: 8, left: 8, right: 8,
+              display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
-              {parentName || "Parent"} Tutor
-            </div>
-            {isSpeaking && (
               <div style={{
-                fontSize: 9, color: "#5a9e76", letterSpacing: "0.15em",
-                textTransform: "uppercase" as const,
+                fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase" as const,
+                color: "#fff", background: "rgba(0,0,0,0.5)", padding: "3px 8px",
+                borderRadius: 3,
               }}>
-                Speaking...
+                {parentName || "Parent"} Tutor
+              </div>
+              {isSpeaking && (
+                <div style={{
+                  fontSize: 9, color: "#5a9e76", letterSpacing: "0.12em",
+                  textTransform: "uppercase" as const,
+                  background: "rgba(0,0,0,0.5)", padding: "3px 8px", borderRadius: 3,
+                }}>
+                  Speaking...
+                </div>
+              )}
+            </div>
+
+            {/* Kid self-view PiP */}
+            <div style={{
+              position: "absolute", top: 8, right: 8, width: 96, height: 72,
+              borderRadius: 6, overflow: "hidden", border: "2px solid rgba(255,255,255,0.3)",
+              background: "#000",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            }}>
+              {webcamOn ? (
+                <video
+                  ref={selfVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    width: "100%", height: "100%", objectFit: "cover",
+                    transform: "scaleX(-1)", display: "block",
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: "100%", height: "100%", display: "flex",
+                  alignItems: "center", justifyContent: "center",
+                  background: "#1e1a12",
+                }}>
+                  <VideoOff size={16} style={{ color: "#8a7f6e" }} />
+                </div>
+              )}
+              <div style={{
+                position: "absolute", bottom: 2, left: 4,
+                fontSize: 8, color: "#fff", letterSpacing: "0.1em",
+                textTransform: "uppercase" as const,
+                textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+              }}>
+                You
+              </div>
+            </div>
+          </div>
+
+          {/* Stats below video */}
+          <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(55,45,25,0.10)" }}>
+            <div style={{
+              padding: "12px", background: "#f8f3e8",
+              border: "1px solid rgba(55,45,25,0.08)", borderRadius: 4, textAlign: "center",
+            }}>
+              <div style={{
+                fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" as const,
+                color: "#8a7f6e", marginBottom: 4,
+              }}>Focus</div>
+              <div style={{ fontSize: 28, fontWeight: 300, color: focusColor }}>
+                {attention.score}%
+              </div>
+              <div style={{
+                width: "100%", height: 2, background: "rgba(55,45,25,0.08)",
+                borderRadius: 1, marginTop: 6, overflow: "hidden",
+              }}>
+                <div style={{
+                  width: `${attention.score}%`, height: "100%",
+                  background: focusColor, transition: "width 0.6s ease",
+                }} />
+              </div>
+            </div>
+
+            {attention.webcam && !attention.webcam.webcamEnabled && webcamOn && (
+              <div style={{
+                fontSize: 10, color: "#c89020", textAlign: "center",
+                padding: "8px 10px", background: "rgba(200,144,32,0.06)",
+                border: "1px solid rgba(200,144,32,0.15)", borderRadius: 3,
+                marginTop: 8,
+              }}>
+                Webcam permission needed for focus detection
               </div>
             )}
           </div>
-
-          <div style={{
-            width: "100%", padding: "16px 12px", background: "#f8f3e8",
-            border: "1px solid rgba(55,45,25,0.08)", borderRadius: 4, textAlign: "center",
-          }}>
-            <div style={{
-              fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" as const,
-              color: "#8a7f6e", marginBottom: 6,
-            }}>Focus</div>
-            <div style={{ fontSize: 32, fontWeight: 300, color: focusColor }}>
-              {attention.score}%
-            </div>
-            <div style={{
-              width: "100%", height: 2, background: "rgba(55,45,25,0.08)",
-              borderRadius: 1, marginTop: 8, overflow: "hidden",
-            }}>
-              <div style={{
-                width: `${attention.score}%`, height: "100%",
-                background: focusColor, transition: "width 0.6s ease",
-              }} />
-            </div>
-          </div>
-
-          {attention.webcam && !attention.webcam.webcamEnabled && webcamOn && (
-            <div style={{
-              fontSize: 10, color: "#c89020", textAlign: "center",
-              padding: "8px 12px", background: "rgba(200,144,32,0.06)",
-              border: "1px solid rgba(200,144,32,0.15)", borderRadius: 3,
-            }}>
-              Webcam permission needed for focus detection
-            </div>
-          )}
         </div>
       </div>
 
