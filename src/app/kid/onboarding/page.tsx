@@ -74,7 +74,7 @@ export default function KidOnboardingPage() {
               onClick={() => setSelectedAvatar(avatar.id)}
               style={{
                 padding: "20px 12px", border: `2px solid ${selectedAvatar === avatar.id ? "#c8416a" : "rgba(55,45,25,0.08)"}`,
-                borderRadius: 8, background: selectedAvatar === avatar.id ? "rgba(200,65,106,0.06)" : "#f4efe5",
+                borderRadius: 8, background: selectedAvatar === avatar.id ? "rgba(158,107,117,0.06)" : "#f4efe5",
                 cursor: "pointer", transition: "all 0.2s", textAlign: "center",
                 transform: selectedAvatar === avatar.id ? "scale(1.05)" : "scale(1)",
               }}

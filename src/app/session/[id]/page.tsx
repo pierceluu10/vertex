@@ -276,7 +276,7 @@ export default function SessionPage() {
   const focusColor =
     attention.focusLevel === "high" ? "#5a9e76"
     : attention.focusLevel === "medium" ? "#c89020"
-    : "#c8416a";
+    : "#9e6b75";
 
   return (
     <div style={{
@@ -331,24 +331,24 @@ export default function SessionPage() {
           </button>
           <button onClick={() => sendMessage("Give me a hint for what we're working on", "hint")} style={{
             display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
-            border: "1px solid rgba(200,65,106,0.2)", borderRadius: 3, background: "transparent",
-            color: "#c8416a", fontSize: 10, cursor: "pointer",
+            border: "1px solid rgba(158,107,117,0.2)", borderRadius: 3, background: "transparent",
+            color: "#9e6b75", fontSize: 10, cursor: "pointer",
             letterSpacing: "0.1em", textTransform: "uppercase" as const,
           }}>
             <Lightbulb size={12} /> Hint
           </button>
           <button onClick={() => sendMessage("Quiz me on what we've been studying", "quiz")} style={{
             display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
-            border: "1px solid rgba(200,65,106,0.2)", borderRadius: 3, background: "transparent",
-            color: "#c8416a", fontSize: 10, cursor: "pointer",
+            border: "1px solid rgba(158,107,117,0.2)", borderRadius: 3, background: "transparent",
+            color: "#9e6b75", fontSize: 10, cursor: "pointer",
             letterSpacing: "0.1em", textTransform: "uppercase" as const,
           }}>
             <Sparkles size={12} /> Quiz Me
           </button>
           <button onClick={() => setShowGame(true)} style={{
             display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
-            border: "1px solid rgba(200,65,106,0.2)", borderRadius: 3, background: "rgba(200,65,106,0.06)",
-            color: "#c8416a", fontSize: 10, cursor: "pointer",
+            border: "1px solid rgba(158,107,117,0.2)", borderRadius: 3, background: "rgba(158,107,117,0.06)",
+            color: "#9e6b75", fontSize: 10, cursor: "pointer",
             letterSpacing: "0.1em", textTransform: "uppercase" as const,
           }}>
             <Gamepad2 size={12} /> Play
@@ -375,17 +375,17 @@ export default function SessionPage() {
                     maxWidth: "80%", padding: "12px 16px", borderRadius: 6,
                     fontSize: 14, lineHeight: 1.65,
                     ...(msg.role === "user"
-                      ? { background: "#c8416a", color: "#fff", borderBottomRightRadius: 2 }
+                      ? { background: "#9e6b75", color: "#fff", borderBottomRightRadius: 2 }
                       : msg.type === "reminder"
                       ? { background: "rgba(200,153,32,0.08)", border: "1px solid rgba(200,153,32,0.2)", color: "#1e1a12", borderBottomLeftRadius: 2 }
                       : msg.type === "quiz"
-                      ? { background: "rgba(200,65,106,0.06)", border: "1px solid rgba(200,65,106,0.15)", color: "#1e1a12", borderBottomLeftRadius: 2 }
+                      ? { background: "rgba(158,107,117,0.06)", border: "1px solid rgba(158,107,117,0.14)", color: "#1e1a12", borderBottomLeftRadius: 2 }
                       : { background: "#f8f3e8", border: "1px solid rgba(55,45,25,0.08)", color: "#1e1a12", borderBottomLeftRadius: 2 }),
                   }}>
                     {msg.type === "quiz" && (
                       <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
-                        <Sparkles size={12} style={{ color: "#c8416a" }} />
-                        <span style={{ fontSize: 10, fontWeight: 500, color: "#c8416a", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>Quiz</span>
+                        <Sparkles size={12} style={{ color: "#9e6b75" }} />
+                        <span style={{ fontSize: 10, fontWeight: 500, color: "#9e6b75", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>Quiz</span>
                       </div>
                     )}
                     {msg.type === "hint" && msg.role === "assistant" && (
@@ -407,7 +407,7 @@ export default function SessionPage() {
                   <div style={{
                     maxWidth: "80%", padding: "10px 14px", borderRadius: 6,
                     fontSize: 14, lineHeight: 1.65, borderBottomRightRadius: 2,
-                    background: "rgba(200,65,106,0.3)", color: "#fff",
+                    background: "rgba(158,107,117,0.25)", color: "#fff",
                     fontStyle: "italic", opacity: 0.8,
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -426,7 +426,7 @@ export default function SessionPage() {
                   }}>
                     {[0, 1, 2].map((i) => (
                       <div key={i} style={{
-                        width: 6, height: 6, borderRadius: "50%", background: "#c8416a",
+                        width: 6, height: 6, borderRadius: "50%", background: "#9e6b75",
                         animation: `vtxBounce 0.6s ease infinite ${i * 0.15}s`,
                       }} />
                     ))}
@@ -458,11 +458,11 @@ export default function SessionPage() {
                   fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", fontSize: 14,
                   fontWeight: 300, outline: "none",
                 }}
-                onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#c8416a"; }}
+                onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#9e6b75"; }}
                 onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(55,45,25,0.10)"; }}
               />
               <button type="submit" disabled={loading || !input.trim()} style={{
-                padding: "10px 16px", background: "#c8416a", color: "#fff", border: "none",
+                padding: "10px 16px", background: "#9e6b75", color: "#fff", border: "none",
                 borderRadius: 3, cursor: "pointer", display: "flex", alignItems: "center",
                 opacity: loading || !input.trim() ? 0.5 : 1,
               }}>

@@ -365,7 +365,7 @@ export default function ParentProfilePage() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 4, background: "rgba(200,65,106,0.08)",
+              width: 40, height: 40, borderRadius: 4, background: "rgba(158,107,117,0.08)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <Video size={18} style={{ color: "#c8416a" }} />
@@ -381,22 +381,22 @@ export default function ParentProfilePage() {
           {parent?.heygen_avatar_id && recordingState === "idle" && (
             <div style={{
               display: "flex", alignItems: "center", gap: 8, padding: "12px 16px",
-              background: "rgba(90,158,118,0.08)", borderRadius: 4, marginBottom: 16,
-              border: "1px solid rgba(90,158,118,0.15)",
+              background: "rgba(92,124,106,0.1)", borderRadius: 4, marginBottom: 16,
+              border: "1px solid rgba(92,124,106,0.18)",
             }}>
-              <CheckCircle size={16} style={{ color: "#5a9e76" }} />
-              <span style={{ fontSize: 13, color: "#5a9e76" }}>Avatar created successfully</span>
+              <CheckCircle size={16} style={{ color: "#5c7c6a" }} />
+              <span style={{ fontSize: 13, color: "#5c7c6a" }}>Avatar created successfully</span>
             </div>
           )}
 
           {recordingState === "done" && (
             <div style={{
               display: "flex", alignItems: "center", gap: 8, padding: "12px 16px",
-              background: "rgba(90,158,118,0.08)", borderRadius: 4, marginBottom: 16,
-              border: "1px solid rgba(90,158,118,0.15)",
+              background: "rgba(92,124,106,0.1)", borderRadius: 4, marginBottom: 16,
+              border: "1px solid rgba(92,124,106,0.18)",
             }}>
-              <CheckCircle size={16} style={{ color: "#5a9e76" }} />
-              <span style={{ fontSize: 13, color: "#5a9e76" }}>Video uploaded! Your avatar is being processed.</span>
+              <CheckCircle size={16} style={{ color: "#5c7c6a" }} />
+              <span style={{ fontSize: 13, color: "#5c7c6a" }}>Video uploaded! Your avatar is being processed.</span>
             </div>
           )}
 
@@ -421,7 +421,7 @@ export default function ParentProfilePage() {
                 <label style={{
                   display: "inline-flex", alignItems: "center", gap: 8,
                   padding: "14px 24px", background: "transparent", color: "#c8416a",
-                  border: "1.5px solid rgba(200,65,106,0.4)", borderRadius: 3,
+                  border: "1.5px solid rgba(158,107,117,0.35)", borderRadius: 3,
                   fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase" as const,
                   cursor: "pointer",
                 }}>
@@ -573,7 +573,7 @@ export default function ParentProfilePage() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 4, background: "rgba(200,65,106,0.08)",
+              width: 40, height: 40, borderRadius: 4, background: "rgba(158,107,117,0.08)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <Upload size={18} style={{ color: "#c8416a" }} />
@@ -595,7 +595,7 @@ export default function ParentProfilePage() {
                   style={{
                     padding: "8px 16px", borderRadius: 3, fontSize: 12,
                     border: `1.5px solid ${selectedChild?.id === child.id ? "#c8416a" : "rgba(55,45,25,0.10)"}`,
-                    background: selectedChild?.id === child.id ? "rgba(200,65,106,0.06)" : "transparent",
+                    background: selectedChild?.id === child.id ? "rgba(158,107,117,0.06)" : "transparent",
                     color: selectedChild?.id === child.id ? "#c8416a" : "#1a1610",
                     cursor: "pointer", transition: "all 0.2s",
                   }}
@@ -608,7 +608,7 @@ export default function ParentProfilePage() {
 
           <label style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            padding: "14px", border: "1.5px dashed rgba(200,65,106,0.25)", borderRadius: 4,
+            padding: "14px", border: "1.5px dashed rgba(158,107,117,0.22)", borderRadius: 4,
             color: "#c8416a", fontSize: 12, letterSpacing: "0.12em",
             textTransform: "uppercase" as const, cursor: "pointer",
             transition: "background 0.2s",
@@ -650,7 +650,7 @@ export default function ParentProfilePage() {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
               <div style={{
-                width: 40, height: 40, borderRadius: 4, background: "rgba(200,65,106,0.08)",
+                width: 40, height: 40, borderRadius: 4, background: "rgba(158,107,117,0.08)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 <Clock size={18} style={{ color: "#c8416a" }} />
@@ -673,7 +673,7 @@ export default function ParentProfilePage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{
                       width: 7, height: 7, borderRadius: "50%",
-                      background: session.status === "active" ? "#5a9e76" : "#afa598",
+                      background: session.status === "active" ? "#5c7c6a" : "#afa598",
                     }} />
                     <div>
                       <div style={{ fontSize: 13 }}>

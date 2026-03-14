@@ -132,7 +132,7 @@ export default function SignUpPage() {
                     style={{
                       padding: "6px 12px", fontSize: 12, borderRadius: 3,
                       border: `1.5px solid ${mathTopics.includes(topic) ? "#c8416a" : "rgba(55,45,25,0.10)"}`,
-                      background: mathTopics.includes(topic) ? "rgba(200,65,106,0.06)" : "transparent",
+                      background: mathTopics.includes(topic) ? "rgba(158,107,117,0.06)" : "transparent",
                       color: mathTopics.includes(topic) ? "#c8416a" : "#1a1610",
                       cursor: "pointer", transition: "all 0.2s",
                       fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
@@ -159,7 +159,7 @@ export default function SignUpPage() {
                     style={{
                       padding: "10px 8px", fontSize: 12, borderRadius: 3,
                       border: `1.5px solid ${learningPace === opt.value ? "#c8416a" : "rgba(55,45,25,0.10)"}`,
-                      background: learningPace === opt.value ? "rgba(200,65,106,0.06)" : "transparent",
+                      background: learningPace === opt.value ? "rgba(158,107,117,0.06)" : "transparent",
                       color: learningPace === opt.value ? "#c8416a" : "#1a1610",
                       cursor: "pointer", transition: "all 0.2s",
                       fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",

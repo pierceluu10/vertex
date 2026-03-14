@@ -153,8 +153,8 @@ export default function KidDashboardPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Flame size={18} style={{ color: "#ef8c3b" }} />
-            <span style={{ fontSize: 16, fontWeight: 600, color: "#ef8c3b" }}>{streak}</span>
+            <Flame size={18} style={{ color: "#c89020" }} />
+            <span style={{ fontSize: 16, fontWeight: 600, color: "#c89020" }}>{streak}</span>
             <span style={{ fontSize: 11, color: "#8a7f6e" }}>day streak</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -184,16 +184,16 @@ export default function KidDashboardPage() {
             <div style={{
               padding: "20px 24px", background: "linear-gradient(135deg, #fff5e6 0%, #ffe8cc 100%)",
               borderRadius: 12, marginBottom: 16, display: "flex", alignItems: "center", gap: 16,
-              border: "1px solid rgba(239,140,59,0.15)",
+              border: "1px solid rgba(166,124,74,0.2)",
             }}>
               <div style={{
-                width: 56, height: 56, borderRadius: 12, background: "rgba(239,140,59,0.12)",
+                width: 56, height: 56, borderRadius: 12, background: "rgba(166,124,74,0.12)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <Flame size={28} style={{ color: "#ef8c3b" }} />
+                <Flame size={28} style={{ color: "#c89020" }} />
               </div>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 600, color: "#ef8c3b" }}>{streak} Day Streak!</div>
+                <div style={{ fontSize: 22, fontWeight: 600, color: "#c89020" }}>{streak} Day Streak!</div>
                 <div style={{ fontSize: 12, color: "#8a7f6e" }}>Keep it up — you&apos;re on fire!</div>
               </div>
             </div>
@@ -202,10 +202,10 @@ export default function KidDashboardPage() {
             <div style={{
               padding: "20px 24px", background: "linear-gradient(135deg, #fef2f5 0%, #fce4ec 100%)",
               borderRadius: 12, marginBottom: 24, display: "flex", alignItems: "center", gap: 16,
-              border: "1px solid rgba(200,65,106,0.12)",
+              border: "1px solid rgba(158,107,117,0.12)",
             }}>
               <div style={{
-                width: 56, height: 56, borderRadius: 12, background: "rgba(200,65,106,0.1)",
+                width: 56, height: 56, borderRadius: 12, background: "rgba(158,107,117,0.1)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 <Star size={28} style={{ color: "#c8416a" }} />
@@ -252,7 +252,7 @@ export default function KidDashboardPage() {
 
             <label style={{
               display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
-              padding: "40px 24px", border: "2px dashed rgba(200,65,106,0.25)", borderRadius: 12,
+              padding: "40px 24px", border: "2px dashed rgba(158,107,117,0.22)", borderRadius: 12,
               background: "rgba(255,255,255,0.6)", cursor: "pointer", marginBottom: 24, textAlign: "center",
             }}>
               <Upload size={32} style={{ color: "#c8416a" }} />

@@ -45,8 +45,8 @@ function RecapContent() {
           padding: "24px 16px", background: "#fff", borderRadius: 12,
           border: "1px solid rgba(0,0,0,0.06)",
         }}>
-          <MessageCircle size={24} style={{ color: "#c8416a", marginBottom: 8 }} />
-          <div style={{ fontSize: 28, fontWeight: 300, color: "#c8416a" }}>
+          <MessageCircle size={24} style={{ color: "#9e6b75", marginBottom: 8 }} />
+          <div style={{ fontSize: 28, fontWeight: 300, color: "#9e6b75" }}>
             {messageCount}
           </div>
           <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>Messages</div>
@@ -54,10 +54,10 @@ function RecapContent() {
 
         <div style={{
           padding: "24px 16px", background: "linear-gradient(135deg, #fef2f5, #fce4ec)",
-          borderRadius: 12, border: "1px solid rgba(200,65,106,0.12)",
+          borderRadius: 12, border: "1px solid rgba(158,107,117,0.12)",
         }}>
-          <Star size={24} style={{ color: "#c8416a", marginBottom: 8 }} />
-          <div style={{ fontSize: 28, fontWeight: 300, color: "#c8416a" }}>
+          <Star size={24} style={{ color: "#9e6b75", marginBottom: 8 }} />
+          <div style={{ fontSize: 28, fontWeight: 300, color: "#9e6b75" }}>
             +{xpEarned}
           </div>
           <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>XP Earned</div>
@@ -65,10 +65,10 @@ function RecapContent() {
 
         <div style={{
           padding: "24px 16px", background: "linear-gradient(135deg, #fff5e6, #ffe8cc)",
-          borderRadius: 12, border: "1px solid rgba(239,140,59,0.15)",
+          borderRadius: 12, border: "1px solid rgba(166,124,74,0.18)",
         }}>
-          <Flame size={24} style={{ color: "#ef8c3b", marginBottom: 8 }} />
-          <div style={{ fontSize: 28, fontWeight: 300, color: "#ef8c3b" }}>
+          <Flame size={24} style={{ color: "#c89020", marginBottom: 8 }} />
+          <div style={{ fontSize: 28, fontWeight: 300, color: "#c89020" }}>
             🔥
           </div>
           <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>Streak Alive</div>
@@ -79,7 +79,7 @@ function RecapContent() {
         onClick={() => router.push("/dashboard/kid")}
         style={{
           display: "inline-flex", alignItems: "center", gap: 8,
-          padding: "16px 32px", background: "#c8416a", color: "#fff",
+          padding: "16px 32px", background: "#9e6b75", color: "#fff",
           border: "none", borderRadius: 10, fontSize: 14, cursor: "pointer",
         }}
       >

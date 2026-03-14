@@ -14,8 +14,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Ensure parent row exists (e.g. OAuth users or legacy signups may not have one)
+    const { data: existingParent } = await supabase
+      .from("parents")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!existingParent) {
+      const { error: parentError } = await supabase.from("parents").insert({
+        id: user.id,
+        email: user.email ?? "",
+        name: (user.user_metadata?.full_name as string) || user.email?.split("@")[0] || "Parent",
+      });
+      if (parentError) {
+        console.error("Parent upsert error:", parentError);
+        return NextResponse.json(
+          { error: "Please complete your profile in Settings first." },
+          { status: 400 }
+        );
+      }
+    }
+
     const body = await request.json();
-    const childName = body.childName || null;
+    const childName = body.childName ?? null;
 
     let code = generateCode();
     let attempts = 0;
@@ -26,7 +48,7 @@ export async function POST(request: Request) {
         .from("access_codes")
         .select("id")
         .eq("code", code)
-        .single();
+        .maybeSingle();
 
       if (!existing) break;
       code = generateCode();
@@ -46,7 +68,10 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error("Access code creation error:", error);
-      return NextResponse.json({ error: "Failed to generate code" }, { status: 500 });
+      return NextResponse.json(
+        { error: error.message || "Failed to generate code" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ accessCode });

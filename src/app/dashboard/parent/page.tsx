@@ -29,6 +29,7 @@ export default function ParentDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [sendingReport, setSendingReport] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -72,14 +73,22 @@ export default function ParentDashboardPage() {
 
   async function generateNewCode() {
     setGeneratingCode(true);
+    setCodeError(null);
     try {
       const res = await fetch("/api/access-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ childName: parent?.child_name }),
       });
-      if (res.ok) await loadData();
-    } catch { /* ignore */ }
+      const data = await res.json();
+      if (res.ok) {
+        await loadData();
+      } else {
+        setCodeError(data.error || "Failed to create access code");
+      }
+    } catch (e) {
+      setCodeError("Could not create access code. Please try again.");
+    }
     setGeneratingCode(false);
   }
 
@@ -151,7 +160,7 @@ export default function ParentDashboardPage() {
     sidebarHeader: { padding: "0 24px 32px", borderBottom: "1px solid rgba(55,45,25,0.10)", marginBottom: 16 } as React.CSSProperties,
     sidebarItem: (active: boolean) => ({
       display: "flex", alignItems: "center", gap: 12, padding: "12px 24px",
-      color: active ? "#c8416a" : "#8a7f6e", background: active ? "rgba(200,65,106,0.06)" : "transparent",
+      color: active ? "#c8416a" : "#8a7f6e", background: active ? "rgba(158,107,117,0.06)" : "transparent",
       border: "none", cursor: "pointer", width: "100%", textAlign: "left" as const,
       fontSize: 13, letterSpacing: "0.05em", transition: "all 0.2s",
       fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", borderLeft: active ? "2px solid #c8416a" : "2px solid transparent",
@@ -234,6 +243,10 @@ export default function ParentDashboardPage() {
                 </button>
               </div>
 
+              {codeError && (
+                <p style={{ fontSize: 13, color: "#944040", marginBottom: 12 }}>{codeError}</p>
+              )}
+
               {accessCodes.filter((c) => c.is_active).length === 0 ? (
                 <p style={{ fontSize: 13, color: "#8a7f6e" }}>
                   No active codes. Generate one for your child to start learning!
@@ -299,8 +312,8 @@ export default function ParentDashboardPage() {
                         {session.focus_score_avg != null && (
                           <span style={{
                             fontSize: 12, padding: "4px 10px", borderRadius: 3,
-                            background: session.focus_score_avg >= 75 ? "rgba(90,158,118,0.1)" : session.focus_score_avg >= 50 ? "rgba(200,144,32,0.1)" : "rgba(200,65,106,0.1)",
-                            color: session.focus_score_avg >= 75 ? "#3a7a52" : session.focus_score_avg >= 50 ? "#c89020" : "#c8416a",
+                            background: session.focus_score_avg >= 75 ? "rgba(92,124,106,0.12)" : session.focus_score_avg >= 50 ? "rgba(166,124,74,0.1)" : "rgba(158,107,117,0.1)",
+                            color: session.focus_score_avg >= 75 ? "#2d7a4a" : session.focus_score_avg >= 50 ? "#c89020" : "#c8416a",
                           }}>
                             {Math.round(session.focus_score_avg)}% focus
                           </span>
@@ -373,7 +386,7 @@ export default function ParentDashboardPage() {
               </div>
               <label style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                padding: "20px", border: "1.5px dashed rgba(200,65,106,0.25)", borderRadius: 4,
+                padding: "20px", border: "1.5px dashed rgba(158,107,117,0.22)", borderRadius: 4,
                 color: "#c8416a", fontSize: 12, letterSpacing: "0.12em",
                 textTransform: "uppercase", cursor: "pointer",
               }}>
@@ -498,7 +511,7 @@ export default function ParentDashboardPage() {
                     ? parent!.math_topics.map((t) => (
                         <span key={t} style={{
                           padding: "4px 10px", fontSize: 12, borderRadius: 3,
-                          background: "rgba(200,65,106,0.06)", border: "1px solid rgba(200,65,106,0.15)",
+                          background: "rgba(158,107,117,0.06)", border: "1px solid rgba(158,107,117,0.14)",
                           color: "#c8416a",
                         }}>{t}</span>
                       ))

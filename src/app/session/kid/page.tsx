@@ -161,7 +161,7 @@ function KidSessionContent() {
     }).toString());
   }
 
-  const focusColor = attention.focusLevel === "high" ? "#5a9e76" : attention.focusLevel === "medium" ? "#c89020" : "#c8416a";
+  const focusColor = attention.focusLevel === "high" ? "#5c7c6a" : attention.focusLevel === "medium" ? "#c89020" : "#c8416a";
 
   type MathVisualConfig = { type: string; [key: string]: unknown };
 
@@ -194,14 +194,14 @@ function KidSessionContent() {
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => sendMessage("Give me a hint", "hint")} style={{
             display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
-            border: "1px solid rgba(200,65,106,0.2)", borderRadius: 8, background: "transparent",
+            border: "1px solid rgba(158,107,117,0.2)", borderRadius: 8, background: "transparent",
             color: "#c8416a", fontSize: 11, cursor: "pointer",
           }}>
             <Lightbulb size={12} /> Hint
           </button>
           <button onClick={() => sendMessage("Quiz me!", "quiz")} style={{
             display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
-            border: "1px solid rgba(200,65,106,0.2)", borderRadius: 8, background: "transparent",
+            border: "1px solid rgba(158,107,117,0.2)", borderRadius: 8, background: "transparent",
             color: "#c8416a", fontSize: 11, cursor: "pointer",
           }}>
             <Sparkles size={12} /> Quiz
@@ -223,7 +223,7 @@ function KidSessionContent() {
                     ...(msg.role === "user"
                       ? { background: "#c8416a", color: "#fff", borderBottomRightRadius: 4 }
                       : msg.type === "reminder"
-                      ? { background: "rgba(239,140,59,0.08)", border: "1px solid rgba(239,140,59,0.2)", borderBottomLeftRadius: 4 }
+                      ? { background: "rgba(166,124,74,0.08)", border: "1px solid rgba(166,124,74,0.18)", borderBottomLeftRadius: 4 }
                       : { background: "#fff", border: "1px solid rgba(0,0,0,0.06)", borderBottomLeftRadius: 4 }),
                   }}>
                     <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
@@ -295,7 +295,7 @@ function KidSessionContent() {
             onSpeakComplete={() => setSpeakText(null)}
           />
           {isSpeaking && (
-            <div style={{ fontSize: 10, color: "#5a9e76", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            <div style={{ fontSize: 10, color: "#5c7c6a", letterSpacing: "0.15em", textTransform: "uppercase" }}>
               Speaking...
             </div>
           )}

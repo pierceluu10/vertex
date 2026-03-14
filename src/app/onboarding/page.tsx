@@ -128,7 +128,7 @@ export default function OnboardingPage() {
                         padding: "18px 12px",
                         border: `1.5px solid ${preferredPace === option.value ? "#c8416a" : "rgba(55,45,25,0.10)"}`,
                         borderRadius: 3,
-                        background: preferredPace === option.value ? "rgba(200,65,106,0.06)" : "transparent",
+                        background: preferredPace === option.value ? "rgba(158,107,117,0.06)" : "transparent",
                         color: preferredPace === option.value ? "#c8416a" : "#1a1610",
                         fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
                         fontSize: 13, fontWeight: 400, letterSpacing: "0.08em",
@@ -173,7 +173,7 @@ export default function OnboardingPage() {
                       style={{
                         padding: "8px 14px", fontSize: 13, borderRadius: 3,
                         border: `1.5px solid ${selectedTopics.includes(topic) ? "#c8416a" : "rgba(55,45,25,0.10)"}`,
-                        background: selectedTopics.includes(topic) ? "rgba(200,65,106,0.06)" : "transparent",
+                        background: selectedTopics.includes(topic) ? "rgba(158,107,117,0.06)" : "transparent",
                         color: selectedTopics.includes(topic) ? "#c8416a" : "#1a1610",
                         cursor: "pointer", transition: "all 0.2s",
                         fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
@@ -206,9 +206,9 @@ export default function OnboardingPage() {
           {step === "complete" && (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{
-                width: 56, height: 56, borderRadius: "50%", background: "rgba(90,158,118,.1)",
+                width: 56, height: 56, borderRadius: "50%", background: "rgba(92,124,106,.12)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 20px", border: "1.5px solid rgba(90,158,118,.3)",
+                margin: "0 auto 20px", border: "1.5px solid rgba(92,124,106,.25)",
               }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3a7a52" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </div>

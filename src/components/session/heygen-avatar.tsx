@@ -152,12 +152,12 @@ export function HeyGenAvatar({
     return (
       <div className={className} style={{
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        background: "rgba(200,65,106,0.06)", borderRadius: 8, padding: 20, textAlign: "center",
+        background: "rgba(158,107,117,0.06)", borderRadius: 8, padding: 20, textAlign: "center",
       }}>
         <div style={{
           width: 48, height: 48, borderRadius: "50%", background: "rgba(200,65,106,0.1)",
           display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12,
-          border: "1.5px solid rgba(200,65,106,0.2)",
+          border: "1.5px solid rgba(158,107,117,0.2)",
         }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c8416a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -170,7 +170,7 @@ export function HeyGenAvatar({
           onClick={() => { initializingRef.current = false; setStatus("idle"); initAvatar(); }}
           style={{
             marginTop: 8, fontSize: 10, color: "#c8416a", background: "none",
-            border: "1px solid rgba(200,65,106,0.3)", borderRadius: 3, padding: "6px 12px",
+            border: "1px solid rgba(158,107,117,0.25)", borderRadius: 3, padding: "6px 12px",
             cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" as const,
           }}
         >
@@ -189,7 +189,7 @@ export function HeyGenAvatar({
         }}>
           <div style={{ textAlign: "center" }}>
             <div style={{
-              width: 32, height: 32, border: "2px solid rgba(200,65,106,0.2)",
+              width: 32, height: 32, border: "2px solid rgba(158,107,117,0.2)",
               borderTopColor: "#c8416a", borderRadius: "50%",
               animation: "spin 0.8s linear infinite", margin: "0 auto 8px",
             }} />
