@@ -62,7 +62,9 @@ export default function StudentEntryPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.error || "Invalid code. Please try again.");
+        const msg = data.error || "Invalid code. Please try again.";
+        const debug = typeof data.debug !== "undefined" ? ` (${JSON.stringify(data.debug)})` : "";
+        setError(msg + debug);
         setLoading(false);
         return;
       }

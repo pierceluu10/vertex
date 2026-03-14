@@ -4,16 +4,16 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   BarChart3, BookOpen, FileText, Settings, Clock, Copy, Plus,
-  Send, LogOut, ChevronRight, Users, Zap, Eye, X, RefreshCw,
+  LogOut, ChevronRight, Users, Eye, X, TrendingUp, Activity,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Parent, AccessCode, TutoringSession, UploadedDocument,
-  ParentReport, FocusEvent,
+  FocusEvent,
 } from "@/types";
 import "@/styles/vertex.css";
 
-type Tab = "overview" | "progress" | "homework" | "reports" | "settings";
+type Tab = "overview" | "progress" | "homework" | "analytics" | "settings";
 
 export default function ParentDashboardPage() {
   const router = useRouter();
@@ -24,29 +24,25 @@ export default function ParentDashboardPage() {
   const [accessCodes, setAccessCodes] = useState<AccessCode[]>([]);
   const [sessions, setSessions] = useState<TutoringSession[]>([]);
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
-  const [reports, setReports] = useState<ParentReport[]>([]);
   const [focusEvents, setFocusEvents] = useState<FocusEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
-  const [sendingReport, setSendingReport] = useState(false);
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login"); return; }
 
-    const [parentRes, sessionsRes, docsRes, reportsRes] = await Promise.all([
+    const [parentRes, sessionsRes, docsRes] = await Promise.all([
       supabase.from("parents").select("*").eq("id", user.id).single(),
       supabase.from("tutoring_sessions").select("*").order("started_at", { ascending: false }).limit(50),
       supabase.from("uploaded_documents").select("*").eq("parent_id", user.id).order("uploaded_at", { ascending: false }),
-      supabase.from("parent_reports").select("*").eq("parent_id", user.id).order("created_at", { ascending: false }).limit(20),
     ]);
 
     if (parentRes.data) setParent(parentRes.data);
     if (sessionsRes.data) setSessions(sessionsRes.data);
     if (docsRes.data) setDocuments(docsRes.data);
-    if (reportsRes.data) setReports(reportsRes.data);
 
     // Load access codes
     try {
@@ -107,21 +103,6 @@ export default function ParentDashboardPage() {
     await loadData();
   }
 
-  async function triggerReport() {
-    if (!sessions.length) return;
-    setSendingReport(true);
-    const latestSession = sessions.find((s) => s.status === "completed") || sessions[0];
-    try {
-      await fetch("/api/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: latestSession.id }),
-      });
-      await loadData();
-    } catch { /* ignore */ }
-    setSendingReport(false);
-  }
-
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.push("/login");
@@ -142,7 +123,7 @@ export default function ParentDashboardPage() {
     { id: "overview", label: "Overview", icon: <BarChart3 size={18} /> },
     { id: "progress", label: "Progress", icon: <ChevronRight size={18} /> },
     { id: "homework", label: "Homework", icon: <BookOpen size={18} /> },
-    { id: "reports", label: "Reports", icon: <FileText size={18} /> },
+    { id: "analytics", label: "Analytics", icon: <TrendingUp size={18} /> },
     { id: "settings", label: "Settings", icon: <Settings size={18} /> },
   ];
 
@@ -423,54 +404,137 @@ export default function ParentDashboardPage() {
           </>
         )}
 
-        {/* REPORTS TAB */}
-        {activeTab === "reports" && (
+        {/* ANALYTICS TAB */}
+        {activeTab === "analytics" && (
           <>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 300, margin: 0 }}>Reports</h1>
-              <button onClick={triggerReport} disabled={sendingReport || !sessions.length} style={s.btn}>
-                <Send size={14} /> {sendingReport ? "Sending..." : "Send Report Email"}
-              </button>
-            </div>
+            <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 8 }}>Analytics</h1>
+            <p style={{ color: "#8a7f6e", fontSize: 13, marginBottom: 32 }}>
+              How {parent?.child_name || "your child"} uses Vertex
+            </p>
 
-            {reports.length === 0 ? (
+            {sessions.length === 0 ? (
               <div style={s.card}>
                 <p style={{ fontSize: 13, color: "#8a7f6e" }}>
-                  No reports yet. Reports are generated after each study session.
+                  No activity yet. Analytics will appear once your child starts study sessions.
                 </p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {reports.map((report) => (
-                  <div key={report.id} style={s.card}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                      <div style={{ fontSize: 14, fontWeight: 500 }}>
-                        {new Date(report.created_at).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-                      </div>
-                      {report.sent_at && (
-                        <span style={{ fontSize: 11, color: "#5a9e76", display: "flex", alignItems: "center", gap: 4 }}>
-                          <Zap size={10} /> Emailed
-                        </span>
-                      )}
+              <>
+                {/* Summary stats */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 16, marginBottom: 32 }}>
+                  <div style={s.statCard}>
+                    <div style={s.label}>Total Sessions</div>
+                    <div style={s.bigNum}>{completedSessions.length}</div>
+                    <div style={{ fontSize: 11, color: "#8a7f6e" }}>completed</div>
+                  </div>
+                  <div style={s.statCard}>
+                    <div style={s.label}>Avg Focus</div>
+                    <div style={s.bigNum}>{avgFocus}%</div>
+                    <div style={{ fontSize: 11, color: "#8a7f6e" }}>across sessions</div>
+                  </div>
+                  <div style={s.statCard}>
+                    <div style={s.label}>Distraction Events</div>
+                    <div style={s.bigNum}>{focusEvents.length}</div>
+                    <div style={{ fontSize: 11, color: "#8a7f6e" }}>logged</div>
+                  </div>
+                  <div style={s.statCard}>
+                    <div style={s.label}>Study This Week</div>
+                    <div style={s.bigNum}>
+                      {sessions.filter((s) => {
+                        const d = new Date(s.started_at);
+                        const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+                        return d >= weekAgo;
+                      }).length}
                     </div>
-                    <p style={{ fontSize: 13, color: "#1e1a12", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
-                      {report.summary}
-                    </p>
-                    {report.focus_summary && (
-                      <div style={{ display: "flex", gap: 16, marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(55,45,25,0.06)" }}>
-                        <div>
-                          <span style={s.label}>Focus Events</span>
-                          <div style={{ fontSize: 16, fontWeight: 300 }}>{report.focus_summary.total_focus_events}</div>
+                    <div style={{ fontSize: 11, color: "#8a7f6e" }}>sessions</div>
+                  </div>
+                </div>
+
+                {/* Sessions per day (last 7 days) */}
+                <div style={s.card}>
+                  <h2 style={s.h2}>Sessions per day (last 7 days)</h2>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 12, height: 140, marginTop: 16 }}>
+                    {(() => {
+                      const days: { label: string; count: number }[] = [];
+                      for (let i = 6; i >= 0; i--) {
+                        const d = new Date(); d.setDate(d.getDate() - i);
+                        const dayStr = d.toISOString().split("T")[0];
+                        const count = sessions.filter((s) => new Date(s.started_at).toISOString().split("T")[0] === dayStr).length;
+                        days.push({
+                          label: d.toLocaleDateString("en-US", { weekday: "short" }),
+                          count,
+                        });
+                      }
+                      const max = Math.max(1, ...days.map((x) => x.count));
+                      return days.map((day, i) => (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                          <div style={{
+                            width: "100%", borderRadius: 4, background: "rgba(200,65,106,0.2)",
+                            height: day.count ? `${Math.round((day.count / max) * 100)}%` : "4px",
+                            minHeight: day.count ? 24 : 4,
+                            transition: "height 0.3s",
+                          }} />
+                          <span style={{ fontSize: 11, color: "#8a7f6e" }}>{day.count}</span>
+                          <span style={{ fontSize: 10, color: "#8a7f6e", letterSpacing: "0.05em" }}>{day.label}</span>
                         </div>
-                        <div>
-                          <span style={s.label}>Tab Blurs</span>
-                          <div style={{ fontSize: 16, fontWeight: 300 }}>{report.focus_summary.tab_blur_count}</div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+                {/* Focus score trend (last 7 completed sessions) */}
+                <div style={{ ...s.card, marginTop: 20 }}>
+                  <h2 style={s.h2}>Focus score trend</h2>
+                  <p style={{ fontSize: 12, color: "#8a7f6e", marginBottom: 16 }}>
+                    Average focus % for the last completed sessions
+                  </p>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 120 }}>
+                    {completedSessions.slice(0, 7).reverse().map((session, i) => {
+                      const score = session.focus_score_avg ?? 0;
+                      return (
+                        <div key={session.id} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                          <div style={{
+                            width: "100%", borderRadius: 4, background: score >= 75 ? "rgba(90,158,118,0.25)" : score >= 50 ? "rgba(200,144,32,0.2)" : "rgba(200,65,106,0.2)",
+                            height: `${Math.min(100, score)}%`, minHeight: score > 0 ? 16 : 4,
+                            transition: "height 0.3s",
+                          }} />
+                          <span style={{ fontSize: 10, fontWeight: 500, color: "#1e1a12" }}>{Math.round(score)}%</span>
+                          <span style={{ fontSize: 9, color: "#8a7f6e" }}>Session {completedSessions.length - i}</span>
                         </div>
-                      </div>
+                      );
+                    })}
+                    {completedSessions.length === 0 && (
+                      <span style={{ fontSize: 13, color: "#8a7f6e" }}>No completed sessions yet</span>
                     )}
                   </div>
-                ))}
-              </div>
+                </div>
+
+                {/* Focus events breakdown */}
+                {focusEvents.length > 0 && (
+                  <div style={{ ...s.card, marginTop: 20 }}>
+                    <h2 style={s.h2}>Distraction breakdown</h2>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginTop: 12 }}>
+                      {["tab_blur", "inactive", "face_absent", "no_response"].map((eventType) => {
+                        const count = focusEvents.filter((e) => e.event_type === eventType).length;
+                        const label = eventType.replace("_", " ");
+                        return (
+                          <div key={eventType} style={{
+                            display: "flex", alignItems: "center", gap: 10,
+                            padding: "12px 16px", background: "rgba(244,239,229,0.6)", borderRadius: 4,
+                            border: "1px solid rgba(55,45,25,0.06)",
+                          }}>
+                            <Activity size={16} style={{ color: "#c8416a" }} />
+                            <div>
+                              <div style={{ fontSize: 12, textTransform: "capitalize", color: "#1e1a12" }}>{label}</div>
+                              <div style={{ fontSize: 18, fontWeight: 300, color: "#c8416a" }}>{count}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
