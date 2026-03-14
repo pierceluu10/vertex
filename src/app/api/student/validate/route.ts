@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClientFromRequest } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
@@ -14,8 +14,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use anon client (no auth): RLS allows anyone to read active access_codes and manage kids_sessions
-    const supabase = createClientFromRequest(request);
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+      console.error("Student validate: SUPABASE_SERVICE_ROLE_KEY is missing or empty");
+      return NextResponse.json(
+        { success: false, error: "Server misconfiguration. Please try again later." },
+        { status: 500 }
+      );
+    }
+    const supabase = await createServiceClient();
 
     const { data: accessCode, error: codeError } = await supabase
       .from("access_codes")
@@ -30,7 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "Something went wrong. Please try again.",
+          error: isDev ? `Access code lookup failed: ${codeError.message}` : "Something went wrong. Please try again.",
           ...(isDev && { debug: { message: codeError.message, code: codeError.code, details: codeError.details } }),
         },
         { status: 500 }
@@ -99,8 +105,13 @@ export async function POST(request: Request) {
 
     if (sessionError || !kidSession) {
       console.error("Kid session creation error:", sessionError);
+      const isDev = process.env.NODE_ENV === "development";
       return NextResponse.json(
-        { success: false, error: "Something went wrong. Please try again." },
+        {
+          success: false,
+          error: isDev && sessionError ? `Could not create session: ${sessionError.message}` : "Something went wrong. Please try again.",
+          ...(isDev && sessionError && { debug: { message: sessionError.message, code: sessionError.code, details: sessionError.details } }),
+        },
         { status: 500 }
       );
     }
@@ -112,8 +123,14 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Student validate error:", error);
+    const isDev = process.env.NODE_ENV === "development";
+    const errMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, error: "Something went wrong." },
+      {
+        success: false,
+        error: isDev ? `Error: ${errMsg}` : "Something went wrong.",
+        ...(isDev && { debug: { message: errMsg } }),
+      },
       { status: 500 }
     );
   }
