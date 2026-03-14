@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Send, ArrowLeft, Sparkles, Lightbulb, Mic, MicOff, Video, VideoOff } from "lucide-react";
+import { Send, ArrowLeft, Sparkles, Lightbulb, Mic, MicOff, Video, VideoOff, Gamepad2 } from "lucide-react";
+import { FlappyQuiz } from "@/components/vertex/flappy-quiz";
 import { createClient } from "@/lib/supabase/client";
 import { HeyGenAvatar } from "@/components/session/heygen-avatar";
 import { useAttention } from "@/hooks/use-attention";
@@ -41,6 +42,7 @@ export default function SessionPage() {
   const [micEnabled, setMicEnabled] = useState(false);
   const [webcamOn, setWebcamOn] = useState(true);
   const [liveTranscript, setLiveTranscript] = useState("");
+  const [showGame, setShowGame] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const selfVideoRef = useRef<HTMLVideoElement>(null);
@@ -343,6 +345,14 @@ export default function SessionPage() {
           }}>
             <Sparkles size={12} /> Quiz Me
           </button>
+          <button onClick={() => setShowGame(true)} style={{
+            display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
+            border: "1px solid rgba(200,65,106,0.2)", borderRadius: 3, background: "rgba(200,65,106,0.06)",
+            color: "#c8416a", fontSize: 10, cursor: "pointer",
+            letterSpacing: "0.1em", textTransform: "uppercase" as const,
+          }}>
+            <Gamepad2 size={12} /> Play
+          </button>
         </div>
       </header>
 
@@ -577,6 +587,14 @@ export default function SessionPage() {
           </div>
         </div>
       </div>
+
+      {showGame && (
+        <FlappyQuiz
+          topic={documentContext ? "mixed" : "mixed"}
+          childAge={childAge}
+          onClose={() => setShowGame(false)}
+        />
+      )}
 
       <style>{`
         @keyframes vtxBounce {
