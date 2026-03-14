@@ -540,7 +540,7 @@ export default function ParentProfilePage() {
 
   return (
     <div style={{
-      height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column",
+      minHeight: "100vh", overflowX: "hidden", overflowY: "auto", display: "flex", flexDirection: "column",
       background: "#f4efe5", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#1e1a12",
     }}>
       <header style={{
