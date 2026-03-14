@@ -4,6 +4,7 @@ export interface Parent {
   email: string;
   avatar_url: string | null;
   heygen_avatar_id: string | null;
+  heygen_talking_photo_id: string | null;
   created_at: string;
 }
 

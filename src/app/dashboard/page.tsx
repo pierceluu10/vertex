@@ -67,11 +67,11 @@ export default function DashboardPage() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "#f4efe5",
-      fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#1e1a12",
+      height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column",
+      background: "#f4efe5", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#1e1a12",
     }}>
       <header style={{
-        borderBottom: "1px solid rgba(55,45,25,0.10)",
+        flexShrink: 0, borderBottom: "1px solid rgba(55,45,25,0.10)",
         padding: "20px 48px", display: "flex", alignItems: "center", justifyContent: "space-between",
         background: "rgba(248,243,232,0.95)",
       }}>
@@ -91,7 +91,7 @@ export default function DashboardPage() {
         </button>
       </header>
 
-      <main style={{ maxWidth: 960, margin: "0 auto", padding: "40px 24px" }}>
+      <main style={{ flex: 1, overflowY: "auto", maxWidth: 960, margin: "0 auto", padding: "40px 24px" }}>
         {children.length > 1 && (
           <div style={{ display: "flex", gap: 8, marginBottom: 32 }}>
             {children.map((child) => (

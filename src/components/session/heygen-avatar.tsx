@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type StreamingAvatarAPI from "@heygen/streaming-avatar";
 
 interface HeyGenAvatarProps {
+  avatarName?: string;
   onAvatarReady?: () => void;
   onAvatarSpeaking?: (speaking: boolean) => void;
   onUserMessage?: (transcript: string) => void;
@@ -17,6 +18,7 @@ interface HeyGenAvatarProps {
 type StreamingAvatarInstance = InstanceType<typeof StreamingAvatarAPI>;
 
 export function HeyGenAvatar({
+  avatarName = "default",
   onAvatarReady,
   onAvatarSpeaking,
   onUserMessage,
@@ -31,6 +33,7 @@ export function HeyGenAvatar({
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const initializingRef = useRef(false);
+  const startedRef = useRef(false);
 
   const initAvatar = useCallback(async () => {
     if (initializingRef.current || avatarRef.current) return;
@@ -56,6 +59,7 @@ export function HeyGenAvatar({
           videoRef.current.srcObject = event.detail;
           videoRef.current.play().catch(() => {});
         }
+        startedRef.current = true;
         setStatus("ready");
         onAvatarReady?.();
       });
@@ -88,7 +92,7 @@ export function HeyGenAvatar({
       });
 
       await avatar.createStartAvatar({
-        avatarName: "default",
+        avatarName,
         quality: AvatarQuality.Medium,
         language: "en",
         voice: {
@@ -107,20 +111,26 @@ export function HeyGenAvatar({
       }
     } catch (err) {
       console.error("HeyGen init error:", err);
-      setErrorMsg(err instanceof Error ? err.message : "Failed to start avatar");
+      const msg = err instanceof Error ? err.message : "Failed to start avatar";
+      setErrorMsg(
+        msg.includes("429")
+          ? "Rate limit reached. Wait a minute, then click Retry."
+          : msg
+      );
       setStatus("error");
       initializingRef.current = false;
     }
-  }, [onAvatarReady, onAvatarSpeaking, onUserMessage, onUserSpeaking, onAvatarMessage, onSpeakComplete]);
+  }, [avatarName, onAvatarReady, onAvatarSpeaking, onUserMessage, onUserSpeaking, onAvatarMessage, onSpeakComplete]);
 
   useEffect(() => {
     initAvatar();
 
     return () => {
-      if (avatarRef.current) {
+      if (avatarRef.current && startedRef.current) {
         avatarRef.current.stopAvatar().catch(() => {});
-        avatarRef.current = null;
       }
+      avatarRef.current = null;
+      startedRef.current = false;
       initializingRef.current = false;
     };
   }, [initAvatar]);
@@ -162,7 +172,13 @@ export function HeyGenAvatar({
           {errorMsg || "Avatar unavailable"}
         </p>
         <button
-          onClick={() => { initializingRef.current = false; setStatus("idle"); initAvatar(); }}
+          onClick={() => {
+            initializingRef.current = false;
+            setStatus("idle");
+            setErrorMsg(null);
+            // Delay retry to avoid rate limit (429)
+            setTimeout(() => initAvatar(), 3000);
+          }}
           style={{
             marginTop: 8, fontSize: 10, color: "#c8416a", background: "none",
             border: "1px solid rgba(200,65,106,0.3)", borderRadius: 3, padding: "6px 12px",

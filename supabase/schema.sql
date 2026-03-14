@@ -8,6 +8,7 @@ create table if not exists parents (
   email text not null,
   avatar_url text,
   heygen_avatar_id text,
+  heygen_talking_photo_id text,
   created_at timestamptz default now()
 );
 

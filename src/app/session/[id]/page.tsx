@@ -32,6 +32,7 @@ export default function SessionPage() {
   const [childName, setChildName] = useState("");
   const [childAge, setChildAge] = useState(8);
   const [parentName, setParentName] = useState("");
+  const [parentAvatarId, setParentAvatarId] = useState<string | undefined>();
   const [documentContext, setDocumentContext] = useState<string | null>(null);
   const [adaptiveState, setAdaptiveState] = useState<AdaptiveState>(
     createInitialAdaptiveState()
@@ -102,10 +103,13 @@ export default function SessionPage() {
       if (user) {
         const { data: parent } = await supabase
           .from("parents")
-          .select("full_name")
+          .select("full_name, heygen_avatar_id, heygen_talking_photo_id")
           .eq("id", user.id)
           .single();
-        if (parent) setParentName(parent.full_name);
+        if (parent) {
+          setParentName(parent.full_name);
+          setParentAvatarId(parent.heygen_avatar_id ?? parent.heygen_talking_photo_id ?? undefined);
+        }
       }
 
       if (session.document_id) {
@@ -470,15 +474,16 @@ export default function SessionPage() {
         }}>
           {/* Parent avatar (main feed) */}
           <div style={{ position: "relative", flex: 1 }}>
-            <HeyGenAvatar
-              className=""
-              onAvatarReady={() => {}}
-              onAvatarSpeaking={setIsSpeaking}
-              onUserMessage={handleUserVoiceMessage}
-              onUserSpeaking={handleUserSpeaking}
-              speakQueue={speakText}
-              onSpeakComplete={() => setSpeakText(null)}
-            />
+          <HeyGenAvatar
+            className=""
+            avatarName={parentAvatarId ?? "default"}
+            onAvatarReady={() => {}}
+            onAvatarSpeaking={setIsSpeaking}
+            onUserMessage={handleUserVoiceMessage}
+            onUserSpeaking={handleUserSpeaking}
+            speakQueue={speakText}
+            onSpeakComplete={() => setSpeakText(null)}
+          />
 
             <div style={{
               position: "absolute", bottom: 8, left: 8, right: 8,
