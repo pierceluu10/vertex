@@ -20,7 +20,7 @@ export default function DashboardRedirect() {
 
   return (
     <div style={{
-      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      height: "100vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
       background: "#f4efe5", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#8a7f6e",
     }}>
       Redirecting...

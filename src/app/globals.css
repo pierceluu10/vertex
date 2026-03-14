@@ -107,10 +107,14 @@
     @apply font-sans;
     overflow-x: hidden;
     overflow-y: auto;
+    margin: 0;
+    padding: 0;
   }
   body {
     @apply bg-background text-foreground;
     overflow-x: hidden;
     overflow-y: auto;
+    margin: 0;
+    padding: 0;
   }
 }

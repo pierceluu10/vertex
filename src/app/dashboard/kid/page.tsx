@@ -138,7 +138,7 @@ export default function KidDashboardPage() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "linear-gradient(180deg, #fef7ee 0%, #fdf2e6 100%)",
+      height: "100vh", overflow: "hidden", background: "linear-gradient(180deg, #fef7ee 0%, #fdf2e6 100%)",
       fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#1e1a12",
       display: "flex", flexDirection: "column",
     }}>
@@ -166,7 +166,7 @@ export default function KidDashboardPage() {
       </header>
 
       {/* Main content */}
-      <main style={{ flex: 1, padding: "24px", maxWidth: 600, margin: "0 auto", width: "100%", paddingBottom: 80 }}>
+      <main style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px", maxWidth: 600, margin: "0 auto", width: "100%", paddingBottom: 80 }}>
 
         {/* HOME TAB */}
         {activeTab === "home" && (

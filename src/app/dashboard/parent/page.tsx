@@ -136,7 +136,7 @@ export default function ParentDashboardPage() {
   }
 
   const s = {
-    page: { display: "flex", minHeight: "100vh", background: "#f4efe5", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#1e1a12" } as React.CSSProperties,
+    page: { display: "flex", height: "100vh", overflow: "hidden", background: "#f4efe5", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#1e1a12" } as React.CSSProperties,
     sidebar: { width: 240, borderRight: "1px solid rgba(55,45,25,0.10)", background: "rgba(248,243,232,0.95)", display: "flex", flexDirection: "column", padding: "24px 0", flexShrink: 0 } as React.CSSProperties,
     sidebarHeader: { padding: "0 24px 32px", borderBottom: "1px solid rgba(55,45,25,0.10)", marginBottom: 16 } as React.CSSProperties,
     sidebarItem: (active: boolean) => ({
