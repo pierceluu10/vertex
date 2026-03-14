@@ -14,6 +14,7 @@ import {
   Clock,
   Loader2,
   Image,
+  Camera,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Parent, Child, UploadedDocument, TutoringSession } from "@/types";
@@ -45,7 +46,12 @@ export default function ParentProfilePage() {
   const [creatingAvatar, setCreatingAvatar] = useState(false);
   const [creatingPhotoAvatar, setCreatingPhotoAvatar] = useState(false);
   const [photoUploadSuccess, setPhotoUploadSuccess] = useState(false);
+  const [cameraMode, setCameraMode] = useState<"off" | "preview" | "captured">("off");
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const photoUploadRef = useRef<HTMLInputElement>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const cameraCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const videoPlaybackRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -466,10 +472,93 @@ export default function ParentProfilePage() {
     e.target.value = "";
   }
 
+  async function startPhotoCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      cameraStreamRef.current = stream;
+      setCameraMode("preview");
+      setCapturedPhoto(null);
+      // Wait for ref to be available after state update
+      requestAnimationFrame(() => {
+        if (cameraVideoRef.current) {
+          cameraVideoRef.current.srcObject = stream;
+          cameraVideoRef.current.play().catch(() => {});
+        }
+      });
+    } catch {
+      alert("Could not access camera. Please check permissions.");
+    }
+  }
+
+  function stopPhotoCamera() {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(t => t.stop());
+      cameraStreamRef.current = null;
+    }
+    setCameraMode("off");
+    setCapturedPhoto(null);
+  }
+
+  function capturePhoto() {
+    const video = cameraVideoRef.current;
+    const canvas = cameraCanvasRef.current;
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Mirror the image (front camera is mirrored in preview)
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0);
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    setCapturedPhoto(dataUrl);
+    setCameraMode("captured");
+
+    // Stop the camera stream since we have the photo
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(t => t.stop());
+      cameraStreamRef.current = null;
+    }
+  }
+
+  async function submitCapturedPhoto() {
+    if (!capturedPhoto) return;
+    setCreatingPhotoAvatar(true);
+    setPhotoUploadSuccess(false);
+    try {
+      // Convert data URL to blob
+      const res = await fetch(capturedPhoto);
+      const blob = await res.blob();
+      const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+
+      const formData = new FormData();
+      formData.append("photo", file);
+      const uploadRes = await fetch("/api/heygen/photo-avatar", { method: "POST", body: formData });
+      const data = await uploadRes.json().catch(() => ({}));
+      if (!uploadRes.ok) throw new Error(data.error || "Failed to create photo avatar");
+      setPhotoUploadSuccess(true);
+      setCameraMode("off");
+      setCapturedPhoto(null);
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to create photo avatar");
+    }
+    setCreatingPhotoAvatar(false);
+  }
+
   useEffect(() => {
     if (useDefaultAvatar && (streamRef.current || consentStreamRef.current)) {
       stopCamera();
       stopConsentCamera();
+    }
+    if (useDefaultAvatar) {
+      stopPhotoCamera();
     }
   }, [useDefaultAvatar]);
 
@@ -798,10 +887,10 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {recordingState === "idle" && !useDefaultAvatar && !parent?.heygen_talking_photo_id && (
+          {recordingState === "idle" && !useDefaultAvatar && !parent?.heygen_talking_photo_id && cameraMode === "off" && (
             <div style={{ textAlign: "center", padding: "32px 0" }}>
               <p style={{ fontSize: 13, color: "#8a7f6e", marginBottom: 8, maxWidth: 420, margin: "0 auto 8px" }}>
-                Create a tutor that looks like you: upload a photo (JPG or PNG).
+                Create a tutor that looks like you: upload or take a photo.
               </p>
               <p style={{ fontSize: 11, color: "#afa598", marginBottom: 20 }}>
                 JPG or PNG · Max 10 MB
@@ -823,6 +912,119 @@ export default function ParentProfilePage() {
                     disabled={creatingPhotoAvatar}
                   />
                 </label>
+                <button
+                  onClick={startPhotoCamera}
+                  disabled={creatingPhotoAvatar}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "14px 24px", background: "transparent", color: "#c8416a",
+                    border: "1.5px solid #c8416a", borderRadius: 3, fontSize: 12, letterSpacing: "0.15em",
+                    textTransform: "uppercase" as const, cursor: creatingPhotoAvatar ? "not-allowed" : "pointer",
+                  }}
+                >
+                  <Camera size={16} /> Take Photo
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Camera preview */}
+          {recordingState === "idle" && !useDefaultAvatar && cameraMode === "preview" && (
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <div style={{
+                position: "relative", borderRadius: 6, overflow: "hidden",
+                background: "#000", marginBottom: 16, maxWidth: 480, margin: "0 auto 16px",
+                aspectRatio: "4/3",
+              }}>
+                <video
+                  ref={cameraVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: "scaleX(-1)" }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+                <button
+                  onClick={capturePhoto}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "14px 28px", background: "#c8416a", color: "#fff",
+                    border: "none", borderRadius: 3, fontSize: 12, letterSpacing: "0.15em",
+                    textTransform: "uppercase" as const, cursor: "pointer",
+                  }}
+                >
+                  <Camera size={16} /> Capture
+                </button>
+                <button
+                  onClick={stopPhotoCamera}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "14px 24px", background: "transparent", color: "#8a7f6e",
+                    border: "1.5px solid rgba(55,45,25,0.15)", borderRadius: 3, fontSize: 12, letterSpacing: "0.15em",
+                    textTransform: "uppercase" as const, cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+              <canvas ref={cameraCanvasRef} style={{ display: "none" }} />
+            </div>
+          )}
+
+          {/* Captured photo review */}
+          {recordingState === "idle" && !useDefaultAvatar && cameraMode === "captured" && capturedPhoto && (
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <div style={{
+                borderRadius: 6, overflow: "hidden", marginBottom: 16,
+                maxWidth: 480, margin: "0 auto 16px", aspectRatio: "4/3",
+                border: "1px solid rgba(55,45,25,0.10)",
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={capturedPhoto}
+                  alt="Captured photo"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+                <button
+                  onClick={submitCapturedPhoto}
+                  disabled={creatingPhotoAvatar}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "14px 28px", background: "#c8416a", color: "#fff",
+                    border: "none", borderRadius: 3, fontSize: 12, letterSpacing: "0.15em",
+                    textTransform: "uppercase" as const, cursor: creatingPhotoAvatar ? "not-allowed" : "pointer",
+                    opacity: creatingPhotoAvatar ? 0.6 : 1,
+                  }}
+                >
+                  <CheckCircle size={16} /> {creatingPhotoAvatar ? "Creating..." : "Use This Photo"}
+                </button>
+                <button
+                  onClick={startPhotoCamera}
+                  disabled={creatingPhotoAvatar}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "14px 24px", background: "transparent", color: "#8a7f6e",
+                    border: "1.5px solid rgba(55,45,25,0.15)", borderRadius: 3, fontSize: 12, letterSpacing: "0.15em",
+                    textTransform: "uppercase" as const, cursor: "pointer",
+                  }}
+                >
+                  <Camera size={16} /> Retake
+                </button>
+                <button
+                  onClick={stopPhotoCamera}
+                  disabled={creatingPhotoAvatar}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "14px 24px", background: "transparent", color: "#8a7f6e",
+                    border: "1.5px solid rgba(55,45,25,0.15)", borderRadius: 3, fontSize: 12, letterSpacing: "0.15em",
+                    textTransform: "uppercase" as const, cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           )}
