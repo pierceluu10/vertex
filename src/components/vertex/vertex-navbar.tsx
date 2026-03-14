@@ -7,6 +7,7 @@ export function VertexNavbar() {
     <nav className="vtx-nav">
       <Link className="vtx-nav-logo" href="/">Vertex</Link>
       <ul className="vtx-nav-links">
+        <li><Link href="/login">Login</Link></li>
         <li><Link href="/signup">Register</Link></li>
         <li><Link href="/student">I&apos;m a Student</Link></li>
         <li><Link href="/mission">Mission</Link></li>

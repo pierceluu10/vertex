@@ -77,7 +77,7 @@ export default function LoginPage() {
               fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
             }}
           >
-            🎒 I&apos;m a Student
+            I&apos;m a Student
           </Link>
         </div>
       </div>

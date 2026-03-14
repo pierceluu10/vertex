@@ -57,13 +57,19 @@ export function Navbar() {
           About
         </Link>
         <Link
+          href="/login"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Login
+        </Link>
+        <Link
           href="/signup"
           className={buttonVariants({
             className:
               "bg-violet-600 hover:bg-violet-700 text-white rounded-full px-6 shadow-lg shadow-violet-500/25",
           })}
         >
-          Get Started
+          Register
         </Link>
       </div>
     </motion.nav>
