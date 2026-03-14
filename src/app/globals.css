@@ -103,10 +103,24 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
+    overflow: hidden;
+    background-color: var(--background);
+  }
+  body {
+    @apply text-foreground;
+    overflow: hidden;
+    background-color: var(--background);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Scrollable app shell so content can scroll without overscroll bounce on html/body */
+  body > main#app-root {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+    background-color: var(--background);
   }
 }
