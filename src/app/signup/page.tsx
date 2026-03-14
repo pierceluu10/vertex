@@ -83,7 +83,7 @@ export default function SignUpPage() {
     const { error: profileError } = await supabase.from("parents").insert({
       id: data.user.id,
       email,
-      name,
+      full_name: name,
       child_name: childName || null,
       grade_level: gradeLevel || null,
       math_topics: mathTopics,
