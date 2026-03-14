@@ -46,7 +46,7 @@ export function MathQuiz() {
   const [score, setScore] = useState(0);
   const [qCnt, setQCnt] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [question, setQuestion] = useState<Question>(() => generateQuestion(1));
+  const [question, setQuestion] = useState<Question | null>(null);
   const [answered, setAnswered] = useState(false);
   const [results, setResults] = useState<Record<number, "correct" | "wrong">>({});
   const [displayAnswer, setDisplayAnswer] = useState<string>("?");
@@ -63,7 +63,7 @@ export function MathQuiz() {
   }, [diff, nextQuestion]);
 
   const handleAnswer = (val: number, idx: number) => {
-    if (answered) return;
+    if (answered || !question) return;
     setAnswered(true);
     setQCnt(c => c + 1);
 
@@ -106,21 +106,33 @@ export function MathQuiz() {
               <div className="vtx-question-box">
                 <div className="vtx-q-label">Solve for the missing number</div>
                 <div className="vtx-question-text">
-                  <span>{question.num1}</span>
-                  <span className="op">{question.op}</span>
-                  <span>{question.num2}</span>
-                  <span className="op">=</span>
-                  <span className="blank">{displayAnswer}</span>
+                  {question ? (
+                    <>
+                      <span>{question.num1}</span>
+                      <span className="op">{question.op}</span>
+                      <span>{question.num2}</span>
+                      <span className="op">=</span>
+                      <span className="blank">{displayAnswer}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="op">—</span>
+                      <span className="op">—</span>
+                      <span className="op">=</span>
+                      <span className="blank">?</span>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="vtx-answer-row">
-                {question.choices.map((c, i) => (
+                {(question?.choices ?? [0, 0, 0, 0]).map((c, i) => (
                   <button
                     key={i}
                     className={`vtx-ans-btn ${results[i] || ""}`}
                     onClick={() => handleAnswer(c, i)}
+                    disabled={!question}
                   >
-                    {c}
+                    {question ? c : "—"}
                   </button>
                 ))}
               </div>
