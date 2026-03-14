@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClientFromRequest, createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const authClient = createClientFromRequest(request);
@@ -18,27 +18,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No video provided" }, { status: 400 });
     }
 
+    const MAX_SIZE_MB = 50;
+    if (video.size > MAX_SIZE_MB * 1024 * 1024) {
+      return NextResponse.json({
+        error: `Video is too large (${(video.size / (1024 * 1024)).toFixed(1)} MB). Maximum is ${MAX_SIZE_MB} MB.`,
+      }, { status: 400 });
+    }
+
     const videoBuffer = Buffer.from(await video.arrayBuffer());
-    const fileName = `avatars/${user.id}/${Date.now()}-${video.name}`;
+    const consentOnly = formData.get("consentOnly") === "true";
+    const path = consentOnly
+      ? `${user.id}/consent-${Date.now()}-${video.name}`
+      : `${user.id}/${Date.now()}-${video.name}`;
 
     const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some((b) => b.name === "avatars");
+    let bucketName = "avatars";
 
-    if (!bucketExists) {
+    if (!buckets?.some((b) => b.name === "avatars")) {
       const { error: createError } = await supabase.storage.createBucket("avatars", {
         public: true,
-        fileSizeLimit: 100 * 1024 * 1024,
-        allowedMimeTypes: ["video/*"],
       });
       if (createError && !createError.message.includes("already exists")) {
-        console.error("Bucket creation error:", createError);
-        return NextResponse.json({ error: "Storage setup failed" }, { status: 500 });
+        if (buckets?.some((b) => b.name === "documents")) {
+          bucketName = "documents";
+        } else {
+          console.error("Bucket creation error:", createError);
+          return NextResponse.json({
+            error: "Storage setup failed. Create an 'avatars' or 'documents' bucket in Supabase Dashboard → Storage.",
+          }, { status: 500 });
+        }
       }
     }
 
     const { error: uploadError } = await supabase.storage
-      .from("documents")
-      .upload(fileName, videoBuffer, {
+      .from(bucketName)
+      .upload(path, videoBuffer, {
         contentType: video.type || "video/webm",
         upsert: true,
       });
@@ -47,44 +61,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Upload failed: " + uploadError.message }, { status: 500 });
     }
 
-    const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(fileName);
+    const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(path);
 
-    const { error: dbError } = await serviceSupabase
-      .from("parents")
-      .update({ avatar_url: publicUrl })
-      .eq("id", user.id);
-
-    if (dbError) {
-      console.error("DB update error:", dbError);
-    }
-
-    const avatarRes = await fetch("https://api.heygen.com/v2/photo_avatar/photo/generate", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: `parent-avatar-${user.id}`,
-        image_url: publicUrl,
-      }),
-    });
-
-    let heygenAvatarId: string | null = null;
-
-    if (avatarRes.ok) {
-      const avatarData = await avatarRes.json();
-      heygenAvatarId = avatarData.data?.photo_avatar_id || avatarData.data?.avatar_id || null;
-
-      if (heygenAvatarId) {
-        await supabase
-          .from("parents")
-          .update({ heygen_avatar_id: heygenAvatarId })
-          .eq("id", user.id);
+    if (!consentOnly) {
+      const { error: dbError } = await supabase
+        .from("parents")
+        .update({ avatar_url: publicUrl })
+        .eq("id", user.id);
+      if (dbError) {
+        console.error("DB update error:", dbError);
       }
-    } else {
-      const errText = await avatarRes.text();
-      console.error("HeyGen avatar creation error:", errText);
     }
 
     return NextResponse.json({

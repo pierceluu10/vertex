@@ -13,6 +13,7 @@ import {
   FileText,
   Clock,
   Loader2,
+  Image,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Parent, Child, UploadedDocument, TutoringSession } from "@/types";
@@ -41,6 +42,10 @@ export default function ParentProfilePage() {
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [creatingAvatar, setCreatingAvatar] = useState(false);
+  const [creatingPhotoAvatar, setCreatingPhotoAvatar] = useState(false);
+  const [photoUploadSuccess, setPhotoUploadSuccess] = useState(false);
+  const photoUploadRef = useRef<HTMLInputElement>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const videoPlaybackRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -48,6 +53,18 @@ export default function ParentProfilePage() {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileUploadRef = useRef<HTMLInputElement>(null);
+  const consentUploadRef = useRef<HTMLInputElement>(null);
+
+  const [consentRecordingState, setConsentRecordingState] = useState<"idle" | "previewing" | "recording" | "recorded" | "uploading">("idle");
+  const [useDefaultAvatar, setUseDefaultAvatar] = useState(false);
+  const [consentBlob, setConsentBlob] = useState<Blob | null>(null);
+  const [consentRecordingTime, setConsentRecordingTime] = useState(0);
+  const consentPreviewRef = useRef<HTMLVideoElement>(null);
+  const consentPlaybackRef = useRef<HTMLVideoElement>(null);
+  const consentStreamRef = useRef<MediaStream | null>(null);
+  const consentRecorderRef = useRef<MediaRecorder | null>(null);
+  const consentChunksRef = useRef<Blob[]>([]);
+  const consentTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -144,12 +161,14 @@ export default function ParentProfilePage() {
   }, [recordingState, recordedBlob]);
 
   useEffect(() => {
-    if ((recordingState === "recorded" || recordingState === "uploading") && recordedBlob && videoPlaybackRef.current) {
-      const url = URL.createObjectURL(recordedBlob);
-      videoPlaybackRef.current.src = url;
-      return () => URL.revokeObjectURL(url);
+    if ((consentRecordingState === "previewing" || consentRecordingState === "recording") && consentStreamRef.current && consentPreviewRef.current) {
+      consentPreviewRef.current.srcObject = consentStreamRef.current;
+      consentPreviewRef.current.play().catch(() => {});
     }
-  }, [recordingState, recordedBlob]);
+    if (consentRecordingState === "recorded" && consentBlob && consentPlaybackRef.current) {
+      consentPlaybackRef.current.src = URL.createObjectURL(consentBlob);
+    }
+  }, [consentRecordingState, consentBlob]);
 
   function startRecording() {
     if (!streamRef.current) return;
@@ -229,29 +248,230 @@ export default function ParentProfilePage() {
 
   async function uploadRecording() {
     if (!recordedBlob) return;
+
+    const sizeMB = (recordedBlob.size / (1024 * 1024)).toFixed(1);
+    if (recordedBlob.size > 50 * 1024 * 1024) {
+      alert(`Video is too large (${sizeMB} MB). Maximum size is 50 MB.`);
+      return;
+    }
+
     setRecordingState("uploading");
 
-    const formData = new FormData();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert("Please sign in again.");
+      setRecordingState("recorded");
+      return;
+    }
+
     const name = recordedBlob instanceof File ? recordedBlob.name : "avatar-recording.webm";
-    formData.append("video", recordedBlob, name);
+    const file = recordedBlob instanceof File ? recordedBlob : new File([recordedBlob], name, { type: recordedBlob.type || "video/webm" });
 
     try {
-      const res = await fetch("/api/heygen/avatar", { method: "POST", body: formData });
-      const data = await res.json();
-      if (data.success) {
-        setRecordingState("done");
-        stopCamera();
-        await loadData();
-      } else {
-        alert(data.error || "Upload failed");
+      const formData = new FormData();
+      formData.append("video", file);
+
+      const res = await fetch("/api/heygen/avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        console.error("Avatar upload error:", { status: res.status, data, userId: user.id });
+        alert("Upload failed: " + (data.error || res.status));
         setRecordingState("recorded");
+        return;
       }
+
+      setRecordingState("done");
+      stopCamera();
+      await loadData();
     } catch (err) {
       console.error("Avatar upload error:", err);
-      alert("Upload failed. Please try again.");
+      alert("Upload failed. Check the browser console for details.");
       setRecordingState("recorded");
     }
   }
+
+  async function createHeyGenAvatar(consentFile: File): Promise<boolean> {
+    if (!parent?.avatar_url) return false;
+    setCreatingAvatar(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+
+      const formData = new FormData();
+      formData.append("video", consentFile);
+      formData.append("consentOnly", "true");
+      const uploadRes = await fetch("/api/heygen/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      if (!uploadRes.ok) {
+        const d = await uploadRes.json().catch(() => ({}));
+        throw new Error(d.error || "Consent video upload failed");
+      }
+      const { videoUrl: consentUrl } = await uploadRes.json();
+
+      const res = await fetch("/api/heygen/avatar/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trainingVideoUrl: parent.avatar_url,
+          consentVideoUrl: consentUrl,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create avatar");
+      await loadData();
+      return true;
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to create avatar");
+      return false;
+    } finally {
+      setCreatingAvatar(false);
+    }
+  }
+
+  function handleConsentSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("video/")) {
+      if (file) alert("Please select a video file.");
+      e.target.value = "";
+      return;
+    }
+    createHeyGenAvatar(file);
+    e.target.value = "";
+  }
+
+  async function startConsentCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720, facingMode: "user" },
+        audio: true,
+      });
+      consentStreamRef.current = stream;
+      setConsentRecordingState("previewing");
+    } catch (err) {
+      console.error("Consent camera error:", err);
+      alert("Could not access camera. Please allow camera permissions.");
+    }
+  }
+
+  function startConsentRecording() {
+    if (!consentStreamRef.current) return;
+    consentChunksRef.current = [];
+    const recorder = new MediaRecorder(consentStreamRef.current, {
+      mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm",
+    });
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) consentChunksRef.current.push(e.data);
+    };
+    recorder.onstop = () => {
+      const blob = new Blob(consentChunksRef.current, { type: "video/webm" });
+      setConsentBlob(blob);
+      setConsentRecordingState("recorded");
+    };
+    recorder.start(1000);
+    consentRecorderRef.current = recorder;
+    setConsentRecordingState("recording");
+    setConsentRecordingTime(0);
+    consentTimerRef.current = setInterval(() => {
+      setConsentRecordingTime((t) => t + 1);
+    }, 1000);
+  }
+
+  function stopConsentRecording() {
+    if (consentRecorderRef.current?.state === "recording") {
+      consentRecorderRef.current.stop();
+    }
+    if (consentTimerRef.current) {
+      clearInterval(consentTimerRef.current);
+      consentTimerRef.current = null;
+    }
+  }
+
+  function discardConsentRecording() {
+    setConsentBlob(null);
+    setConsentRecordingState("previewing");
+    setConsentRecordingTime(0);
+    if (consentPlaybackRef.current) consentPlaybackRef.current.src = "";
+  }
+
+  function stopConsentCamera() {
+    if (consentStreamRef.current) {
+      consentStreamRef.current.getTracks().forEach((t) => t.stop());
+      consentStreamRef.current = null;
+    }
+    if (consentTimerRef.current) {
+      clearInterval(consentTimerRef.current);
+      consentTimerRef.current = null;
+    }
+    consentRecorderRef.current = null;
+    setConsentBlob(null);
+    setConsentRecordingState("idle");
+    setConsentRecordingTime(0);
+  }
+
+  async function useConsentRecording() {
+    if (!consentBlob) return;
+    setConsentRecordingState("uploading");
+    const file = new File([consentBlob], "consent-recording.webm", { type: "video/webm" });
+    const ok = await createHeyGenAvatar(file);
+    if (ok) {
+      setConsentRecordingState("idle");
+      stopConsentCamera();
+    } else {
+      setConsentRecordingState("recorded");
+    }
+  }
+
+  async function clearSavedVideo() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from("parents")
+      .update({ avatar_url: null })
+      .eq("id", user.id);
+    if (error) alert("Could not clear. Try refreshing.");
+    else await loadData();
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/") || !["image/jpeg", "image/png"].includes(file.type)) {
+      alert("Please select a JPG or PNG photo.");
+      e.target.value = "";
+      return;
+    }
+    setCreatingPhotoAvatar(true);
+    setPhotoUploadSuccess(false);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await fetch("/api/heygen/photo-avatar", { method: "POST", body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to create photo avatar");
+      setPhotoUploadSuccess(true);
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to create photo avatar");
+    }
+    setCreatingPhotoAvatar(false);
+    e.target.value = "";
+  }
+
+  useEffect(() => {
+    if (useDefaultAvatar && (streamRef.current || consentStreamRef.current)) {
+      stopCamera();
+      stopConsentCamera();
+    }
+  }, [useDefaultAvatar]);
 
   useEffect(() => {
     return () => {
@@ -259,6 +479,10 @@ export default function ParentProfilePage() {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
       if (timerRef.current) clearInterval(timerRef.current);
+      if (consentStreamRef.current) {
+        consentStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      if (consentTimerRef.current) clearInterval(consentTimerRef.current);
     };
   }, []);
 
@@ -316,11 +540,11 @@ export default function ParentProfilePage() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "#f4efe5",
-      fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#1e1a12",
+      height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column",
+      background: "#f4efe5", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#1e1a12",
     }}>
       <header style={{
-        borderBottom: "1px solid rgba(55,45,25,0.10)",
+        flexShrink: 0, borderBottom: "1px solid rgba(55,45,25,0.10)",
         padding: "20px 48px", display: "flex", alignItems: "center", justifyContent: "space-between",
         background: "rgba(248,243,232,0.95)",
       }}>
@@ -357,7 +581,7 @@ export default function ParentProfilePage() {
         </button>
       </header>
 
-      <main style={{ maxWidth: 960, margin: "0 auto", padding: "40px 24px" }}>
+      <main style={{ flex: 1, overflowY: "auto", maxWidth: 960, margin: "0 auto", padding: "40px 24px" }}>
         {/* Avatar Recording Section */}
         <div style={{
           padding: "32px 28px", background: "#f8f3e8", border: "1px solid rgba(55,45,25,0.10)",
@@ -368,15 +592,58 @@ export default function ParentProfilePage() {
               width: 40, height: 40, borderRadius: 4, background: "rgba(158,107,117,0.08)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <Video size={18} style={{ color: "#c8416a" }} />
+              <Image size={18} style={{ color: "#c8416a" }} />
             </div>
             <div>
               <div style={{ fontSize: 16, fontWeight: 500 }}>Tutor Avatar</div>
               <p style={{ fontSize: 12, color: "#8a7f6e", marginTop: 2 }}>
-                Record a short video of yourself to create your AI tutor avatar
+                Upload a photo to create your AI tutor avatar
               </p>
             </div>
           </div>
+
+          {!parent?.heygen_avatar_id && !parent?.heygen_talking_photo_id && !useDefaultAvatar && (
+            <div style={{
+              padding: "12px 16px", marginBottom: 16, borderRadius: 4,
+              background: "rgba(90,158,118,0.08)", border: "1px solid rgba(90,158,118,0.2)",
+            }}>
+              <p style={{ fontSize: 12, color: "#1e1a12", lineHeight: 1.5 }}>
+                Upload a photo to create a tutor that looks like you, or use our default tutor.
+              </p>
+              <button
+                type="button"
+                onClick={() => setUseDefaultAvatar(true)}
+                style={{
+                  marginTop: 8, fontSize: 11, color: "#5a9e76", background: "none",
+                  border: "none", cursor: "pointer", textDecoration: "underline",
+                  padding: 0,
+                }}
+              >
+                Use default avatar →
+              </button>
+            </div>
+          )}
+
+          {(parent?.heygen_avatar_id || useDefaultAvatar) && recordingState === "idle" && !parent?.heygen_avatar_id && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "12px 16px",
+              background: "rgba(90,158,118,0.08)", borderRadius: 4, marginBottom: 16,
+              border: "1px solid rgba(90,158,118,0.15)",
+            }}>
+              <CheckCircle size={16} style={{ color: "#5a9e76" }} />
+              <span style={{ fontSize: 13, color: "#5a9e76" }}>Using default tutor avatar. Sessions are ready.</span>
+              <button
+                type="button"
+                onClick={() => setUseDefaultAvatar(false)}
+                style={{
+                  marginLeft: "auto", fontSize: 10, color: "#8a7f6e", background: "none",
+                  border: "none", cursor: "pointer", textDecoration: "underline",
+                }}
+              >
+                Try custom avatar
+              </button>
+            </div>
+          )}
 
           {parent?.heygen_avatar_id && recordingState === "idle" && (
             <div style={{
@@ -389,56 +656,178 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {recordingState === "done" && (
+          {(parent?.heygen_talking_photo_id || photoUploadSuccess) && recordingState === "idle" && !parent?.heygen_avatar_id && (
             <div style={{
               display: "flex", alignItems: "center", gap: 8, padding: "12px 16px",
               background: "rgba(92,124,106,0.1)", borderRadius: 4, marginBottom: 16,
               border: "1px solid rgba(92,124,106,0.18)",
             }}>
-              <CheckCircle size={16} style={{ color: "#5c7c6a" }} />
-              <span style={{ fontSize: 13, color: "#5c7c6a" }}>Video uploaded! Your avatar is being processed.</span>
+              <CheckCircle size={16} style={{ color: "#5a9e76" }} />
+              <span style={{ fontSize: 13, color: "#5a9e76" }}>Photo avatar created. It may take a few minutes to process. Sessions will use your likeness.</span>
             </div>
           )}
 
-          {recordingState === "idle" && (
+          {creatingPhotoAvatar && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", marginBottom: 16,
+              background: "rgba(200,65,106,0.06)", borderRadius: 4, border: "1px solid rgba(200,65,106,0.15)",
+            }}>
+              <Loader2 size={18} style={{ color: "#c8416a", animation: "spin 1s linear infinite", flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: "#8a7f6e" }}>Creating your photo avatar...</span>
+            </div>
+          )}
+
+          {(parent?.avatar_url || recordingState === "done") && !parent?.heygen_avatar_id && !useDefaultAvatar && (consentRecordingState === "previewing" || consentRecordingState === "recording") && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{
+                position: "relative", borderRadius: 6, overflow: "hidden",
+                background: "#000", marginBottom: 16, aspectRatio: "16/9",
+              }}>
+                <video
+                  ref={consentPreviewRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }}
+                />
+                {consentRecordingState === "recording" && (
+                  <div style={{
+                    position: "absolute", top: 16, left: 16, display: "flex",
+                    alignItems: "center", gap: 8, background: "rgba(0,0,0,0.6)",
+                    padding: "6px 12px", borderRadius: 4,
+                  }}>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", background: "#ef4444",
+                      animation: "pulse 1.5s ease-in-out infinite",
+                    }} />
+                    <span style={{ color: "#fff", fontSize: 13, fontFamily: "monospace" }}>
+                      {formatTime(consentRecordingTime)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p style={{ fontSize: 12, color: "#8a7f6e", marginBottom: 12 }}>
+                State clearly: &quot;I grant permission to use my likeness for the AI tutor.&quot;
+              </p>
+              <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
+                {consentRecordingState === "previewing" && (
+                  <>
+                    <button onClick={startConsentRecording} style={{
+                      display: "inline-flex", alignItems: "center", gap: 8,
+                      padding: "12px 24px", background: "#c8416a", color: "#fff",
+                      border: "none", borderRadius: 3, fontSize: 11, letterSpacing: "0.15em",
+                      textTransform: "uppercase" as const, cursor: "pointer",
+                    }}>
+                      <Circle size={14} /> Start Recording
+                    </button>
+                    <button onClick={stopConsentCamera} style={{
+                      display: "inline-flex", alignItems: "center", gap: 8,
+                      padding: "12px 24px", background: "transparent", color: "#8a7f6e",
+                      border: "1px solid rgba(55,45,25,0.15)", borderRadius: 3,
+                      fontSize: 11, letterSpacing: "0.15em",
+                      textTransform: "uppercase" as const, cursor: "pointer",
+                    }}>
+                      Cancel
+                    </button>
+                  </>
+                )}
+                {consentRecordingState === "recording" && (
+                  <button onClick={stopConsentRecording} style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "12px 24px", background: "#1e1a12", color: "#fff",
+                    border: "none", borderRadius: 3, fontSize: 11, letterSpacing: "0.15em",
+                    textTransform: "uppercase" as const, cursor: "pointer",
+                  }}>
+                    <Square size={14} /> Stop Recording
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {(parent?.avatar_url || recordingState === "done") && !parent?.heygen_avatar_id && !useDefaultAvatar && consentRecordingState === "recorded" && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{
+                borderRadius: 6, overflow: "hidden", background: "#000",
+                marginBottom: 16, aspectRatio: "16/9",
+              }}>
+                <video
+                  ref={consentPlaybackRef}
+                  controls
+                  playsInline
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
+                <button onClick={useConsentRecording} style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "12px 24px", background: "#c8416a", color: "#fff",
+                  border: "none", borderRadius: 3, fontSize: 11, letterSpacing: "0.15em",
+                  textTransform: "uppercase" as const, cursor: "pointer",
+                }}>
+                  <Upload size={14} /> Use This Video
+                </button>
+                <button onClick={discardConsentRecording} style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "12px 24px", background: "transparent", color: "#8a7f6e",
+                  border: "1px solid rgba(55,45,25,0.15)", borderRadius: 3,
+                  fontSize: 11, letterSpacing: "0.15em",
+                  textTransform: "uppercase" as const, cursor: "pointer",
+                }}>
+                  Re-record
+                </button>
+              </div>
+            </div>
+          )}
+
+          {(parent?.avatar_url || recordingState === "done") && !parent?.heygen_avatar_id && !useDefaultAvatar && consentRecordingState === "uploading" && (
+            <div style={{ textAlign: "center", padding: "24px 0", marginBottom: 16 }}>
+              <Loader2 size={28} style={{ color: "#c8416a", animation: "spin 1s linear infinite", margin: "0 auto 12px", display: "block" }} />
+              <p style={{ fontSize: 13, color: "#8a7f6e" }}>Creating your avatar...</p>
+            </div>
+          )}
+
+          {recordingState === "done" && parent?.heygen_avatar_id && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "12px 16px",
+              background: "rgba(90,158,118,0.08)", borderRadius: 4, marginBottom: 16,
+              border: "1px solid rgba(90,158,118,0.15)",
+            }}>
+              <CheckCircle size={16} style={{ color: "#5a9e76" }} />
+              <span style={{ fontSize: 13, color: "#5a9e76" }}>Avatar created. It may take a few minutes to process.</span>
+            </div>
+          )}
+
+          {recordingState === "idle" && !useDefaultAvatar && !parent?.heygen_talking_photo_id && (
             <div style={{ textAlign: "center", padding: "32px 0" }}>
               <p style={{ fontSize: 13, color: "#8a7f6e", marginBottom: 8, maxWidth: 420, margin: "0 auto 8px" }}>
-                Look directly at the camera and speak naturally for 30 seconds to 2 minutes.
-                This will be used to generate your personalized AI tutor avatar.
+                Create a tutor that looks like you: upload a photo (JPG or PNG).
               </p>
               <p style={{ fontSize: 11, color: "#afa598", marginBottom: 20 }}>
-                Supported formats: MP4, WebM, or MOV
+                JPG or PNG · Max 10 MB
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
-                <button onClick={startCamera} style={{
+                <label style={{
                   display: "inline-flex", alignItems: "center", gap: 8,
                   padding: "14px 24px", background: "#c8416a", color: "#fff",
                   border: "none", borderRadius: 3, fontSize: 12, letterSpacing: "0.15em",
-                  textTransform: "uppercase" as const, cursor: "pointer",
+                  textTransform: "uppercase" as const, cursor: creatingPhotoAvatar ? "not-allowed" : "pointer",
                 }}>
-                  <Video size={16} /> Record Now
-                </button>
-                <label style={{
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  padding: "14px 24px", background: "transparent", color: "#c8416a",
-                  border: "1.5px solid rgba(158,107,117,0.35)", borderRadius: 3,
-                  fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase" as const,
-                  cursor: "pointer",
-                }}>
-                  <Upload size={16} /> Upload Video
+                  <Image size={16} /> {creatingPhotoAvatar ? "Creating..." : "Upload Photo"}
                   <input
-                    ref={fileUploadRef}
+                    ref={photoUploadRef}
                     type="file"
-                    accept="video/mp4,video/webm,video/quicktime"
+                    accept="image/jpeg,image/png"
                     style={{ display: "none" }}
-                    onChange={handleFileSelect}
+                    onChange={handlePhotoUpload}
+                    disabled={creatingPhotoAvatar}
                   />
                 </label>
               </div>
             </div>
           )}
 
-          {(recordingState === "previewing" || recordingState === "recording") && (
+          {(recordingState === "previewing" || recordingState === "recording") && !useDefaultAvatar && (
             <div>
               <div style={{
                 position: "relative", borderRadius: 6, overflow: "hidden",
@@ -503,7 +892,7 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {recordingState === "recorded" && (
+          {recordingState === "recorded" && !useDefaultAvatar && (
             <div>
               <div style={{
                 borderRadius: 6, overflow: "hidden", background: "#000",
@@ -538,25 +927,10 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {recordingState === "uploading" && (
-            <div>
-              <div style={{
-                position: "relative", borderRadius: 6, overflow: "hidden",
-                background: "#000", marginBottom: 16, aspectRatio: "16/9",
-              }}>
-                <video
-                  ref={videoPlaybackRef}
-                  playsInline
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-                <div style={{
-                  position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
-                }}>
-                  <Loader2 size={28} style={{ color: "#fff", animation: "spin 1s linear infinite" }} />
-                  <p style={{ fontSize: 13, color: "#fff" }}>Uploading and processing your video...</p>
-                </div>
-              </div>
+          {recordingState === "uploading" && !useDefaultAvatar && (
+            <div style={{ textAlign: "center", padding: "32px 0" }}>
+              <Loader2 size={28} style={{ color: "#c8416a", animation: "spin 1s linear infinite", margin: "0 auto 12px", display: "block" }} />
+              <p style={{ fontSize: 13, color: "#8a7f6e" }}>Uploading and processing your video...</p>
             </div>
           )}
 

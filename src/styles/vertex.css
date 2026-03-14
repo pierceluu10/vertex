@@ -772,7 +772,8 @@
   background: var(--vtx-bg, #f4efe5);
   color: var(--vtx-text, #1e1a12);
   font-family: 'Calibri', 'Trebuchet MS', sans-serif;
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;

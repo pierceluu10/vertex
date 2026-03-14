@@ -15,6 +15,7 @@ create table if not exists parents (
   notification_daily_time text default '18:00',
   avatar_url text,
   heygen_avatar_id text,
+  heygen_talking_photo_id text,
   created_at timestamptz default now()
 );
 
