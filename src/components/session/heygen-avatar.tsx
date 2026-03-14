@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import type StreamingAvatarAPI from "@heygen/streaming-avatar";
 
 interface HeyGenAvatarProps {
   onAvatarReady?: () => void;
@@ -12,7 +11,8 @@ interface HeyGenAvatarProps {
   className?: string;
 }
 
-type StreamingAvatarInstance = InstanceType<typeof StreamingAvatarAPI>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type StreamingAvatarInstance = any;
 
 export function HeyGenAvatar({
   onAvatarReady,
@@ -41,8 +41,13 @@ export function HeyGenAvatar({
         throw new Error(tokenData.error || "Failed to get HeyGen token");
       }
 
-      const { default: StreamingAvatar, StreamingEvents, AvatarQuality, VoiceEmotion } =
-        await import("@heygen/streaming-avatar");
+      const mod = await import("@heygen/streaming-avatar");
+      const StreamingAvatar = mod.default;
+      const { StreamingEvents, AvatarQuality, VoiceEmotion } = mod;
+
+      if (typeof StreamingAvatar !== "function") {
+        throw new Error("HeyGen StreamingAvatar SDK could not be loaded. Run: npm install @heygen/streaming-avatar");
+      }
 
       const avatar = new StreamingAvatar({ token: tokenData.token });
       avatarRef.current = avatar;

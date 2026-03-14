@@ -139,6 +139,14 @@ export default function ParentProfilePage() {
     }
   }, [recordingState]);
 
+  useEffect(() => {
+    if ((recordingState === "recorded" || recordingState === "uploading") && recordedBlob && videoPlaybackRef.current) {
+      const url = URL.createObjectURL(recordedBlob);
+      videoPlaybackRef.current.src = url;
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [recordingState, recordedBlob]);
+
   function startRecording() {
     if (!streamRef.current) return;
 
@@ -497,9 +505,24 @@ export default function ParentProfilePage() {
           )}
 
           {recordingState === "uploading" && (
-            <div style={{ textAlign: "center", padding: "32px 0" }}>
-              <Loader2 size={28} style={{ color: "#c8416a", animation: "spin 1s linear infinite", margin: "0 auto 12px", display: "block" }} />
-              <p style={{ fontSize: 13, color: "#8a7f6e" }}>Uploading and processing your video...</p>
+            <div>
+              <div style={{
+                position: "relative", borderRadius: 6, overflow: "hidden",
+                background: "#000", marginBottom: 16, aspectRatio: "16/9",
+              }}>
+                <video
+                  ref={videoPlaybackRef}
+                  playsInline
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+                <div style={{
+                  position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
+                }}>
+                  <Loader2 size={28} style={{ color: "#fff", animation: "spin 1s linear infinite" }} />
+                  <p style={{ fontSize: 13, color: "#fff" }}>Uploading and processing your video...</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -646,7 +669,7 @@ export default function ParentProfilePage() {
             <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" as const, color: "#8a7f6e", marginBottom: 4 }}>
               Account
             </div>
-            <div style={{ fontSize: 14 }}>{parent?.full_name || "Parent"}</div>
+            <div style={{ fontSize: 14 }}>{parent?.name || "Parent"}</div>
             <div style={{ fontSize: 12, color: "#8a7f6e" }}>{parent?.email}</div>
           </div>
           <div style={{ fontSize: 12, color: "#8a7f6e" }}>

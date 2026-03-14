@@ -106,15 +106,15 @@ export function MathQuiz() {
               <div className="vtx-question-box">
                 <div className="vtx-q-label">Solve for the missing number</div>
                 <div className="vtx-question-text">
-                  <span>{question.num1}</span>
-                  <span className="op">{question.op}</span>
-                  <span>{question.num2}</span>
+                  <span>{question?.num1 ?? "?"}</span>
+                  <span className="op">{question?.op ?? "+"}</span>
+                  <span>{question?.num2 ?? "?"}</span>
                   <span className="op">=</span>
                   <span className="blank">{displayAnswer}</span>
                 </div>
               </div>
               <div className="vtx-answer-row">
-                {question.choices.map((c, i) => (
+                {(question?.choices ?? []).map((c, i) => (
                   <button
                     key={i}
                     className={`vtx-ans-btn ${results[i] || ""}`}

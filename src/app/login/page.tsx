@@ -19,10 +19,7 @@ export default function LoginPage() {
     setError(null);
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) {
       setError(authError.message);
@@ -30,7 +27,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push("/dashboard/parent");
     setLoading(false);
   }
 
@@ -39,32 +36,18 @@ export default function LoginPage() {
       <div className="vtx-auth-card">
         <Link href="/" className="vtx-auth-logo">Vertex</Link>
         <h1>Welcome back</h1>
-        <p className="vtx-auth-sub">Sign in to your account</p>
+        <p className="vtx-auth-sub">Sign in to your parent account</p>
 
         <div className="vtx-auth-form">
           <form onSubmit={handleSubmit}>
             <div className="vtx-field">
               <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+              <input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
 
             <div className="vtx-field">
               <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                placeholder="Your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <input id="password" type="password" placeholder="Your password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
 
             {error && <div className="vtx-auth-error">{error}</div>}
@@ -76,9 +59,27 @@ export default function LoginPage() {
         </div>
 
         <p className="vtx-auth-link">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup">Sign up</Link>
+          Don&apos;t have an account? <Link href="/signup">Sign up</Link>
         </p>
+
+        <div style={{
+          marginTop: 32, paddingTop: 24,
+          borderTop: "1px solid rgba(55,45,25,0.10)", textAlign: "center",
+        }}>
+          <Link
+            href="/student"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "14px 28px", border: "1.5px solid rgba(55,45,25,0.15)",
+              borderRadius: 3, background: "transparent", color: "#1a1610",
+              fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
+              textDecoration: "none", transition: "all 0.2s",
+              fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+            }}
+          >
+            🎒 I&apos;m a Student
+          </Link>
+        </div>
       </div>
     </div>
   );

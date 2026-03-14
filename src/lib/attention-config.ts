@@ -23,6 +23,8 @@ export const ATTENTION_CONFIG = {
   WEBCAM_CHECK_INTERVAL_MS: 1_500,
   INACTIVITY_CHECK_INTERVAL_MS: 10_000,
   INTERVENTION_CHECK_INTERVAL_MS: 15_000,
+  /** Min time between sending intervention messages (avoid spamming the same line). */
+  INTERVENTION_COOLDOWN_MS: 120_000,
 
   FACE_ABSENT_GRACE_MS: 3_000,
   LOOKING_AWAY_GRACE_MS: 4_000,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const apiKey = process.env.HEYGEN_API_KEY;
@@ -24,7 +24,8 @@ export async function POST(request: Request) {
     const videoBuffer = Buffer.from(await video.arrayBuffer());
     const fileName = `avatars/${user.id}/${Date.now()}-${video.name}`;
 
-    const { error: uploadError } = await supabase.storage
+    const serviceSupabase = await createServiceClient();
+    const { error: uploadError } = await serviceSupabase.storage
       .from("documents")
       .upload(fileName, videoBuffer, {
         contentType: video.type,
@@ -32,12 +33,19 @@ export async function POST(request: Request) {
       });
 
     if (uploadError) {
-      return NextResponse.json({ error: "Upload failed: " + uploadError.message }, { status: 500 });
+      const message =
+        uploadError.message?.toLowerCase().includes("bucket") ||
+        uploadError.message?.toLowerCase().includes("not found")
+          ? "Upload failed: Storage bucket not found. In Supabase Dashboard go to Storage → New bucket, create a bucket named 'documents' (public), then try again."
+          : uploadError.message?.toLowerCase().includes("row-level security") || uploadError.message?.toLowerCase().includes("policy")
+          ? "Upload failed: Storage permissions error. The app now uses elevated permissions for this upload; if you still see this, check that the 'documents' bucket exists and is public."
+          : "Upload failed: " + uploadError.message;
+      return NextResponse.json({ error: message }, { status: 500 });
     }
 
-    const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(fileName);
+    const { data: { publicUrl } } = serviceSupabase.storage.from("documents").getPublicUrl(fileName);
 
-    const { error: dbError } = await supabase
+    const { error: dbError } = await serviceSupabase
       .from("parents")
       .update({
         avatar_url: publicUrl,
@@ -67,7 +75,7 @@ export async function POST(request: Request) {
       heygenAvatarId = avatarData.data?.photo_avatar_id || avatarData.data?.avatar_id || null;
 
       if (heygenAvatarId) {
-        await supabase
+        await serviceSupabase
           .from("parents")
           .update({ heygen_avatar_id: heygenAvatarId })
           .eq("id", user.id);
