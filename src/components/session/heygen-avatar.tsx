@@ -17,6 +17,9 @@ interface HeyGenAvatarProps {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type StreamingAvatarInstance = any;
 
+const MAX_RETRIES = 3;
+const BASE_RETRY_DELAY = 5000; // 5 seconds base for exponential backoff
+
 export function HeyGenAvatar({
   avatarName = "default",
   onAvatarReady,
@@ -34,15 +37,20 @@ export function HeyGenAvatar({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const initializingRef = useRef(false);
   const startedRef = useRef(false);
+  const retriesRef = useRef(0);
+  const mountedRef = useRef(true);
 
   const initAvatar = useCallback(async () => {
-    if (initializingRef.current || avatarRef.current) return;
+    if (initializingRef.current || avatarRef.current || !mountedRef.current) return;
     initializingRef.current = true;
     setStatus("loading");
+    setErrorMsg(null);
 
     try {
       const tokenRes = await fetch("/api/heygen/token", { method: "POST" });
       const tokenData = await tokenRes.json();
+
+      if (!mountedRef.current) return;
 
       if (!tokenData.token) {
         throw new Error(tokenData.error || "Failed to get HeyGen token");
@@ -56,17 +64,22 @@ export function HeyGenAvatar({
         throw new Error("HeyGen StreamingAvatar SDK could not be loaded. Run: npm install @heygen/streaming-avatar");
       }
 
+      if (!mountedRef.current) return;
+
       const avatar = new StreamingAvatar({ token: tokenData.token });
       avatarRef.current = avatar;
 
       avatar.on(StreamingEvents.STREAM_READY, (event: { detail: MediaStream }) => {
-        if (videoRef.current) {
+        if (videoRef.current && mountedRef.current) {
           videoRef.current.srcObject = event.detail;
           videoRef.current.play().catch(() => {});
         }
         startedRef.current = true;
-        setStatus("ready");
-        onAvatarReady?.();
+        retriesRef.current = 0; // Reset retries on success
+        if (mountedRef.current) {
+          setStatus("ready");
+          onAvatarReady?.();
+        }
       });
 
       avatar.on(StreamingEvents.AVATAR_START_TALKING, () => {
@@ -96,6 +109,9 @@ export function HeyGenAvatar({
         }
       });
 
+      // Only use avatarName if it's a known streaming avatar ID.
+      // Photo avatar (talking photo) IDs are NOT compatible with the streaming API.
+      // Pass "default" to use HeyGen's default streaming avatar.
       await avatar.createStartAvatar({
         avatarName,
         quality: AvatarQuality.Medium,
@@ -116,10 +132,34 @@ export function HeyGenAvatar({
       }
     } catch (err) {
       console.error("HeyGen init error:", err);
+      if (!mountedRef.current) return;
+
       const msg = err instanceof Error ? err.message : "Failed to start avatar";
+      const is429 = msg.includes("429");
+
+      if (is429 && retriesRef.current < MAX_RETRIES) {
+        // Exponential backoff: 5s, 10s, 20s
+        const delay = BASE_RETRY_DELAY * Math.pow(2, retriesRef.current);
+        retriesRef.current++;
+        console.log(`HeyGen rate limited. Retry ${retriesRef.current}/${MAX_RETRIES} in ${delay / 1000}s`);
+        setErrorMsg(`Rate limited. Retrying in ${Math.round(delay / 1000)}s... (${retriesRef.current}/${MAX_RETRIES})`);
+        setStatus("loading");
+        initializingRef.current = false;
+        // Clean up partial state before retry
+        if (avatarRef.current && !startedRef.current) {
+          avatarRef.current = null;
+        }
+        setTimeout(() => {
+          if (mountedRef.current) initAvatar();
+        }, delay);
+        return;
+      }
+
       setErrorMsg(
-        msg.includes("429")
-          ? "Rate limit reached. Wait a minute, then click Retry."
+        is429
+          ? `Rate limit reached after ${MAX_RETRIES} retries. Wait a minute, then click Retry.`
+          : msg.includes("401")
+          ? "Authentication failed. Check your HeyGen API key."
           : msg
       );
       setStatus("error");
@@ -127,10 +167,19 @@ export function HeyGenAvatar({
     }
   }, [avatarName, onAvatarReady, onAvatarSpeaking, onUserMessage, onUserSpeaking, onAvatarMessage, onSpeakComplete]);
 
+  // Lazy init: only start when component mounts, clean up on unmount
   useEffect(() => {
-    initAvatar();
+    mountedRef.current = true;
+
+    // Small delay to avoid double-mount in React dev strict mode
+    const timer = setTimeout(() => {
+      if (mountedRef.current) initAvatar();
+    }, 500);
 
     return () => {
+      mountedRef.current = false;
+      clearTimeout(timer);
+      // Only call stopAvatar if the session actually reached STREAM_READY
       if (avatarRef.current && startedRef.current) {
         avatarRef.current.stopAvatar().catch(() => {});
       }
@@ -158,6 +207,18 @@ export function HeyGenAvatar({
     doSpeak();
   }, [speakQueue, status, onSpeakComplete]);
 
+  const handleRetry = useCallback(() => {
+    initializingRef.current = false;
+    retriesRef.current = 0;
+    setStatus("idle");
+    setErrorMsg(null);
+    // Clean up any partial avatar state
+    if (avatarRef.current && !startedRef.current) {
+      avatarRef.current = null;
+    }
+    setTimeout(() => initAvatar(), 3000);
+  }, [initAvatar]);
+
   if (status === "error") {
     return (
       <div className={className} style={{
@@ -177,13 +238,7 @@ export function HeyGenAvatar({
           {errorMsg || "Avatar unavailable"}
         </p>
         <button
-          onClick={() => {
-            initializingRef.current = false;
-            setStatus("idle");
-            setErrorMsg(null);
-            // Delay retry to avoid rate limit (429)
-            setTimeout(() => initAvatar(), 3000);
-          }}
+          onClick={handleRetry}
           style={{
             marginTop: 8, fontSize: 10, color: "#c8416a", background: "none",
             border: "1px solid rgba(158,107,117,0.25)", borderRadius: 3, padding: "6px 12px",
@@ -198,7 +253,7 @@ export function HeyGenAvatar({
 
   return (
     <div className={className} style={{ position: "relative", overflow: "hidden", borderRadius: 8 }}>
-      {status === "loading" && (
+      {(status === "loading") && (
         <div style={{
           position: "absolute", inset: 0, display: "flex", alignItems: "center",
           justifyContent: "center", background: "rgba(244,239,229,0.9)", zIndex: 2,
@@ -209,7 +264,9 @@ export function HeyGenAvatar({
               borderTopColor: "#c8416a", borderRadius: "50%",
               animation: "spin 0.8s linear infinite", margin: "0 auto 8px",
             }} />
-            <p style={{ fontSize: 11, color: "#8a7f6e" }}>Loading tutor...</p>
+            <p style={{ fontSize: 11, color: "#8a7f6e" }}>
+              {errorMsg || "Loading tutor..."}
+            </p>
           </div>
         </div>
       )}

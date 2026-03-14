@@ -110,7 +110,10 @@ export default function SessionPage() {
           .single();
         if (parent) {
           setParentName(parent.full_name);
-          setParentAvatarId(parent.heygen_avatar_id ?? parent.heygen_talking_photo_id ?? undefined);
+          // Only use heygen_avatar_id (streaming avatar) for live sessions.
+          // heygen_talking_photo_id is NOT compatible with the streaming API —
+          // it only works for pre-rendered video generation (Studio API).
+          setParentAvatarId(parent.heygen_avatar_id ?? undefined);
         }
       }
 
