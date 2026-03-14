@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
+import { completeOnboarding } from "./actions";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 
 type Step = "child" | "preferences" | "complete";
@@ -25,44 +25,18 @@ export default function OnboardingPage() {
   async function handleSubmit() {
     setLoading(true);
     setError(null);
-    const supabase = createClient();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const result = await completeOnboarding({
+      childName,
+      childAge,
+      childGrade,
+      preferredPace,
+    });
 
-    if (!user) {
-      setError("Not authenticated");
+    if (!result.success) {
+      setError(result.error);
       setLoading(false);
       return;
-    }
-
-    const { data: child, error: childError } = await supabase
-      .from("children")
-      .insert({
-        parent_id: user.id,
-        name: childName,
-        age: parseInt(childAge),
-        grade: childGrade || null,
-      })
-      .select()
-      .single();
-
-    if (childError) {
-      setError(childError.message);
-      setLoading(false);
-      return;
-    }
-
-    const { error: profileError } = await supabase
-      .from("learning_profiles")
-      .insert({
-        child_id: child.id,
-        preferred_pace: preferredPace,
-      });
-
-    if (profileError) {
-      console.error("Profile error:", profileError);
     }
 
     setStep("complete");
