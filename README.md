@@ -1,25 +1,22 @@
-# Vertex
+# Vertex — AI Math Tutoring
 
-AI-powered tutoring platform for children under 12, where a parent's voice and presence guides the learning experience.
+A full-stack AI math tutoring web app built with Next.js. Parents set up accounts and configure learning preferences; kids enter a 6-digit access code to start learning with an AI tutor powered by OpenAI GPT-4o and a HeyGen streaming avatar.
 
-## Stack
+## Tech Stack
 
-- **Next.js 16** (App Router) + TypeScript
-- **TailwindCSS** + **shadcn/ui**
-- **Framer Motion** for animations
-- **Supabase** for auth, database, and file storage
-- **OpenAI API** (GPT-4o) for tutoring, quizzes, and reports
-- **JSXGraph** for interactive math visuals
-- **Resend** for parent email reports
-- **HeyGen** for parent avatar (architecture ready)
+- **Framework:** Next.js 16 App Router, TypeScript, Tailwind CSS
+- **UI:** Shadcn UI components + custom Vertex design system
+- **Auth & DB:** Supabase (Auth + PostgreSQL + Storage)
+- **AI:** OpenAI GPT-4o for tutoring and quiz generation
+- **Avatar:** HeyGen Streaming Avatar SDK
+- **Email:** Resend for parent notifications
+- **Attention:** Real-time focus tracking (tab visibility, mouse activity, webcam face detection)
 
 ## Getting Started
 
-### 1. Clone and install
+### 1. Install dependencies
 
 ```bash
-git clone https://github.com/your-org/vertex.git
-cd vertex
 npm install
 ```
 
@@ -31,20 +28,12 @@ Copy `.env.example` to `.env.local` and fill in your keys:
 cp .env.example .env.local
 ```
 
-Required:
-- `NEXT_PUBLIC_SUPABASE_URL` — Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
-- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-side only)
-- `OPENAI_API_KEY` — OpenAI API key
-- `HEYGEN_API_KEY` — HeyGen API key
-- `RESEND_API_KEY` — Resend API key for email reports
-
 ### 3. Set up Supabase
 
-1. Create a new Supabase project
-2. Run the SQL in `supabase/schema.sql` in the SQL editor
-3. Create a storage bucket called `documents` (public)
-4. **Optional (dev):** To avoid "email rate limit exceeded" when testing signup, go to **Authentication → Providers → Email** and turn off **Confirm email**. Re-enable it for production.
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Run `supabase/schema.sql` in the SQL editor
+3. Go to Storage → create a bucket named `documents` (set to public)
+4. In Auth → Settings, disable "Confirm email" for development
 
 ### 4. Run the dev server
 
@@ -56,37 +45,69 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Architecture
 
-```
-src/
-├── app/              # Next.js App Router pages & API routes
-│   ├── page.tsx      # Landing page
-│   ├── login/        # Auth
-│   ├── signup/
-│   ├── onboarding/   # Parent onboarding flow
-│   ├── dashboard/    # Parent dashboard
-│   ├── session/[id]/ # Child tutoring session
-│   └── api/          # Route handlers (chat, quiz, upload, report, focus, heygen)
-├── components/       # React components
-│   ├── ui/           # shadcn/ui primitives
-│   ├── landing/      # Landing page components
-│   └── session/      # Tutoring session components
-├── hooks/            # Custom React hooks (attention engine)
-├── lib/              # Utilities and service clients
-│   ├── supabase/     # Supabase client/server/middleware
-│   ├── openai.ts     # OpenAI client + prompt builders
-│   ├── pdf.ts        # PDF parsing + chunking
-│   ├── attention.ts  # Focus scoring + intervention policy
-│   └── adaptive.ts   # Adaptive difficulty engine
-└── types/            # Shared TypeScript types
-```
+### Routes
 
-## Core Features
+| Route | Who | Description |
+|---|---|---|
+| `/` | Public | Landing page |
+| `/signup` | Public | Parent registration (name, email, password, child info, math topics, pace) |
+| `/login` | Public | Parent login |
+| `/student` | Public | Kid code entry (6-digit access code) |
+| `/onboarding` | Parent | Post-signup child profile setup |
+| `/dashboard/parent` | Parent | Data-heavy dashboard: Overview, Progress, Homework, Reports, Settings |
+| `/dashboard/kid` | Kid | Fun dashboard: Home, Homework, Quiz, Ask Tutor (bottom nav) |
+| `/kid/onboarding` | Kid | Avatar picker (choose tutor character) |
+| `/session/[id]` | Parent | Tutoring session (parent flow) |
+| `/session/kid` | Kid | Tutoring session (kid flow with avatar) |
+| `/session/kid/recap` | Kid | Post-session recap (XP earned, focus score) |
+| `/parent` | Parent | Parent profile (avatar recording, homework upload, settings) |
+| `/mission` | Public | About page |
 
-1. **Parent Avatar Tutor** — Parent presence in the corner of the session
-2. **PDF-Grounded Tutoring** — Upload homework, get answers based on the actual worksheet
-3. **Attention Engine** — Real-time focus detection via tab visibility, activity, and inactivity
-4. **Policy Engine** — Graduated interventions (gentle reminder → quiz → simplify)
-5. **Adaptive Difficulty** — Auto-adjusts based on correct/incorrect streaks
-6. **Quiz Mode** — AI-generated age-appropriate quiz questions
-7. **Interactive Math Visuals** — JSXGraph number lines, shapes, fractions
-8. **Parent Reports** — Session summaries sent via email
+### Database Tables
+
+- **`parents`** — Parent accounts with learning config (grade, math topics, pace)
+- **`access_codes`** — 6-digit codes parents generate for kids
+- **`kids_sessions`** — Kid "accounts" (created via code entry), streak/XP tracking
+- **`children`** — Per-child profiles linked to parents
+- **`learning_profiles`** — Learning pace, difficulty, topics per child
+- **`uploaded_documents`** — Homework PDFs with extracted text
+- **`homework`** — Homework records
+- **`tutoring_sessions`** — Chat-based tutoring sessions
+- **`messages`** — Chat messages (user/assistant/system)
+- **`sessions`** — Focus tracking sessions
+- **`quizzes`** — Structured quiz records (5 questions, answers, scores)
+- **`quiz_attempts`** — Individual question attempts
+- **`focus_events`** — Distraction events (tab blur, inactive, face absent)
+- **`parent_reports`** — AI-generated session summaries sent to parents
+
+### Key Features
+
+**Parent Flow:**
+- Sign up with child info, math topics, and learning pace
+- Auto-generated 6-digit access codes (one per child)
+- Dashboard with session history, focus charts, homework management
+- Reports sent via email (Resend) after each session
+- Avatar recording for personalized AI tutor
+
+**Kid Flow:**
+- Enter 6-digit code → pick avatar → start learning
+- Fun dashboard with streak (Duolingo-style) and XP system
+- Upload homework PDFs → AI parses and creates study material
+- Chat with AI tutor (GPT-4o) with LaTeX math, JSXGraph diagrams
+- Take quizzes (5 questions, multiple choice + open) based on homework
+- Session recap with XP earned and focus score
+
+**Attention Engine:**
+- Tab visibility tracking
+- Mouse inactivity detection
+- Webcam face detection (MediaPipe)
+- Focus score 0-100 updated every 30s
+- Policy engine: gentle reminders → quiz mode → simplified content → parent email alert
+- Real-time email to parent when focus drops below 50 for 2+ consecutive checks
+
+**AI Features:**
+- Dynamic system prompts based on parent config (grade, topics, pace)
+- LaTeX math rendering (KaTeX)
+- Interactive diagrams (JSXGraph: graphs, number lines, shapes, fractions, geometry, bar/pie charts)
+- Adaptive difficulty (harder after 3 correct, easier after 2 incorrect)
+- Quiz generation from homework content

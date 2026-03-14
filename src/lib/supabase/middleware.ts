@@ -29,24 +29,47 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAuthPage =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup");
+  const path = request.nextUrl.pathname;
 
-  const isProtectedPage =
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/onboarding") ||
-    request.nextUrl.pathname.startsWith("/session");
+  const isAuthPage = path.startsWith("/login") || path.startsWith("/signup");
+  const isKidPage = path.startsWith("/dashboard/kid") || path.startsWith("/kid");
+  const isStudentEntry = path === "/student";
 
-  if (!user && isProtectedPage) {
+  const isParentProtected =
+    path.startsWith("/dashboard/parent") ||
+    path.startsWith("/onboarding") ||
+    path.startsWith("/parent");
+
+  const isSessionPage = path.startsWith("/session");
+
+  // Kid pages don't require Supabase auth — they use access codes stored in cookies/localStorage
+  if (isKidPage || isStudentEntry) {
+    return supabaseResponse;
+  }
+
+  // Session pages are accessible by both parents and kids
+  if (isSessionPage) {
+    return supabaseResponse;
+  }
+
+  // Redirect unauthenticated users away from parent-protected pages
+  if (!user && isParentProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
+  // Redirect authenticated users away from login/signup
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/dashboard/parent";
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect /dashboard to /dashboard/parent for logged-in parents
+  if (user && path === "/dashboard") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard/parent";
     return NextResponse.redirect(url);
   }
 

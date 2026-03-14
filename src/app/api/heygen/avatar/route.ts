@@ -58,7 +58,6 @@ export async function POST(request: Request) {
       });
 
     if (uploadError) {
-      console.error("Storage upload error:", uploadError);
       return NextResponse.json({ error: "Upload failed: " + uploadError.message }, { status: 500 });
     }
 
@@ -69,7 +68,6 @@ export async function POST(request: Request) {
         .from("parents")
         .update({ avatar_url: publicUrl })
         .eq("id", user.id);
-
       if (dbError) {
         console.error("DB update error:", dbError);
       }

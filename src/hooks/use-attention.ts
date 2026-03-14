@@ -25,6 +25,7 @@ export function useAttention(
     createInitialAttentionState()
   );
   const stateRef = useRef(attention);
+  const lastInterventionAtRef = useRef<number>(0);
 
   useEffect(() => {
     stateRef.current = attention;
@@ -115,9 +116,36 @@ export function useAttention(
       });
     }, ATTENTION_CONFIG.INACTIVITY_CHECK_INTERVAL_MS);
 
+    let consecutiveLowChecks = 0;
+
     const interventionInterval = setInterval(() => {
+      const now = Date.now();
+
+      // Track consecutive low focus for email alerts
+      if (stateRef.current.score < 50) {
+        consecutiveLowChecks++;
+        if (consecutiveLowChecks >= 2) {
+          fetch("/api/focus/alert", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              focusScore: stateRef.current.score,
+              consecutiveLowChecks,
+            }),
+          }).catch(() => {});
+          consecutiveLowChecks = 0; // Reset after sending
+        }
+      } else {
+        consecutiveLowChecks = 0;
+      }
+
+      if (now - lastInterventionAtRef.current < ATTENTION_CONFIG.INTERVENTION_COOLDOWN_MS) {
+        return;
+      }
       const intervention = getIntervention(stateRef.current);
       if (intervention) {
+        lastInterventionAtRef.current = now;
         onIntervention(intervention);
       }
     }, ATTENTION_CONFIG.INTERVENTION_CHECK_INTERVAL_MS);

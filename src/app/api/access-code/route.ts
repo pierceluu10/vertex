@@ -1,0 +1,128 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+function generateCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Ensure parent row exists (e.g. OAuth users or legacy signups may not have one)
+    const { data: existingParent } = await supabase
+      .from("parents")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!existingParent) {
+      const { error: parentError } = await supabase.from("parents").insert({
+        id: user.id,
+        email: user.email ?? "",
+        name: (user.user_metadata?.full_name as string) || user.email?.split("@")[0] || "Parent",
+      });
+      if (parentError) {
+        console.error("Parent upsert error:", parentError);
+        return NextResponse.json(
+          { error: "Please complete your profile in Settings first." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const body = await request.json();
+    const childName = body.childName ?? null;
+
+    let code = generateCode();
+    let attempts = 0;
+
+    // Ensure unique code
+    while (attempts < 10) {
+      const { data: existing } = await supabase
+        .from("access_codes")
+        .select("id")
+        .eq("code", code)
+        .maybeSingle();
+
+      if (!existing) break;
+      code = generateCode();
+      attempts++;
+    }
+
+    const { data: accessCode, error } = await supabase
+      .from("access_codes")
+      .insert({
+        parent_id: user.id,
+        code,
+        child_name: childName,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Access code creation error:", error);
+      return NextResponse.json(
+        { error: error.message || "Failed to generate code" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ accessCode });
+  } catch (error) {
+    console.error("Access code API error:", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
+export async function GET() {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: codes } = await supabase
+      .from("access_codes")
+      .select("*")
+      .eq("parent_id", user.id)
+      .order("created_at", { ascending: false });
+
+    return NextResponse.json({ codes: codes || [] });
+  } catch (error) {
+    console.error("Access code GET error:", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { codeId } = await request.json();
+
+    await supabase
+      .from("access_codes")
+      .update({ is_active: false })
+      .eq("id", codeId)
+      .eq("parent_id", user.id);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Access code DELETE error:", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}

@@ -46,7 +46,7 @@ export function MathQuiz() {
   const [score, setScore] = useState(0);
   const [qCnt, setQCnt] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [question, setQuestion] = useState<Question | null>(null);
+  const [question, setQuestion] = useState<Question>(() => generateQuestion(1));
   const [answered, setAnswered] = useState(false);
   const [results, setResults] = useState<Record<number, "correct" | "wrong">>({});
   const [displayAnswer, setDisplayAnswer] = useState<string>("?");
@@ -62,21 +62,8 @@ export function MathQuiz() {
     nextQuestion(diff);
   }, [diff, nextQuestion]);
 
-  if (!question) {
-    return (
-      <div className="vtx-section-wrap">
-        <section className="vtx-math-section">
-          <div className="vtx-section-header">
-            <h2>Practice,<br/><em>perfected</em></h2>
-            <p>Adaptive exercises that adjust to your child&apos;s pace. Instant feedback, zero frustration.</p>
-          </div>
-        </section>
-      </div>
-    );
-  }
-
   const handleAnswer = (val: number, idx: number) => {
-    if (answered || !question) return;
+    if (answered) return;
     setAnswered(true);
     setQCnt(c => c + 1);
 

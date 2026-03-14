@@ -66,7 +66,7 @@ export function HeroShapes() {
 
       {/* Main large shape cluster - pink arch/torus */}
       <FloatingShape className="top-[25%] left-[35%] z-30" delay={0.2} duration={6}>
-        <div className="w-20 h-12 rounded-t-full border-[8px] border-[#6d28d9] border-b-0 opacity-80" />
+        <div className="w-20 h-12 rounded-t-full border-[8px] border-[#7c3aed] border-b-0 opacity-80" />
       </FloatingShape>
 
       {/* Pink cube */}

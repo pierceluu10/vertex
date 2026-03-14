@@ -589,7 +589,7 @@ export default function ParentProfilePage() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 4, background: "rgba(200,65,106,0.08)",
+              width: 40, height: 40, borderRadius: 4, background: "rgba(158,107,117,0.08)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <Image size={18} style={{ color: "#c8416a" }} />
@@ -648,19 +648,19 @@ export default function ParentProfilePage() {
           {parent?.heygen_avatar_id && recordingState === "idle" && (
             <div style={{
               display: "flex", alignItems: "center", gap: 8, padding: "12px 16px",
-              background: "rgba(90,158,118,0.08)", borderRadius: 4, marginBottom: 16,
-              border: "1px solid rgba(90,158,118,0.15)",
+              background: "rgba(92,124,106,0.1)", borderRadius: 4, marginBottom: 16,
+              border: "1px solid rgba(92,124,106,0.18)",
             }}>
-              <CheckCircle size={16} style={{ color: "#5a9e76" }} />
-              <span style={{ fontSize: 13, color: "#5a9e76" }}>Avatar created successfully</span>
+              <CheckCircle size={16} style={{ color: "#5c7c6a" }} />
+              <span style={{ fontSize: 13, color: "#5c7c6a" }}>Avatar created successfully</span>
             </div>
           )}
 
           {(parent?.heygen_talking_photo_id || photoUploadSuccess) && recordingState === "idle" && !parent?.heygen_avatar_id && (
             <div style={{
               display: "flex", alignItems: "center", gap: 8, padding: "12px 16px",
-              background: "rgba(90,158,118,0.08)", borderRadius: 4, marginBottom: 16,
-              border: "1px solid rgba(90,158,118,0.15)",
+              background: "rgba(92,124,106,0.1)", borderRadius: 4, marginBottom: 16,
+              border: "1px solid rgba(92,124,106,0.18)",
             }}>
               <CheckCircle size={16} style={{ color: "#5a9e76" }} />
               <span style={{ fontSize: 13, color: "#5a9e76" }}>Photo avatar created. It may take a few minutes to process. Sessions will use your likeness.</span>
@@ -947,7 +947,7 @@ export default function ParentProfilePage() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 4, background: "rgba(200,65,106,0.08)",
+              width: 40, height: 40, borderRadius: 4, background: "rgba(158,107,117,0.08)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <Upload size={18} style={{ color: "#c8416a" }} />
@@ -969,7 +969,7 @@ export default function ParentProfilePage() {
                   style={{
                     padding: "8px 16px", borderRadius: 3, fontSize: 12,
                     border: `1.5px solid ${selectedChild?.id === child.id ? "#c8416a" : "rgba(55,45,25,0.10)"}`,
-                    background: selectedChild?.id === child.id ? "rgba(200,65,106,0.06)" : "transparent",
+                    background: selectedChild?.id === child.id ? "rgba(158,107,117,0.06)" : "transparent",
                     color: selectedChild?.id === child.id ? "#c8416a" : "#1a1610",
                     cursor: "pointer", transition: "all 0.2s",
                   }}
@@ -982,7 +982,7 @@ export default function ParentProfilePage() {
 
           <label style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            padding: "14px", border: "1.5px dashed rgba(200,65,106,0.25)", borderRadius: 4,
+            padding: "14px", border: "1.5px dashed rgba(158,107,117,0.22)", borderRadius: 4,
             color: "#c8416a", fontSize: 12, letterSpacing: "0.12em",
             textTransform: "uppercase" as const, cursor: "pointer",
             transition: "background 0.2s",
@@ -1024,7 +1024,7 @@ export default function ParentProfilePage() {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
               <div style={{
-                width: 40, height: 40, borderRadius: 4, background: "rgba(200,65,106,0.08)",
+                width: 40, height: 40, borderRadius: 4, background: "rgba(158,107,117,0.08)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 <Clock size={18} style={{ color: "#c8416a" }} />
@@ -1047,7 +1047,7 @@ export default function ParentProfilePage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{
                       width: 7, height: 7, borderRadius: "50%",
-                      background: session.status === "active" ? "#5a9e76" : "#afa598",
+                      background: session.status === "active" ? "#5c7c6a" : "#afa598",
                     }} />
                     <div>
                       <div style={{ fontSize: 13 }}>
@@ -1077,7 +1077,7 @@ export default function ParentProfilePage() {
             <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" as const, color: "#8a7f6e", marginBottom: 4 }}>
               Account
             </div>
-            <div style={{ fontSize: 14 }}>{parent?.full_name || "Parent"}</div>
+            <div style={{ fontSize: 14 }}>{parent?.name || "Parent"}</div>
             <div style={{ fontSize: 12, color: "#8a7f6e" }}>{parent?.email}</div>
           </div>
           <div style={{ fontSize: 12, color: "#8a7f6e" }}>

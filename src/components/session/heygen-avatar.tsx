@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import type StreamingAvatarAPI from "@heygen/streaming-avatar";
 
 interface HeyGenAvatarProps {
   avatarName?: string;
@@ -15,7 +14,8 @@ interface HeyGenAvatarProps {
   className?: string;
 }
 
-type StreamingAvatarInstance = InstanceType<typeof StreamingAvatarAPI>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type StreamingAvatarInstance = any;
 
 export function HeyGenAvatar({
   avatarName = "default",
@@ -48,8 +48,13 @@ export function HeyGenAvatar({
         throw new Error(tokenData.error || "Failed to get HeyGen token");
       }
 
-      const { default: StreamingAvatar, StreamingEvents, AvatarQuality, VoiceEmotion } =
-        await import("@heygen/streaming-avatar");
+      const mod = await import("@heygen/streaming-avatar");
+      const StreamingAvatar = mod.default;
+      const { StreamingEvents, AvatarQuality, VoiceEmotion } = mod;
+
+      if (typeof StreamingAvatar !== "function") {
+        throw new Error("HeyGen StreamingAvatar SDK could not be loaded. Run: npm install @heygen/streaming-avatar");
+      }
 
       const avatar = new StreamingAvatar({ token: tokenData.token });
       avatarRef.current = avatar;
@@ -157,12 +162,12 @@ export function HeyGenAvatar({
     return (
       <div className={className} style={{
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        background: "rgba(200,65,106,0.06)", borderRadius: 8, padding: 20, textAlign: "center",
+        background: "rgba(158,107,117,0.06)", borderRadius: 8, padding: 20, textAlign: "center",
       }}>
         <div style={{
           width: 48, height: 48, borderRadius: "50%", background: "rgba(200,65,106,0.1)",
           display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12,
-          border: "1.5px solid rgba(200,65,106,0.2)",
+          border: "1.5px solid rgba(158,107,117,0.2)",
         }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c8416a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -181,7 +186,7 @@ export function HeyGenAvatar({
           }}
           style={{
             marginTop: 8, fontSize: 10, color: "#c8416a", background: "none",
-            border: "1px solid rgba(200,65,106,0.3)", borderRadius: 3, padding: "6px 12px",
+            border: "1px solid rgba(158,107,117,0.25)", borderRadius: 3, padding: "6px 12px",
             cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" as const,
           }}
         >
@@ -200,7 +205,7 @@ export function HeyGenAvatar({
         }}>
           <div style={{ textAlign: "center" }}>
             <div style={{
-              width: 32, height: 32, border: "2px solid rgba(200,65,106,0.2)",
+              width: 32, height: 32, border: "2px solid rgba(158,107,117,0.2)",
               borderTopColor: "#c8416a", borderRadius: "50%",
               animation: "spin 0.8s linear infinite", margin: "0 auto 8px",
             }} />
