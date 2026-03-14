@@ -80,6 +80,14 @@ export default function ParentProfilePage() {
     })();
   }, [supabase, router]);
 
+  // Attach camera stream to video element when preview mode activates
+  useEffect(() => {
+    if (cameraMode === "preview" && cameraVideoRef.current && cameraStreamRef.current) {
+      cameraVideoRef.current.srcObject = cameraStreamRef.current;
+      cameraVideoRef.current.play().catch(() => {});
+    }
+  }, [cameraMode]);
+
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -480,13 +488,6 @@ export default function ParentProfilePage() {
       cameraStreamRef.current = stream;
       setCameraMode("preview");
       setCapturedPhoto(null);
-      // Wait for ref to be available after state update
-      requestAnimationFrame(() => {
-        if (cameraVideoRef.current) {
-          cameraVideoRef.current.srcObject = stream;
-          cameraVideoRef.current.play().catch(() => {});
-        }
-      });
     } catch {
       alert("Could not access camera. Please check permissions.");
     }
