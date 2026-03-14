@@ -148,10 +148,7 @@ export function MathQuiz() {
               <button className="vtx-next-btn" onClick={() => nextQuestion()}>Next &rarr;</button>
             </div>
           </div>
-          <div className="vtx-ai-hint">
-            <span className="vtx-ai-pill">AI Hint</span>
-            <p>{question.hint}</p>
-          </div>
+          {/* Hints provided contextually by the AI tutor during sessions */}
         </div>
       </section>
     </div>

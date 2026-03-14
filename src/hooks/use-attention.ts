@@ -7,13 +7,19 @@ import {
   handleTabFocus,
   handleActivity,
   handleInactivityCheck,
+  handleNoFace,
+  handleLookingAway,
+  handleFaceReturn,
   getIntervention,
 } from "@/lib/attention";
+import { ATTENTION_CONFIG } from "@/lib/attention-config";
+import { useWebcamAttention } from "./use-webcam-attention";
 import type { AttentionState } from "@/types";
 
 export function useAttention(
   sessionId: string,
-  onIntervention: (type: string) => void
+  onIntervention: (type: string) => void,
+  webcamEnabled = true
 ) {
   const [attention, setAttention] = useState<AttentionState>(
     createInitialAttentionState()
@@ -30,18 +36,39 @@ export function useAttention(
         await fetch("/api/focus", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId,
-            eventType,
-            durationMs,
-          }),
+          body: JSON.stringify({ sessionId, eventType, durationMs }),
         });
       } catch {
-        // Non-critical — don't block UI
+        // Non-critical
       }
     },
     [sessionId]
   );
+
+  const handleFaceEvent = useCallback(
+    (event: "FACE_PRESENT" | "NO_FACE" | "LOOKING_AWAY" | "HEAD_TURNED") => {
+      switch (event) {
+        case "NO_FACE":
+          setAttention((prev) => handleNoFace(prev));
+          logFocusEvent("face_absent");
+          break;
+        case "LOOKING_AWAY":
+          setAttention((prev) => handleLookingAway(prev));
+          logFocusEvent("face_absent");
+          break;
+        case "FACE_PRESENT":
+          setAttention((prev) => handleFaceReturn(prev));
+          break;
+        case "HEAD_TURNED":
+          setAttention((prev) => handleLookingAway(prev));
+          logFocusEvent("face_absent");
+          break;
+      }
+    },
+    [logFocusEvent]
+  );
+
+  const webcam = useWebcamAttention(webcamEnabled, handleFaceEvent);
 
   useEffect(() => {
     let blurTimestamp: number | null = null;
@@ -49,10 +76,7 @@ export function useAttention(
     function onVisibilityChange() {
       if (document.hidden) {
         blurTimestamp = Date.now();
-        setAttention((prev) => {
-          const next = handleTabBlur(prev);
-          return next;
-        });
+        setAttention((prev) => handleTabBlur(prev));
       } else {
         const duration = blurTimestamp ? Date.now() - blurTimestamp : undefined;
         logFocusEvent("tab_blur", duration);
@@ -61,11 +85,21 @@ export function useAttention(
       }
     }
 
+    function onWindowBlur() {
+      setAttention((prev) => handleTabBlur(prev));
+    }
+
+    function onWindowFocus() {
+      setAttention((prev) => handleTabFocus(prev));
+    }
+
     function onUserActivity() {
       setAttention((prev) => handleActivity(prev));
     }
 
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("blur", onWindowBlur);
+    window.addEventListener("focus", onWindowFocus);
     document.addEventListener("mousemove", onUserActivity);
     document.addEventListener("keydown", onUserActivity);
     document.addEventListener("click", onUserActivity);
@@ -79,17 +113,19 @@ export function useAttention(
         }
         return next;
       });
-    }, 10_000);
+    }, ATTENTION_CONFIG.INACTIVITY_CHECK_INTERVAL_MS);
 
     const interventionInterval = setInterval(() => {
       const intervention = getIntervention(stateRef.current);
       if (intervention) {
         onIntervention(intervention);
       }
-    }, 15_000);
+    }, ATTENTION_CONFIG.INTERVENTION_CHECK_INTERVAL_MS);
 
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("blur", onWindowBlur);
+      window.removeEventListener("focus", onWindowFocus);
       document.removeEventListener("mousemove", onUserActivity);
       document.removeEventListener("keydown", onUserActivity);
       document.removeEventListener("click", onUserActivity);
@@ -99,5 +135,5 @@ export function useAttention(
     };
   }, [logFocusEvent, onIntervention]);
 
-  return attention;
+  return { ...attention, webcam };
 }

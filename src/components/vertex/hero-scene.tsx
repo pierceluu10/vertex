@@ -44,8 +44,8 @@ export function HeroScene() {
           </defs>
 
           {/* Ghost title */}
-          <text x="430" y="54" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="50" fontWeight="700" fill="rgba(26,22,14,.055)" letterSpacing="22">VERTEX</text>
-          <text x="430" y="76" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9.5" fill="rgba(138,127,110,.45)" letterSpacing="7">INTELLIGENCE · CURIOSITY · GROWTH</text>
+          <text x="430" y="54" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="50" fontWeight="700" fill="rgba(26,22,14,.35)" letterSpacing="22">VERTEX</text>
+          <text x="430" y="76" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9.5" fill="rgba(138,127,110,.45)" letterSpacing="7">INTELLIGENCE &middot; CURIOSITY &middot; GROWTH</text>
 
           {/* Man — stroke outline */}
           <g fill="none" stroke="#1a1610" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -132,7 +132,6 @@ export function HeroScene() {
       </div>
 
       <div className="vtx-hero-bottom">
-        <p>Toronto, CA</p>
         <div className="vtx-scroll-hint">
           <span>Explore</span>
           <div className="vtx-scroll-line"></div>

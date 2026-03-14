@@ -2,26 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import {
-  Upload,
-  Play,
-  FileText,
-  Plus,
-  LogOut,
-  Clock,
-  BarChart3,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Play, FileText, Clock, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Child, UploadedDocument, TutoringSession } from "@/types";
+import "@/styles/vertex.css";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -30,28 +14,18 @@ export default function DashboardPage() {
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [sessions, setSessions] = useState<TutoringSession[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [parentName, setParentName] = useState("");
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
 
   const loadData = useCallback(async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.push("/login"); return; }
 
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    const [parentRes, childrenRes, docsRes, sessionsRes] = await Promise.all([
-      supabase.from("parents").select("*").eq("id", user.id).single(),
+    const [childrenRes, docsRes, sessionsRes] = await Promise.all([
       supabase.from("children").select("*").eq("parent_id", user.id),
       supabase.from("uploaded_documents").select("*").eq("parent_id", user.id).order("uploaded_at", { ascending: false }),
       supabase.from("tutoring_sessions").select("*").order("started_at", { ascending: false }).limit(10),
     ]);
 
-    if (parentRes.data) setParentName(parentRes.data.full_name);
     if (childrenRes.data) {
       setChildren(childrenRes.data);
       if (childrenRes.data.length > 0 && !selectedChild) {
@@ -63,36 +37,11 @@ export default function DashboardPage() {
     setLoading(false);
   }, [supabase, router, selectedChild]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!e.target.files?.[0] || !selectedChild) return;
-    setUploading(true);
-
-    const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("childId", selectedChild.id);
-
-    try {
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (res.ok) {
-        await loadData();
-      }
-    } catch (err) {
-      console.error("Upload failed:", err);
-    }
-    setUploading(false);
-  }
+  useEffect(() => { loadData(); }, [loadData]);
 
   async function startSession(documentId?: string) {
     if (!selectedChild) return;
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     const { data: session } = await supabase
@@ -100,244 +49,181 @@ export default function DashboardPage() {
       .insert({
         child_id: selectedChild.id,
         document_id: documentId || null,
+        status: "active",
       })
       .select()
       .single();
 
-    if (session) {
-      router.push(`/session/${session.id}`);
-    }
-  }
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.push("/");
+    if (session) router.push(`/session/${session.id}`);
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-violet-50/40 to-violet-100/30 flex items-center justify-center">
-        <div className="animate-pulse text-violet-600 font-medium">
-          Loading...
-        </div>
+      <div className="vtx-auth-page">
+        <p style={{ color: "#8a7f6e", fontSize: 13 }}>Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-violet-50/40 to-violet-100/30">
-      {/* Header */}
-      <header className="border-b border-violet-100/50 bg-white/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3L2 20h20L12 3z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="font-semibold text-lg">Welcome, {parentName}</h1>
-              <p className="text-xs text-muted-foreground">Parent Dashboard</p>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground">
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
+    <div style={{
+      minHeight: "100vh", background: "#f4efe5",
+      fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#1e1a12",
+    }}>
+      <header style={{
+        borderBottom: "1px solid rgba(55,45,25,0.10)",
+        padding: "20px 48px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: "rgba(248,243,232,0.95)",
+      }}>
+        <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase" as const }}>
+          Vertex
         </div>
+        <button
+          onClick={() => router.push("/parent")}
+          style={{
+            display: "flex", alignItems: "center", gap: 6, background: "none",
+            border: "1px solid rgba(55,45,25,0.10)", borderRadius: 3, padding: "8px 16px",
+            color: "#8a7f6e", fontSize: 10, letterSpacing: "0.18em",
+            textTransform: "uppercase" as const, cursor: "pointer",
+          }}
+        >
+          <Settings size={14} /> Parent
+        </button>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        {/* Children selector */}
-        {children.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-16"
-          >
-            <p className="text-muted-foreground mb-4">
-              No children added yet.
+      <main style={{ maxWidth: 960, margin: "0 auto", padding: "40px 24px" }}>
+        {children.length > 1 && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 32 }}>
+            {children.map((child) => (
+              <button
+                key={child.id}
+                onClick={() => setSelectedChild(child)}
+                style={{
+                  padding: "10px 20px", borderRadius: 3, fontSize: 13,
+                  border: `1.5px solid ${selectedChild?.id === child.id ? "#c8416a" : "rgba(55,45,25,0.10)"}`,
+                  background: selectedChild?.id === child.id ? "rgba(200,65,106,0.06)" : "transparent",
+                  color: selectedChild?.id === child.id ? "#c8416a" : "#1a1610",
+                  cursor: "pointer", transition: "all 0.2s",
+                }}
+              >
+                {child.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 48 }}>
+          <div style={{
+            padding: "32px 28px", background: "#f8f3e8", border: "1px solid rgba(55,45,25,0.10)",
+            borderRadius: 4,
+          }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 4, background: "rgba(200,65,106,0.08)",
+              display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
+            }}>
+              <Play size={18} style={{ color: "#c8416a" }} />
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 6 }}>Start Session</div>
+            <p style={{ fontSize: 12, color: "#8a7f6e", marginBottom: 16, lineHeight: 1.6 }}>
+              Begin a new tutoring session{selectedChild ? ` for ${selectedChild.name}` : ""}
             </p>
-            <Button
-              onClick={() => router.push("/onboarding")}
-              className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Child
-            </Button>
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
-          >
-            {/* Child selector tabs */}
-            {children.length > 1 && (
-              <div className="flex gap-2">
-                {children.map((child) => (
-                  <button
-                    key={child.id}
-                    onClick={() => setSelectedChild(child)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                      selectedChild?.id === child.id
-                        ? "bg-violet-600 text-white shadow-md"
-                        : "bg-white/70 text-muted-foreground hover:bg-violet-50"
-                    }`}
-                  >
-                    {child.name}
-                  </button>
-                ))}
-              </div>
-            )}
+            <button onClick={() => startSession()} style={{
+              width: "100%", padding: "12px", background: "#c8416a", color: "#fff",
+              border: "none", borderRadius: 3, fontSize: 11, letterSpacing: "0.18em",
+              textTransform: "uppercase" as const, cursor: "pointer",
+            }}>
+              Start Now
+            </button>
+          </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-white/70 backdrop-blur-sm border-violet-100/50 hover:shadow-lg hover:shadow-violet-100/30 transition-all cursor-pointer">
-                <CardHeader className="pb-3">
-                  <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center mb-2">
-                    <Play className="h-5 w-5 text-violet-600" />
-                  </div>
-                  <CardTitle className="text-base">Start Session</CardTitle>
-                  <CardDescription>
-                    Begin a new tutoring session for {selectedChild?.name}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    onClick={() => startSession()}
-                    className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl"
-                  >
-                    Start Now
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/70 backdrop-blur-sm border-violet-100/50 hover:shadow-lg hover:shadow-violet-100/30 transition-all">
-                <CardHeader className="pb-3">
-                  <div className="w-10 h-10 rounded-xl bg-pink-100 flex items-center justify-center mb-2">
-                    <Upload className="h-5 w-5 text-pink-600" />
-                  </div>
-                  <CardTitle className="text-base">Upload Homework</CardTitle>
-                  <CardDescription>
-                    Upload a PDF worksheet for grounded tutoring
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <label className="block cursor-pointer">
-                    <span className="inline-flex w-full items-center justify-center rounded-xl border border-violet-200 text-violet-700 hover:bg-violet-50 h-8 px-2.5 text-sm font-medium transition-colors">
-                      {uploading ? "Uploading..." : "Choose PDF"}
-                    </span>
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                      disabled={uploading}
-                    />
-                  </label>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/70 backdrop-blur-sm border-violet-100/50 hover:shadow-lg hover:shadow-violet-100/30 transition-all">
-                <CardHeader className="pb-3">
-                  <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center mb-2">
-                    <BarChart3 className="h-5 w-5 text-green-600" />
-                  </div>
-                  <CardTitle className="text-base">Progress</CardTitle>
-                  <CardDescription>
-                    {sessions.length} session{sessions.length !== 1 ? "s" : ""}{" "}
-                    completed
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-violet-600">
-                    {sessions.length}
-                  </div>
-                </CardContent>
-              </Card>
+          <div style={{
+            padding: "32px 28px", background: "#f8f3e8", border: "1px solid rgba(55,45,25,0.10)",
+            borderRadius: 4,
+          }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 4, background: "rgba(200,65,106,0.08)",
+              display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
+            }}>
+              <Clock size={18} style={{ color: "#c8416a" }} />
             </div>
-
-            {/* Uploaded Documents */}
-            <div>
-              <h2 className="text-lg font-semibold mb-4">Uploaded Homework</h2>
-              {documents.length === 0 ? (
-                <div className="bg-white/50 rounded-2xl border border-dashed border-violet-200 p-8 text-center">
-                  <FileText className="h-8 w-8 text-violet-300 mx-auto mb-3" />
-                  <p className="text-muted-foreground text-sm">
-                    No documents uploaded yet. Upload a homework PDF to get started.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {documents.map((doc) => (
-                    <motion.div
-                      key={doc.id}
-                      className="bg-white/70 rounded-xl border border-violet-100/50 p-4 flex items-center justify-between"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-violet-500" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{doc.file_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(doc.uploaded_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => startSession(doc.id)}
-                        className="bg-violet-600 hover:bg-violet-700 text-white rounded-lg"
-                      >
-                        <Play className="h-3 w-3 mr-1" />
-                        Study
-                      </Button>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+            <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 6 }}>Progress</div>
+            <p style={{ fontSize: 12, color: "#8a7f6e", marginBottom: 16, lineHeight: 1.6 }}>
+              {sessions.length} session{sessions.length !== 1 ? "s" : ""} completed so far
+            </p>
+            <div style={{ fontSize: 36, fontWeight: 300, color: "#c8416a", textAlign: "center" }}>
+              {sessions.length}
             </div>
+          </div>
+        </div>
 
-            {/* Recent Sessions */}
-            {sessions.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-4">Recent Sessions</h2>
-                <div className="space-y-2">
-                  {sessions.slice(0, 5).map((session) => (
-                    <div
-                      key={session.id}
-                      className="bg-white/70 rounded-xl border border-violet-100/50 p-4 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${session.status === "active" ? "bg-green-500" : "bg-gray-300"}`} />
-                        <div>
-                          <p className="text-sm font-medium">
-                            {session.status === "active" ? "In Progress" : "Completed"}
-                          </p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {new Date(session.started_at).toLocaleString()}
-                          </p>
-                        </div>
+        {/* Homework Documents */}
+        {documents.length > 0 && (
+          <div style={{ marginBottom: 48 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>My Homework</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {documents.map((doc) => (
+                <div key={doc.id} style={{
+                  background: "#f8f3e8", border: "1px solid rgba(55,45,25,0.08)",
+                  borderRadius: 4, padding: "16px 20px",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <FileText size={18} style={{ color: "#c8416a" }} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 400 }}>{doc.file_name}</div>
+                      <div style={{ fontSize: 11, color: "#8a7f6e" }}>
+                        {new Date(doc.uploaded_at).toLocaleDateString()}
                       </div>
-                      {session.focus_score_avg !== null && (
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">Focus: </span>
-                          <span className="font-semibold text-violet-600">
-                            {Math.round(session.focus_score_avg)}%
-                          </span>
-                        </div>
-                      )}
                     </div>
-                  ))}
+                  </div>
+                  <button onClick={() => startSession(doc.id)} style={{
+                    display: "flex", alignItems: "center", gap: 4, padding: "8px 14px",
+                    background: "#c8416a", color: "#fff", border: "none", borderRadius: 3,
+                    fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase" as const,
+                    cursor: "pointer",
+                  }}>
+                    <Play size={10} /> Study
+                  </button>
                 </div>
-              </div>
-            )}
-          </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Sessions */}
+        {sessions.length > 0 && (
+          <div>
+            <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Recent Sessions</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {sessions.slice(0, 5).map((session) => (
+                <div key={session.id} style={{
+                  background: "#f8f3e8", border: "1px solid rgba(55,45,25,0.08)",
+                  borderRadius: 4, padding: "14px 20px",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 7, height: 7, borderRadius: "50%",
+                      background: session.status === "active" ? "#5a9e76" : "#afa598",
+                    }} />
+                    <div>
+                      <div style={{ fontSize: 13 }}>
+                        {session.status === "active" ? "In Progress" : "Completed"}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#8a7f6e" }}>
+                        {new Date(session.started_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#8a7f6e", fontSize: 12 }}>
+                    <Clock size={12} />
+                    {session.focus_score_avg != null ? `${Math.round(session.focus_score_avg)}% focus` : "—"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </main>
     </div>

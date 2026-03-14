@@ -16,7 +16,7 @@ create table if not exists children (
   id uuid primary key default gen_random_uuid(),
   parent_id uuid references parents(id) on delete cascade not null,
   name text not null,
-  age integer not null check (age >= 3 and age <= 14),
+  age integer not null check (age >= 3 and age <= 18),
   grade text,
   avatar_url text,
   created_at timestamptz default now()

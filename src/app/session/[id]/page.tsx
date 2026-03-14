@@ -2,107 +2,15 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { Send, Lightbulb, HelpCircle, ArrowLeft, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Send, ArrowLeft, Sparkles, Lightbulb, Mic, MicOff, Video, VideoOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { ParentAvatar } from "@/components/session/parent-avatar";
-import { MathVisual, type MathVisualConfig } from "@/components/session/math-visual";
-import { MessageContent } from "@/components/session/message-content";
+import { HeyGenAvatar } from "@/components/session/heygen-avatar";
 import { useAttention } from "@/hooks/use-attention";
 import { getInterventionMessage } from "@/lib/attention";
+import { MathVisual } from "@/components/session/math-visual";
 import type { Message, Child, AdaptiveState } from "@/types";
 import { createInitialAdaptiveState, handleCorrectAnswer, handleIncorrectAnswer, handleDistraction } from "@/lib/adaptive";
-
-/** Parse multiple-choice options from quiz message text (e.g. "1. Option A" or "A. Option A"). */
-function parseQuizChoices(content: string): { label: string; text: string }[] | null {
-  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const options: { label: string; text: string }[] = [];
-  for (const line of lines) {
-    const numbered = line.match(/^\s*(\d+)[.)]\s*(.+)$/);
-    const lettered = line.match(/^\s*([A-Da-d])[.)]\s*(.+)$/);
-    if (numbered) {
-      options.push({ label: numbered[1], text: `${numbered[1]}. ${numbered[2].trim()}` });
-    } else if (lettered) {
-      const letter = lettered[1].toUpperCase();
-      options.push({ label: letter, text: `${letter}. ${lettered[2].trim()}` });
-    }
-  }
-  return options.length >= 2 ? options : null;
-}
-
-function QuizReplyForm({
-  onSend,
-  disabled,
-  placeholder,
-  choices,
-}: {
-  onSend: (text: string) => void;
-  disabled: boolean;
-  placeholder: string;
-  choices?: { label: string; text: string }[] | null;
-}) {
-  const [value, setValue] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!disabled && !choices?.length) inputRef.current?.focus();
-  }, [disabled, choices?.length]);
-
-  if (choices && choices.length > 0) {
-    return (
-      <div className="mt-3 pt-3 border-t border-violet-200/60">
-        <p className="text-xs font-medium text-violet-600 mb-2">Choose an answer:</p>
-        <div className="flex flex-col gap-2">
-          {choices.map((choice, i) => (
-            <Button
-              key={i}
-              type="button"
-              variant="outline"
-              disabled={disabled}
-              className="h-auto min-h-9 py-2 px-3 justify-start text-left font-normal bg-white border-violet-200 hover:bg-violet-50 hover:border-violet-300 text-foreground rounded-lg"
-              onClick={() => onSend(choice.text)}
-            >
-              {choice.text}
-            </Button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <form
-      className="mt-3 pt-3 border-t border-violet-200/60 flex gap-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const trimmed = value.trim();
-        if (!trimmed || disabled) return;
-        onSend(trimmed);
-        setValue("");
-      }}
-    >
-      <Input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-        className="flex-1 h-9 rounded-lg bg-white border-violet-200 text-sm focus-visible:ring-violet-400"
-      />
-      <Button
-        type="submit"
-        size="sm"
-        disabled={disabled || !value.trim()}
-        className="h-9 bg-violet-600 hover:bg-violet-700 text-white rounded-lg px-3 shrink-0"
-      >
-        Submit
-      </Button>
-    </form>
-  );
-}
+import "@/styles/vertex.css";
 
 interface DisplayMessage {
   id: string;
@@ -129,6 +37,9 @@ export default function SessionPage() {
     createInitialAdaptiveState()
   );
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakText, setSpeakText] = useState<string | null>(null);
+  const [micEnabled, setMicEnabled] = useState(false);
+  const [webcamOn, setWebcamOn] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -150,13 +61,12 @@ export default function SessionPage() {
         setAdaptiveState((prev) => handleDistraction(prev));
       }
 
-      setIsSpeaking(true);
-      setTimeout(() => setIsSpeaking(false), 3000);
+      setSpeakText(message);
     },
     [childName]
   );
 
-  const attention = useAttention(sessionId, handleIntervention);
+  const attention = useAttention(sessionId, handleIntervention, webcamOn);
 
   useEffect(() => {
     async function loadSession() {
@@ -214,13 +124,14 @@ export default function SessionPage() {
             }))
         );
       } else {
-        const greeting: DisplayMessage = {
+        const greeting = `Hi ${child.name}! I\u2019m here to help you with your math. What would you like to work on today?`;
+        setMessages([{
           id: "greeting",
           role: "assistant",
-          content: `Hi ${child.name}! 😊 I'm here to help you with your math. What would you like to work on today?`,
+          content: greeting,
           type: "chat",
-        };
-        setMessages([greeting]);
+        }]);
+        setSpeakText(greeting);
       }
     }
 
@@ -236,13 +147,9 @@ export default function SessionPage() {
   function parseJsxGraph(content: string): { cleanContent: string; graphs: unknown[] } {
     const graphs: unknown[] = [];
     const cleanContent = content.replace(
-      /\[JSXGRAPH\]([\s\S]*?)\[\/JSXGRAPH\]/g,
+      /\[JSXGRAPH\](.*?)\[\/JSXGRAPH\]/g,
       (_, json) => {
-        try {
-          graphs.push(JSON.parse(json.trim()));
-        } catch {
-          // ignore malformed
-        }
+        try { graphs.push(JSON.parse(json)); } catch { /* skip */ }
         return "";
       }
     );
@@ -294,9 +201,7 @@ export default function SessionPage() {
           jsxGraph: graphs.length > 0 ? graphs : undefined,
         };
         setMessages((prev) => [...prev, assistantMsg]);
-
-        setIsSpeaking(true);
-        setTimeout(() => setIsSpeaking(false), 3000);
+        setSpeakText(cleanContent);
 
         if (data.isCorrect !== undefined) {
           setAdaptiveState((prev) =>
@@ -321,10 +226,20 @@ export default function SessionPage() {
     inputRef.current?.focus();
   }
 
+  function handleUserVoiceMessage(transcript: string) {
+    if (transcript.trim()) {
+      sendMessage(transcript);
+    }
+  }
+
   async function endSession() {
     await supabase
       .from("tutoring_sessions")
-      .update({ status: "completed", ended_at: new Date().toISOString(), focus_score_avg: attention.score })
+      .update({
+        status: "completed",
+        ended_at: new Date().toISOString(),
+        focus_score_avg: attention.score,
+      })
       .eq("id", sessionId);
 
     try {
@@ -333,240 +248,269 @@ export default function SessionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
       });
-    } catch {
-      // Report generation is non-blocking
-    }
+    } catch { /* non-blocking */ }
 
     router.push("/dashboard");
   }
 
+  const focusColor =
+    attention.focusLevel === "high" ? "#5a9e76"
+    : attention.focusLevel === "medium" ? "#c89020"
+    : "#c8416a";
+
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-violet-50/30 to-white">
-      {/* Session Header */}
-      <header className="border-b border-violet-100/50 bg-white/80 backdrop-blur-sm px-4 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={endSession}
-            className="text-muted-foreground"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            End
-          </Button>
+    <div style={{
+      height: "100vh", display: "flex", flexDirection: "column",
+      background: "#f4efe5", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+      color: "#1e1a12",
+    }}>
+      {/* Header */}
+      <header style={{
+        borderBottom: "1px solid rgba(55,45,25,0.10)", background: "rgba(248,243,232,0.95)",
+        padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <button onClick={endSession} style={{
+            display: "flex", alignItems: "center", gap: 4, background: "none", border: "none",
+            color: "#8a7f6e", fontSize: 12, cursor: "pointer", letterSpacing: "0.1em",
+            textTransform: "uppercase" as const,
+          }}>
+            <ArrowLeft size={14} /> End
+          </button>
           <div>
-            <h1 className="font-semibold text-sm">
-              {childName}&apos;s Study Session
-            </h1>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  attention.focusLevel === "high"
-                    ? "bg-green-500"
-                    : attention.focusLevel === "medium"
-                    ? "bg-yellow-500"
-                    : "bg-red-500"
-                }`}
-              />
-              <span className="text-xs text-muted-foreground">
-                Focus: {attention.score}%
-              </span>
+            <div style={{ fontWeight: 500, fontSize: 14 }}>{childName}&apos;s Study Session</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+              <div style={{
+                width: 7, height: 7, borderRadius: "50%", background: focusColor,
+                boxShadow: `0 0 6px ${focusColor}40`,
+              }} />
+              <span style={{ fontSize: 11, color: "#8a7f6e" }}>Focus: {attention.score}%</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => sendMessage("Give me a hint for what we're working on", "hint")}
-            className="text-violet-600 border-violet-200 rounded-lg text-xs"
-          >
-            <Lightbulb className="h-3 w-3 mr-1" />
-            Hint
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => sendMessage("Quiz me on what we've been studying", "quiz")}
-            className="text-violet-600 border-violet-200 rounded-lg text-xs"
-          >
-            <Sparkles className="h-3 w-3 mr-1" />
-            Quiz Me
-          </Button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={() => setWebcamOn(!webcamOn)} style={{
+            display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
+            border: "1px solid rgba(55,45,25,0.10)", borderRadius: 3, background: "transparent",
+            color: webcamOn ? "#5a9e76" : "#8a7f6e", fontSize: 10, cursor: "pointer",
+            letterSpacing: "0.1em", textTransform: "uppercase" as const,
+          }}>
+            {webcamOn ? <Video size={12} /> : <VideoOff size={12} />}
+            {webcamOn ? "Cam On" : "Cam Off"}
+          </button>
+          <button onClick={() => setMicEnabled(!micEnabled)} style={{
+            display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
+            border: "1px solid rgba(55,45,25,0.10)", borderRadius: 3, background: "transparent",
+            color: micEnabled ? "#5a9e76" : "#8a7f6e", fontSize: 10, cursor: "pointer",
+            letterSpacing: "0.1em", textTransform: "uppercase" as const,
+          }}>
+            {micEnabled ? <Mic size={12} /> : <MicOff size={12} />}
+            {micEnabled ? "Mic On" : "Mic Off"}
+          </button>
+          <button onClick={() => sendMessage("Give me a hint for what we're working on", "hint")} style={{
+            display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
+            border: "1px solid rgba(200,65,106,0.2)", borderRadius: 3, background: "transparent",
+            color: "#c8416a", fontSize: 10, cursor: "pointer",
+            letterSpacing: "0.1em", textTransform: "uppercase" as const,
+          }}>
+            <Lightbulb size={12} /> Hint
+          </button>
+          <button onClick={() => sendMessage("Quiz me on what we've been studying", "quiz")} style={{
+            display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
+            border: "1px solid rgba(200,65,106,0.2)", borderRadius: 3, background: "transparent",
+            color: "#c8416a", fontSize: 10, cursor: "pointer",
+            letterSpacing: "0.1em", textTransform: "uppercase" as const,
+          }}>
+            <Sparkles size={12} /> Quiz Me
+          </button>
         </div>
       </header>
 
       {/* Main content */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         {/* Chat area */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <div
-            ref={scrollRef}
-            className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4"
-          >
-            <div className="max-w-2xl mx-auto space-y-4">
-              <AnimatePresence>
-                {messages.map((msg, idx) => {
-                  const isQuizUnanswered =
-                    msg.role === "assistant" &&
-                    msg.type === "quiz" &&
-                    messages[idx + 1]?.role !== "user";
-                  return (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${
-                        msg.role === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                          msg.role === "user"
-                            ? "bg-violet-600 text-white rounded-br-sm"
-                            : msg.type === "reminder"
-                            ? "bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-bl-sm"
-                            : msg.type === "quiz"
-                            ? "bg-violet-50 border border-violet-200 text-foreground rounded-bl-sm"
-                            : "bg-white border border-violet-100/50 text-foreground shadow-sm rounded-bl-sm"
-                        }`}
-                      >
-                        {msg.type === "quiz" && (
-                          <div className="flex items-center gap-1 mb-1">
-                            <Sparkles className="h-3 w-3 text-violet-500" />
-                            <span className="text-xs font-medium text-violet-600">
-                              Quiz
-                            </span>
-                          </div>
-                        )}
-                        {msg.type === "hint" && msg.role === "assistant" && (
-                          <div className="flex items-center gap-1 mb-1">
-                            <Lightbulb className="h-3 w-3 text-yellow-500" />
-                            <span className="text-xs font-medium text-yellow-600">
-                              Hint
-                            </span>
-                          </div>
-                        )}
-                        <MessageContent content={msg.content} />
-                        {msg.jsxGraph
-                          ? (msg.jsxGraph as MathVisualConfig[]).map((graph, i) => (
-                              <MathVisual key={i} config={graph} />
-                            ))
-                          : null}
-                        {isQuizUnanswered && (
-                          <QuizReplyForm
-                            onSend={sendMessage}
-                            disabled={loading}
-                            placeholder="Type your answer here..."
-                            choices={parseQuizChoices(msg.content)}
-                          />
-                        )}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+            <div style={{ maxWidth: 640, margin: "0 auto" }}>
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                    marginBottom: 12,
+                  }}
+                >
+                  <div style={{
+                    maxWidth: "80%", padding: "12px 16px", borderRadius: 6,
+                    fontSize: 14, lineHeight: 1.65,
+                    ...(msg.role === "user"
+                      ? { background: "#c8416a", color: "#fff", borderBottomRightRadius: 2 }
+                      : msg.type === "reminder"
+                      ? { background: "rgba(200,153,32,0.08)", border: "1px solid rgba(200,153,32,0.2)", color: "#1e1a12", borderBottomLeftRadius: 2 }
+                      : msg.type === "quiz"
+                      ? { background: "rgba(200,65,106,0.06)", border: "1px solid rgba(200,65,106,0.15)", color: "#1e1a12", borderBottomLeftRadius: 2 }
+                      : { background: "#f8f3e8", border: "1px solid rgba(55,45,25,0.08)", color: "#1e1a12", borderBottomLeftRadius: 2 }),
+                  }}>
+                    {msg.type === "quiz" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                        <Sparkles size={12} style={{ color: "#c8416a" }} />
+                        <span style={{ fontSize: 10, fontWeight: 500, color: "#c8416a", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>Quiz</span>
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
+                    )}
+                    {msg.type === "hint" && msg.role === "assistant" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                        <Lightbulb size={12} style={{ color: "#c89020" }} />
+                        <span style={{ fontSize: 10, fontWeight: 500, color: "#c89020", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>Hint</span>
+                      </div>
+                    )}
+                    <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+                    {msg.jsxGraph ? (msg.jsxGraph as MathVisualConfig[]).map((config, i) => (
+                      <MathVisual key={i} config={config} />
+                    )) : null}
+                  </div>
+                </div>
+              ))}
 
               {loading && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex justify-start"
-                >
-                  <div className="bg-white border border-violet-100/50 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-                    <div className="flex gap-1">
-                      {[0, 1, 2].map((i) => (
-                        <motion.div
-                          key={i}
-                          className="w-2 h-2 rounded-full bg-violet-400"
-                          animate={{ y: [0, -6, 0] }}
-                          transition={{
-                            repeat: Infinity,
-                            duration: 0.6,
-                            delay: i * 0.15,
-                          }}
-                        />
-                      ))}
-                    </div>
+                <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 12 }}>
+                  <div style={{
+                    background: "#f8f3e8", border: "1px solid rgba(55,45,25,0.08)",
+                    borderRadius: 6, padding: "12px 16px", display: "flex", gap: 4,
+                  }}>
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} style={{
+                        width: 6, height: 6, borderRadius: "50%", background: "#c8416a",
+                        animation: `vtxBounce 0.6s ease infinite ${i * 0.15}s`,
+                      }} />
+                    ))}
                   </div>
-                </motion.div>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Input area */}
-          <div className="border-t border-violet-100/50 bg-white/80 backdrop-blur-sm px-4 py-3 shrink-0">
+          {/* Input */}
+          <div style={{
+            borderTop: "1px solid rgba(55,45,25,0.10)", background: "rgba(248,243,232,0.95)",
+            padding: "12px 24px", flexShrink: 0,
+          }}>
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendMessage(input);
-              }}
-              className="max-w-2xl mx-auto flex gap-2"
+              onSubmit={(e) => { e.preventDefault(); sendMessage(input); }}
+              style={{ maxWidth: 640, margin: "0 auto", display: "flex", gap: 8 }}
             >
-              <Input
+              <input
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask a question or type your answer..."
                 disabled={loading}
-                className="rounded-xl bg-violet-50/50 border-violet-200 focus-visible:ring-violet-400"
                 autoFocus
+                style={{
+                  flex: 1, padding: "10px 14px", border: "1.5px solid rgba(55,45,25,0.10)",
+                  borderRadius: 3, background: "rgba(244,239,229,0.6)", color: "#1a1610",
+                  fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", fontSize: 14,
+                  fontWeight: 300, outline: "none",
+                }}
+                onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#c8416a"; }}
+                onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(55,45,25,0.10)"; }}
               />
-              <Button
-                type="submit"
-                disabled={loading || !input.trim()}
-                className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl px-4 shrink-0"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+              <button type="submit" disabled={loading || !input.trim()} style={{
+                padding: "10px 16px", background: "#c8416a", color: "#fff", border: "none",
+                borderRadius: 3, cursor: "pointer", display: "flex", alignItems: "center",
+                opacity: loading || !input.trim() ? 0.5 : 1,
+              }}>
+                <Send size={16} />
+              </button>
             </form>
-
-            <div className="max-w-2xl mx-auto mt-2 flex gap-2">
-              <button
-                onClick={() => sendMessage("I don't understand, can you explain differently?")}
-                className="text-xs text-violet-500 hover:text-violet-700 bg-violet-50 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <HelpCircle className="h-3 w-3 inline mr-1" />
-                I don&apos;t understand
-              </button>
-              <button
-                onClick={() => sendMessage("Can you show me a picture or diagram?")}
-                className="text-xs text-violet-500 hover:text-violet-700 bg-violet-50 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                Show me a picture
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* Parent avatar sidebar */}
-        <div className="w-28 border-l border-violet-100/50 bg-white/50 flex flex-col items-center py-6 gap-4 shrink-0">
-          <ParentAvatar
-            parentName={parentName || "Parent"}
-            focusLevel={attention.focusLevel}
-            isSpeaking={isSpeaking}
+        {/* Avatar sidebar */}
+        <div style={{
+          width: 240, borderLeft: "1px solid rgba(55,45,25,0.10)",
+          background: "rgba(248,243,232,0.5)", display: "flex", flexDirection: "column",
+          alignItems: "center", padding: "20px 16px", gap: 16, flexShrink: 0,
+        }}>
+          <HeyGenAvatar
+            className=""
+            onAvatarReady={() => {}}
+            onAvatarSpeaking={setIsSpeaking}
+            onUserMessage={handleUserVoiceMessage}
+            speakQueue={speakText}
+            onSpeakComplete={() => setSpeakText(null)}
           />
 
-          <div className="text-center">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-              Focus
+          <div style={{ textAlign: "center" }}>
+            <div style={{
+              fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" as const,
+              color: "#8a7f6e", marginBottom: 4,
+            }}>
+              {parentName || "Parent"} Tutor
             </div>
-            <div
-              className={`text-lg font-bold ${
-                attention.focusLevel === "high"
-                  ? "text-green-600"
-                  : attention.focusLevel === "medium"
-                  ? "text-yellow-600"
-                  : "text-red-600"
-              }`}
-            >
+            {isSpeaking && (
+              <div style={{
+                fontSize: 9, color: "#5a9e76", letterSpacing: "0.15em",
+                textTransform: "uppercase" as const,
+              }}>
+                Speaking...
+              </div>
+            )}
+          </div>
+
+          <div style={{
+            width: "100%", padding: "16px 12px", background: "#f8f3e8",
+            border: "1px solid rgba(55,45,25,0.08)", borderRadius: 4, textAlign: "center",
+          }}>
+            <div style={{
+              fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" as const,
+              color: "#8a7f6e", marginBottom: 6,
+            }}>Focus</div>
+            <div style={{ fontSize: 32, fontWeight: 300, color: focusColor }}>
               {attention.score}%
             </div>
+            <div style={{
+              width: "100%", height: 2, background: "rgba(55,45,25,0.08)",
+              borderRadius: 1, marginTop: 8, overflow: "hidden",
+            }}>
+              <div style={{
+                width: `${attention.score}%`, height: "100%",
+                background: focusColor, transition: "width 0.6s ease",
+              }} />
+            </div>
           </div>
+
+          {attention.webcam && !attention.webcam.webcamEnabled && webcamOn && (
+            <div style={{
+              fontSize: 10, color: "#c89020", textAlign: "center",
+              padding: "8px 12px", background: "rgba(200,144,32,0.06)",
+              border: "1px solid rgba(200,144,32,0.15)", borderRadius: 3,
+            }}>
+              Webcam permission needed for focus detection
+            </div>
+          )}
         </div>
       </div>
+
+      <style>{`
+        @keyframes vtxBounce {
+          0%, 100% { transform: translateY(0) }
+          50% { transform: translateY(-6px) }
+        }
+      `}</style>
     </div>
   );
 }
 
+type MathVisualConfig = {
+  type: string;
+  min?: number;
+  max?: number;
+  points?: number[];
+  label?: string;
+  shapes?: Array<{ shape: string; count: number }>;
+  numerator?: number;
+  denominator?: number;
+};

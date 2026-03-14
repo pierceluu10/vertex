@@ -15,7 +15,8 @@ function renderInlineFormatting(text: string): React.ReactNode[] {
   let remaining = text;
   let key = 0;
   while (remaining.length > 0) {
-    const boldMatch = remaining.match(/^\*\*(.+?)\*\*/s);
+    const boldMatch = remaining.match(/^\*\*(.+?)\*\*/);
+
     const italicMatch = remaining.match(/^\*([^*]+)\*/);
     if (boldMatch) {
       out.push(<strong key={key++}>{boldMatch[1]}</strong>);

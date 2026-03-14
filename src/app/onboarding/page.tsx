@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ArrowRight, ArrowLeft, Check } from "lucide-react";
+import "@/styles/vertex.css";
+import { completeOnboarding } from "./actions";
 
 type Step = "child" | "preferences" | "complete";
 
@@ -25,22 +22,15 @@ export default function OnboardingPage() {
     setLoading(true);
     setError(null);
 
-    const res = await fetch("/api/onboarding/complete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        childName,
-        childAge,
-        childGrade,
-        preferredPace,
-      }),
+    const result = await completeOnboarding({
+      childName,
+      childAge,
+      childGrade,
+      preferredPace,
     });
 
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      setError(data.error ?? "Something went wrong.");
+    if (!result.success) {
+      setError(result.error);
       setLoading(false);
       return;
     }
@@ -50,194 +40,179 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-violet-50/40 to-violet-100/30 flex items-center justify-center px-4">
-      <motion.div
-        className="w-full max-w-lg"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div className="text-center mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center shadow-lg shadow-violet-500/25 mx-auto mb-4">
-            <svg
-              viewBox="0 0 24 24"
-              className="w-6 h-6 text-white"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 3L2 20h20L12 3z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {step === "complete" ? "You're all set!" : "Set up your child's profile"}
-          </h1>
-          {step !== "complete" && (
-            <div className="flex justify-center gap-2 mt-4">
-              {["child", "preferences"].map((s, i) => (
-                <div
-                  key={s}
-                  className={`h-1.5 w-12 rounded-full transition-colors ${
+    <div className="vtx-auth-page">
+      <div className="vtx-auth-card">
+        <div className="vtx-auth-logo">Vertex</div>
+        <h1>{step === "complete" ? "You\u2019re all set!" : "Set up your child\u2019s profile"}</h1>
+
+        {step !== "complete" && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, margin: "16px 0 32px" }}>
+            {["child", "preferences"].map((s, i) => (
+              <div
+                key={s}
+                style={{
+                  height: 2,
+                  width: 48,
+                  borderRadius: 1,
+                  background:
                     s === step || (step === "preferences" && i === 0)
-                      ? "bg-violet-600"
-                      : "bg-violet-200"
-                  }`}
+                      ? "#c8416a"
+                      : "rgba(55,45,25,0.15)",
+                  transition: "background 0.3s",
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="vtx-auth-form">
+          {step === "child" && (
+            <div>
+              <div className="vtx-field">
+                <label htmlFor="childName">Child&apos;s Name</label>
+                <input
+                  id="childName"
+                  type="text"
+                  placeholder="What's your child's name?"
+                  value={childName}
+                  onChange={(e) => setChildName(e.target.value)}
+                  required
                 />
-              ))}
+              </div>
+
+              <div className="vtx-field">
+                <label htmlFor="childAge">Age</label>
+                <input
+                  id="childAge"
+                  type="number"
+                  min={3}
+                  max={14}
+                  placeholder="How old are they?"
+                  value={childAge}
+                  onChange={(e) => setChildAge(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="vtx-field">
+                <label htmlFor="childGrade">Grade (optional)</label>
+                <input
+                  id="childGrade"
+                  type="text"
+                  placeholder="e.g. 3rd grade"
+                  value={childGrade}
+                  onChange={(e) => setChildGrade(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setStep("preferences")}
+                disabled={!childName || !childAge}
+                className="vtx-auth-btn"
+              >
+                Continue &rarr;
+              </button>
+            </div>
+          )}
+
+          {step === "preferences" && (
+            <div>
+              <div className="vtx-field">
+                <label>Learning Pace</label>
+                <p style={{ fontSize: 13, color: "#8a7f6e", marginBottom: 16 }}>
+                  How fast does {childName || "your child"} usually work through problems?
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                  {[
+                    { value: "slow", label: "Steady" },
+                    { value: "normal", label: "Balanced" },
+                    { value: "fast", label: "Quick" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setPreferredPace(option.value)}
+                      style={{
+                        padding: "18px 12px",
+                        border: `1.5px solid ${preferredPace === option.value ? "#c8416a" : "rgba(55,45,25,0.10)"}`,
+                        borderRadius: 3,
+                        background: preferredPace === option.value ? "rgba(200,65,106,0.06)" : "transparent",
+                        color: preferredPace === option.value ? "#c8416a" : "#1a1610",
+                        fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+                        fontSize: 13,
+                        fontWeight: 400,
+                        letterSpacing: "0.08em",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {error && <div className="vtx-auth-error">{error}</div>}
+
+              <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setStep("child")}
+                  style={{
+                    padding: "14px 20px",
+                    border: "1.5px solid rgba(55,45,25,0.10)",
+                    borderRadius: 3,
+                    background: "transparent",
+                    color: "#8a7f6e",
+                    fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+                    fontSize: 11,
+                    letterSpacing: "0.2em",
+                    textTransform: "uppercase" as const,
+                    cursor: "pointer",
+                  }}
+                >
+                  &larr; Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="vtx-auth-btn"
+                  style={{ flex: 1 }}
+                >
+                  {loading ? "Setting up..." : "Complete Setup"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === "complete" && (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: "50%", background: "rgba(90,158,118,.1)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 20px", border: "1.5px solid rgba(90,158,118,.3)",
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3a7a52" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <h2 style={{ fontSize: 22, fontWeight: 300, marginBottom: 8, color: "#1a1610" }}>
+                {childName}&apos;s profile is ready!
+              </h2>
+              <p style={{ fontSize: 13, color: "#8a7f6e", marginBottom: 28 }}>
+                Head to your dashboard to start a tutoring session.
+              </p>
+              <button
+                type="button"
+                onClick={() => router.push("/dashboard")}
+                className="vtx-auth-btn"
+              >
+                Go to Dashboard &rarr;
+              </button>
             </div>
           )}
         </div>
-
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-violet-100/50 p-8 shadow-xl shadow-violet-100/20">
-          <AnimatePresence mode="wait">
-            {step === "child" && (
-              <motion.div
-                key="child"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-4"
-              >
-                <div className="space-y-2">
-                  <Label htmlFor="childName">Child&apos;s Name</Label>
-                  <Input
-                    id="childName"
-                    placeholder="What's your child's name?"
-                    value={childName}
-                    onChange={(e) => setChildName(e.target.value)}
-                    required
-                    className="rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="childAge">Age</Label>
-                  <Input
-                    id="childAge"
-                    type="number"
-                    min={3}
-                    max={14}
-                    placeholder="How old are they?"
-                    value={childAge}
-                    onChange={(e) => setChildAge(e.target.value)}
-                    required
-                    className="rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="childGrade">Grade (optional)</Label>
-                  <Input
-                    id="childGrade"
-                    placeholder="e.g. 3rd grade"
-                    value={childGrade}
-                    onChange={(e) => setChildGrade(e.target.value)}
-                    className="rounded-xl"
-                  />
-                </div>
-
-                <Button
-                  onClick={() => setStep("preferences")}
-                  disabled={!childName || !childAge}
-                  className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl h-11 mt-2"
-                >
-                  Continue
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </motion.div>
-            )}
-
-            {step === "preferences" && (
-              <motion.div
-                key="preferences"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <div className="space-y-3">
-                  <Label>Learning Pace</Label>
-                  <p className="text-sm text-muted-foreground">
-                    How fast does {childName || "your child"} usually work through problems?
-                  </p>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { value: "slow", label: "Steady", emoji: "🐢" },
-                      { value: "normal", label: "Balanced", emoji: "🚶" },
-                      { value: "fast", label: "Quick", emoji: "🚀" },
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => setPreferredPace(option.value)}
-                        className={`p-4 rounded-xl border-2 text-center transition-all ${
-                          preferredPace === option.value
-                            ? "border-violet-600 bg-violet-50"
-                            : "border-violet-100 hover:border-violet-200"
-                        }`}
-                      >
-                        <span className="text-2xl block mb-1">{option.emoji}</span>
-                        <span className="text-sm font-medium">{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {error && (
-                  <p className="text-sm text-red-500 bg-red-50 rounded-lg p-3">
-                    {error}
-                  </p>
-                )}
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep("child")}
-                    className="rounded-xl"
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
-                  </Button>
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-xl h-11"
-                  >
-                    {loading ? "Setting up..." : "Complete Setup"}
-                    <Check className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {step === "complete" && (
-              <motion.div
-                key="complete"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-4"
-              >
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                  <Check className="w-8 h-8 text-green-600" />
-                </div>
-                <h2 className="text-xl font-semibold mb-2">
-                  {childName}&apos;s profile is ready!
-                </h2>
-                <p className="text-muted-foreground mb-6">
-                  Head to your dashboard to upload homework and start a tutoring session.
-                </p>
-                <Button
-                  onClick={() => router.push("/dashboard")}
-                  className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl px-8"
-                >
-                  Go to Dashboard
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

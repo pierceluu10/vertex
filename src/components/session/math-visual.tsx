@@ -126,7 +126,7 @@ export function MathVisual({ config }: MathVisualProps) {
           showNavigation: false,
           showCopyright: false,
           keepAspectRatio: true,
-          zoom: { wheel: true, needshift: false, factorX: 1.25, factorY: 1.25 },
+          zoom: { wheel: true, needShift: false, factorX: 1.25, factorY: 1.25 },
           pan: { needShift: true },
         });
         exprs.forEach((e, i) => {
