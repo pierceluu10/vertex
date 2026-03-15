@@ -233,3 +233,47 @@ export interface KidBadge {
   badge_id: string;
   earned_at: string;
 }
+
+/* ─── Attention Engine types ─── */
+
+export interface FocusTimelineEntry {
+  timestamp: number;
+  score: number;
+}
+
+export interface FocusSignals {
+  gazeScore: number;
+  headPoseScore: number;
+  tabVisibilityScore: number;
+  responseLatencyScore: number;
+  blinkHealthScore: number;
+  interactionScore: number;
+}
+
+export interface ContentConfidenceState {
+  overall: number;
+  quizAccuracy: number;
+  responseQuality: number;
+  hintDependency: number;
+  repeatQuestionScore: number;
+  responseSpeed: number;
+  masteryDecayFactor: number;
+}
+
+export interface TopicMastery {
+  id: string;
+  kid_session_id: string;
+  topic: string;
+  confidence_score: number;
+  last_active_at: string;
+  created_at: string;
+}
+
+export type PolicyMode = "normal" | "gentle_checkin" | "micro_task" | "simplify" | "end_session";
+
+export interface PolicyDecision {
+  mode: PolicyMode;
+  interventionText: string | null;
+  shouldEndSession: boolean;
+  timestamp: number;
+}

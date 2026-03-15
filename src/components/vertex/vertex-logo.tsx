@@ -14,13 +14,15 @@ type VertexLogoProps = {
   className?: string;
   /** Remove white background by blending (use on light/cream backgrounds). */
   transparentBg?: boolean;
+  /** Show "Vertex" wordmark next to the logo. Default true. */
+  showName?: boolean;
 };
 
-export function VertexLogo({ href, height = 32, className = "", transparentBg = false }: VertexLogoProps) {
+export function VertexLogo({ href, height = 32, className = "", transparentBg = false, showName = true }: VertexLogoProps) {
   const img = (
     <Image
       src={LOGO_SRC}
-      alt="Vertex"
+      alt=""
       width={height}
       height={height}
       className={transparentBg ? "vtx-logo-img vtx-logo-no-bg" : "vtx-logo-img"}
@@ -30,12 +32,19 @@ export function VertexLogo({ href, height = 32, className = "", transparentBg = 
     />
   );
 
+  const content = (
+    <>
+      {img}
+      {showName && <span className="vtx-logo-wordmark">Vertex</span>}
+    </>
+  );
+
   if (href) {
     return (
       <Link href={href} className={`vtx-logo-link ${className}`.trim()} aria-label="Vertex home">
-        {img}
+        {content}
       </Link>
     );
   }
-  return <span className={className}>{img}</span>;
+  return <span className={`vtx-logo-wrap ${className}`.trim()}>{content}</span>;
 }

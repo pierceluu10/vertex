@@ -23,8 +23,8 @@ export function HeroScene() {
         <svg className="vtx-scene-svg" viewBox="0 0 860 460" xmlns="http://www.w3.org/2000/svg" fill="none">
 
           {/* Ghost title */}
-          <text x="430" y="54" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="50" fontWeight="700" fill="rgba(58,48,38,.44)" letterSpacing="22">VERTEX</text>
-          <text x="430" y="76" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9.5" fontWeight="600" fill="rgba(112,97,80,.8)" letterSpacing="7">INTELLIGENCE &middot; CURIOSITY &middot; GROWTH</text>
+          <text x="430" y="58" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="68" fontWeight="700" fill="rgba(58,48,38,.44)" letterSpacing="26">VERTEX</text>
+          <text x="430" y="88" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="15" fontWeight="600" fill="rgba(112,97,80,.8)" letterSpacing="8">INTELLIGENCE &middot; CURIOSITY &middot; GROWTH</text>
 
           {/* Parent — stroke outline: broader shoulders, collar, composed silhouette */}
           <g fill="none" stroke="#1a1610" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -56,25 +56,25 @@ export function HeroScene() {
           </g>
 
           {/* Connection lines (drawn under logo): parent → logo → student — paths meet the triangle */}
-          <path d="M262 210 Q318 208 378 207" stroke="rgba(200,65,106,0.5)" strokeWidth="1.5">
-            <animate attributeName="opacity" values=".3;.85;.3" dur="2.6s" repeatCount="indefinite"/>
+          <path d="M262 210 Q318 208 378 207" stroke="rgba(200,65,106,0.65)" strokeWidth="2.5">
+            <animate attributeName="opacity" values=".4;.9;.4" dur="2.6s" repeatCount="indefinite"/>
           </path>
-          <circle r="3.5" fill="#c8416a">
+          <circle r="5" fill="#c8416a">
             <animateMotion dur="2s" repeatCount="indefinite" path="M262 210 Q318 208 378 207"/>
             <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/>
           </circle>
-          <circle r="2" fill="#c8416a">
+          <circle r="3" fill="#c8416a">
             <animateMotion dur="2s" begin=".65s" repeatCount="indefinite" path="M262 210 Q318 208 378 207"/>
             <animate attributeName="opacity" values="0;.7;0" dur="2s" begin=".65s" repeatCount="indefinite"/>
           </circle>
-          <path d="M482 207 Q546 208 598 210" stroke="rgba(200,65,106,0.5)" strokeWidth="1.5">
-            <animate attributeName="opacity" values=".3;.85;.3" dur="2.6s" begin=".35s" repeatCount="indefinite"/>
+          <path d="M482 207 Q546 208 598 210" stroke="rgba(200,65,106,0.65)" strokeWidth="2.5">
+            <animate attributeName="opacity" values=".4;.9;.4" dur="2.6s" begin=".35s" repeatCount="indefinite"/>
           </path>
-          <circle r="3.5" fill="#c8416a">
+          <circle r="5" fill="#c8416a">
             <animateMotion dur="2s" begin=".4s" repeatCount="indefinite" path="M482 207 Q546 208 598 210"/>
             <animate attributeName="opacity" values="0;1;0" dur="2s" begin=".4s" repeatCount="indefinite"/>
           </circle>
-          <circle r="2" fill="#c8416a">
+          <circle r="3" fill="#c8416a">
             <animateMotion dur="2s" begin="1.1s" repeatCount="indefinite" path="M482 207 Q546 208 598 210"/>
             <animate attributeName="opacity" values="0;.7;0" dur="2s" begin="1.1s" repeatCount="indefinite"/>
           </circle>
@@ -88,11 +88,11 @@ export function HeroScene() {
             height="140"
             preserveAspectRatio="xMidYMid meet"
           />
-          <text x="430" y="268" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="10" fill="#c8416a" letterSpacing="5" opacity="0.9">Vertex</text>
+          <text x="430" y="272" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="18" fill="#c8416a" letterSpacing="6" fontWeight="600">Vertex</text>
 
           {/* Labels */}
-          <text x="210" y="398" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9.5" fontWeight="600" fill="rgba(112,97,80,.86)" letterSpacing="3.5">PARENT</text>
-          <text x="650" y="398" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9.5" fontWeight="600" fill="rgba(112,97,80,.86)" letterSpacing="3.5">STUDENT</text>
+          <text x="210" y="398" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="15" fontWeight="600" fill="rgba(112,97,80,.9)" letterSpacing="4">PARENT</text>
+          <text x="650" y="398" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="15" fontWeight="600" fill="rgba(112,97,80,.9)" letterSpacing="4">STUDENT</text>
 
           <line x1="60" y1="370" x2="800" y2="370" stroke="rgba(26,22,14,.06)" strokeWidth="1"/>
         </svg>
@@ -105,7 +105,7 @@ export function HeroScene() {
         transition={{ duration: 0.5, delay: 0.7 }}
       >
         <div className="vtx-scroll-hint">
-          <span>Explore</span>
+          <span>Interactive learning</span>
           <div className="vtx-scroll-line"></div>
         </div>
       </motion.div>

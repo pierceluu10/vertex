@@ -8,10 +8,12 @@ import {
   type LiveTranscriptEntry,
 } from "@/components/session/livekit-avatar";
 import { useAttention } from "@/hooks/use-attention";
+import { useAttentionPolicy } from "@/hooks/use-attention-policy";
+import { AttentionDebug } from "@/components/session/attention-debug";
 import { getInterventionMessage } from "@/lib/attention";
 import { MathVisual } from "@/components/session/math-visual";
 import { MessageContent } from "@/components/session/message-content";
-import type { AdaptiveState, KidSession } from "@/types";
+import type { AdaptiveState, ContentConfidenceState, KidSession } from "@/types";
 import {
   createInitialAdaptiveState,
   handleDistraction,
@@ -71,6 +73,8 @@ function KidSessionContent() {
 
   const childName = kidSession?.child_name?.trim() || "there";
 
+  const [contentConfidence, setContentConfidence] = useState<ContentConfidenceState | null>(null);
+
   const handleIntervention = useCallback(
     (type: string) => {
       const message = getInterventionMessage(type, childName);
@@ -86,7 +90,30 @@ function KidSessionContent() {
     [childName]
   );
 
-  const attention = useAttention(tutoringSessionId || "none", handleIntervention, false);
+  const attention = useAttention(tutoringSessionId || "none", handleIntervention, true);
+
+  const handlePolicyIntervention = useCallback((text: string) => {
+    setAgentPromptRequest({ id: Date.now(), text });
+  }, []);
+
+  const handlePolicyEndSession = useCallback(() => {
+    // Auto-end session when policy decides both focus + confidence are critically low
+    void endSessionRef.current?.();
+  }, []);
+
+  const { policyLog } = useAttentionPolicy(
+    attention.score,
+    contentConfidence,
+    {
+      childName,
+      sessionId: tutoringSessionId || "",
+      kidSessionId: kidSessionId || "",
+    },
+    handlePolicyIntervention,
+    handlePolicyEndSession,
+  );
+
+  const endSessionRef = useRef<(() => Promise<void>) | null>(null);
 
   // Generate lesson plan from document
   const generateLessonPlan = useCallback(async (docText: string) => {
@@ -390,7 +417,7 @@ function KidSessionContent() {
         await fetch("/api/student/session", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: tutoringSessionId, focusScore: attention.score }),
+          body: JSON.stringify({ sessionId: tutoringSessionId, focusScore: attention.getSessionAverageScore() }),
         });
       } catch {
         // ignore
@@ -407,6 +434,9 @@ function KidSessionContent() {
         }).toString()
     );
   }
+
+  // Wire up the ref so the policy engine can call endSession
+  endSessionRef.current = endSession;
 
   const focusColor =
     attention.focusLevel === "high"
@@ -880,6 +910,17 @@ function KidSessionContent() {
           50% { transform: translateY(-6px); }
         }
       `}</style>
+
+      {/* Attention Debug Overlay (Ctrl+Shift+D) */}
+      <AttentionDebug
+        webcamStream={attention.webcam.stream}
+        landmarks={attention.webcam.lastLandmarks}
+        signals={attention.signals}
+        smoothedFocus={attention.score}
+        contentConfidence={contentConfidence}
+        calibration={attention.calibration}
+        policyLog={policyLog}
+      />
     </div>
   );
 }

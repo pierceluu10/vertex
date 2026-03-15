@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3, BookOpen, FileText, Settings, Copy, Plus,
   LogOut, ChevronRight, Users, Eye, X, TrendingUp, Activity,
+  Brain,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type {
@@ -14,9 +15,10 @@ import type {
 } from "@/types";
 import { Card } from "@/components/ui/card";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import "@/styles/vertex.css";
 
-type Tab = "overview" | "progress" | "homework" | "analytics" | "settings";
+type Tab = "overview" | "progress" | "homework" | "analytics" | "insights" | "settings";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -56,6 +58,13 @@ export default function ParentDashboardPage() {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsLearningTopics, setSettingsLearningTopics] = useState<string[]>([]);
   const [settingsLearningPace, setSettingsLearningPace] = useState<"slow" | "medium" | "fast">("medium");
+
+  // Insights state
+  type InsightSession = TutoringSession & { focus_timeline?: { timestamp: number; score: number }[]; distraction_events?: { timestamp: number; type: string; focusScore: number }[]; focus_score?: number; study_duration?: number };
+  const [insightSessions, setInsightSessions] = useState<InsightSession[]>([]);
+  const [insightMastery, setInsightMastery] = useState<{ topic: string; adjustedConfidence: number; daysSinceActive: number; isStale: boolean; last_active_at: string }[]>([]);
+  const [selectedInsightSession, setSelectedInsightSession] = useState<string | null>(null);
+  const [insightsLoaded, setInsightsLoaded] = useState(false);
 
   const topicOptions = [
     "Addition", "Subtraction", "Multiplication", "Division",
@@ -231,8 +240,29 @@ export default function ParentDashboardPage() {
     { id: "progress", label: "Progress", icon: <ChevronRight size={18} /> },
     { id: "homework", label: "Homework", icon: <BookOpen size={18} /> },
     { id: "analytics", label: "Analytics", icon: <TrendingUp size={18} /> },
+    { id: "insights", label: "Insights", icon: <Brain size={18} /> },
     { id: "settings", label: "Settings", icon: <Settings size={18} /> },
   ];
+
+  // Load insights data when tab is selected
+  useEffect(() => {
+    if (activeTab !== "insights" || insightsLoaded) return;
+    async function loadInsights() {
+      try {
+        const [sessRes, mastRes] = await Promise.all([
+          fetch("/api/insights/sessions").then(r => r.json()),
+          fetch("/api/insights/mastery").then(r => r.json()),
+        ]);
+        if (sessRes.sessions) {
+          setInsightSessions(sessRes.sessions);
+          if (sessRes.sessions.length > 0) setSelectedInsightSession(sessRes.sessions[0].id);
+        }
+        if (mastRes.topics) setInsightMastery(mastRes.topics);
+        setInsightsLoaded(true);
+      } catch { /* ignore */ }
+    }
+    loadInsights();
+  }, [activeTab, insightsLoaded]);
 
   if (loading) {
     return (
@@ -629,6 +659,206 @@ export default function ParentDashboardPage() {
                       </div>
                     </motion.div>
                   )}
+                </>
+              )}
+            </motion.div>
+          )}
+
+          {/* INSIGHTS */}
+          {activeTab === "insights" && (
+            <motion.div key="insights" {...tabMotion}>
+              <span className="vtx-parent-section-label">Insights</span>
+              <h1 className="vtx-parent-heading">Attention <em>Engine</em></h1>
+              <p className="vtx-parent-subheading">Deep dive into {parent?.child_name || "your child"}&apos;s focus, confidence, and mastery.</p>
+
+              {insightSessions.length === 0 ? (
+                <div className="vtx-parent-card">
+                  <p className="vtx-parent-muted-text">No session data yet. Insights will appear once your child completes study sessions with the attention engine active.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Session picker */}
+                  <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={0}>
+                    <h2 className="vtx-parent-card-title" style={{ marginBottom: 12 }}>Focus Timeline</h2>
+                    <div style={{ marginBottom: 16 }}>
+                      <select
+                        value={selectedInsightSession || ""}
+                        onChange={(e) => setSelectedInsightSession(e.target.value)}
+                        className="vtx-parent-input"
+                        style={{ maxWidth: 320 }}
+                      >
+                        {insightSessions.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {new Date(s.started_at).toLocaleDateString()} — {new Date(s.started_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            {s.focus_score != null ? ` (${Math.round(s.focus_score as number)}% avg)` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Recharts Line Chart */}
+                    {(() => {
+                      const selected = insightSessions.find((s) => s.id === selectedInsightSession);
+                      const timeline = (selected?.focus_timeline || []) as { timestamp: number; score: number }[];
+                      if (timeline.length === 0) {
+                        return <p className="vtx-parent-muted-text">No focus timeline data for this session.</p>;
+                      }
+                      const startTime = timeline[0].timestamp;
+                      const chartData = timeline.map((entry) => ({
+                        minute: Math.round((entry.timestamp - startTime) / 60000),
+                        score: entry.score,
+                      }));
+                      return (
+                        <div style={{ width: "100%", height: 220 }}>
+                          <ResponsiveContainer>
+                            <LineChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+                              <XAxis dataKey="minute" tick={{ fontSize: 11, fill: "#8a7f6e" }} label={{ value: "Minutes", position: "insideBottom", offset: -4, style: { fontSize: 11, fill: "#8a7f6e" } }} />
+                              <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#8a7f6e" }} />
+                              <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", fontSize: 12 }} formatter={(value) => [`${value}%`, "Focus"]} />
+                              <ReferenceLine y={80} stroke="#5a9e76" strokeDasharray="4 4" strokeOpacity={0.5} />
+                              <ReferenceLine y={50} stroke="#c89020" strokeDasharray="4 4" strokeOpacity={0.5} />
+                              <Line type="monotone" dataKey="score" stroke="#c8416a" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#c8416a" }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })()}
+                  </motion.div>
+
+                  {/* Distraction Event Log */}
+                  {(() => {
+                    const selected = insightSessions.find((s) => s.id === selectedInsightSession);
+                    const events = (selected?.distraction_events || []) as { timestamp: number; type: string; focusScore: number }[];
+                    if (events.length === 0) return null;
+                    return (
+                      <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={1}>
+                        <h2 className="vtx-parent-card-title" style={{ marginBottom: 12 }}>Distraction Events</h2>
+                        <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                          {events.map((ev, i) => (
+                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                              <span style={{ fontSize: 11, color: "#8a7f6e", width: 70 }}>
+                                {new Date(ev.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                              </span>
+                              <span style={{
+                                padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600,
+                                background: ev.type === "face_absent" ? "rgba(239,68,68,0.1)" : ev.type === "tab_switch" ? "rgba(245,158,11,0.1)" : "rgba(139,92,246,0.1)",
+                                color: ev.type === "face_absent" ? "#ef4444" : ev.type === "tab_switch" ? "#f59e0b" : "#8b5cf6",
+                              }}>
+                                {ev.type.replace("_", " ")}
+                              </span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: ev.focusScore >= 50 ? "#5a9e76" : "#c8416a" }}>
+                                {ev.focusScore}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    );
+                  })()}
+
+                  {/* Content Confidence Breakdown */}
+                  <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={2}>
+                    <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Content Confidence Breakdown</h2>
+                    <p className="vtx-parent-muted-text" style={{ marginBottom: 16 }}>Components of the content confidence score</p>
+                    {[
+                      { label: "Quiz Accuracy", value: 78, color: "#5a9e76" },
+                      { label: "Response Quality", value: 65, color: "#3b82f6" },
+                      { label: "Hint Dependency", value: 85, color: "#8b5cf6" },
+                      { label: "Repeat Questions", value: 90, color: "#06b6d4" },
+                      { label: "Response Speed", value: 72, color: "#f59e0b" },
+                    ].map((bar) => (
+                      <div key={bar.label} style={{ marginBottom: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                          <span style={{ color: "#5c5347" }}>{bar.label}</span>
+                          <span style={{ fontWeight: 600, color: bar.color }}>{bar.value}%</span>
+                        </div>
+                        <div style={{ height: 8, background: "rgba(0,0,0,0.04)", borderRadius: 4, overflow: "hidden" }}>
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${bar.value}%` }}
+                            transition={{ duration: 0.6, ease: "easeOut" }}
+                            style={{ height: "100%", background: bar.color, borderRadius: 4 }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </motion.div>
+
+                  {/* Topic Mastery Map */}
+                  {insightMastery.length > 0 && (
+                    <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={3}>
+                      <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Topic Mastery</h2>
+                      {insightMastery.map((t, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#1a1610" }}>{t.topic}</span>
+                          <div style={{ width: 120, height: 6, background: "rgba(0,0,0,0.04)", borderRadius: 3, overflow: "hidden" }}>
+                            <div style={{
+                              width: `${t.adjustedConfidence}%`, height: "100%", borderRadius: 3,
+                              background: t.adjustedConfidence >= 70 ? "#5a9e76" : t.adjustedConfidence >= 40 ? "#c89020" : "#c8416a",
+                            }} />
+                          </div>
+                          <span style={{ width: 36, fontSize: 12, fontWeight: 600, textAlign: "right", color: t.adjustedConfidence >= 70 ? "#5a9e76" : t.adjustedConfidence >= 40 ? "#c89020" : "#c8416a" }}>
+                            {t.adjustedConfidence}%
+                          </span>
+                          <span style={{ width: 70, fontSize: 10, color: "#8a7f6e", textAlign: "right" }}>
+                            {t.last_active_at ? new Date(t.last_active_at).toLocaleDateString([], { month: "short", day: "numeric" }) : "—"}
+                          </span>
+                          {t.isStale && (
+                            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(245,158,11,0.12)", color: "#c89020", fontWeight: 600 }}>
+                              Stale
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+
+                  {/* Session Comparison Table */}
+                  <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={4}>
+                    <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Session Comparison</h2>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                        <thead>
+                          <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+                            {["Date", "Avg Focus", "Duration", "Distractions", "Status"].map((h) => (
+                              <th key={h} style={{ textAlign: "left", padding: "8px 10px", fontWeight: 600, color: "#5c5347", fontSize: 11 }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {insightSessions.slice(0, 5).map((s) => {
+                            const distractionCount = Array.isArray(s.distraction_events) ? s.distraction_events.length : 0;
+                            const durationMin = s.ended_at ? Math.round((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000) : 0;
+                            const focus = typeof s.focus_score === "number" ? Math.round(s.focus_score) : (s.focus_score_avg ? Math.round(s.focus_score_avg) : 0);
+                            return (
+                              <tr key={s.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.03)" }}>
+                                <td style={{ padding: "8px 10px", color: "#1a1610" }}>
+                                  {new Date(s.started_at).toLocaleDateString([], { month: "short", day: "numeric" })}
+                                </td>
+                                <td style={{ padding: "8px 10px" }}>
+                                  <span style={{ fontWeight: 600, color: focus >= 80 ? "#5a9e76" : focus >= 50 ? "#c89020" : "#c8416a" }}>
+                                    {focus}%
+                                  </span>
+                                </td>
+                                <td style={{ padding: "8px 10px", color: "#5c5347" }}>{durationMin > 0 ? `${durationMin}m` : "—"}</td>
+                                <td style={{ padding: "8px 10px", color: "#5c5347" }}>{distractionCount}</td>
+                                <td style={{ padding: "8px 10px" }}>
+                                  <span style={{
+                                    fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600,
+                                    background: s.status === "completed" ? "rgba(90,158,118,0.1)" : "rgba(200,65,106,0.1)",
+                                    color: s.status === "completed" ? "#5a9e76" : "#c8416a",
+                                  }}>
+                                    {s.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
                 </>
               )}
             </motion.div>

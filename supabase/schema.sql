@@ -272,6 +272,34 @@ create index if not exists idx_kids_sessions_code on kids_sessions(code_used);
 create index if not exists idx_quizzes_parent on quizzes(parent_id);
 create index if not exists idx_homework_parent on homework(parent_id);
 
+-- Focus timeline on sessions (array of {timestamp, score} entries)
+alter table sessions add column if not exists focus_timeline jsonb default '[]'::jsonb;
+
+-- Topic mastery (forgetting curve tracking)
+create table if not exists topic_mastery (
+  id uuid primary key default gen_random_uuid(),
+  kid_session_id uuid references kids_sessions(id) on delete cascade not null,
+  topic text not null,
+  confidence_score real default 100,
+  last_active_at timestamptz default now(),
+  created_at timestamptz default now(),
+  unique(kid_session_id, topic)
+);
+
+alter table topic_mastery enable row level security;
+
+create policy "Topic mastery is readable" on topic_mastery
+  for select using (true);
+
+create policy "Topic mastery is insertable" on topic_mastery
+  for insert with check (true);
+
+create policy "Topic mastery is updatable" on topic_mastery
+  for update using (true);
+
+create index if not exists idx_topic_mastery_session on topic_mastery(kid_session_id);
+create index if not exists idx_topic_mastery_topic on topic_mastery(kid_session_id, topic);
+
 -- Kid badges (earned achievements)
 create table if not exists kid_badges (
   id uuid primary key default gen_random_uuid(),

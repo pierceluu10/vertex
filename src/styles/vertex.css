@@ -127,10 +127,20 @@ a.vtx-auth-logo {
 .vtx-logo-img.vtx-logo-no-bg {
   mix-blend-mode: screen;
 }
-.vtx-logo-link {
+.vtx-logo-link,
+.vtx-logo-wrap {
   display: inline-flex;
   align-items: center;
+  gap: 10px;
   text-decoration: none;
+}
+.vtx-logo-wordmark {
+  font-family: 'Calibri', 'Trebuchet MS', sans-serif;
+  font-size: inherit;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: inherit;
 }
 
 .vtx-nav-links {
@@ -175,8 +185,8 @@ a.vtx-auth-logo {
 }
 .vtx-hero-tagline span {
   font-family: 'Calibri', 'Trebuchet MS', sans-serif;
-  font-size: 13px;
-  letter-spacing: 0.38em;
+  font-size: 18px;
+  letter-spacing: 0.32em;
   text-transform: uppercase;
   color: rgba(104, 88, 71, 0.92);
   font-weight: 600;
@@ -185,7 +195,8 @@ a.vtx-auth-logo {
 .vtx-scene-wrapper {
   position: relative;
   z-index: 5;
-  width: 860px;
+  width: min(960px, 92vw);
+  max-width: 960px;
   animation: vtxFadeUp 1.2s ease both 0.1s;
 }
 .vtx-scene-svg {
@@ -211,16 +222,16 @@ a.vtx-auth-logo {
 .vtx-scroll-hint {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   color: rgba(114, 97, 80, 0.92);
-  font-size: 11px;
-  letter-spacing: 0.18em;
+  font-size: 14px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   font-weight: 500;
 }
 .vtx-scroll-line {
-  width: 38px;
-  height: 1px;
+  width: 48px;
+  height: 2px;
   background: rgba(114, 97, 80, 0.72);
   position: relative;
   overflow: hidden;
@@ -1074,6 +1085,13 @@ a.vtx-auth-logo {
 .vtx-kid-scroll-padding.vtx-kid-fit-viewport .vtx-kid-home-left .vtx-kid-cta-desc {
   font-size: 15px;
 }
+.vtx-kid-scroll-padding.vtx-kid-fit-viewport .vtx-kid-home-left .vtx-kid-quick-actions {
+  margin-top: 24px;
+}
+.vtx-kid-scroll-padding.vtx-kid-fit-viewport .vtx-kid-home-left .vtx-kid-quick-actions-label {
+  margin-bottom: 10px;
+  font-size: 12px;
+}
 .vtx-kid-scroll-padding.vtx-kid-fit-viewport .vtx-kid-home-left .vtx-kid-actions-label {
   margin-top: 24px;
   margin-bottom: 14px;
@@ -1226,7 +1244,66 @@ a.vtx-auth-logo {
   color: var(--vtx-muted, #8a7f6e);
 }
 
-/* Action grid */
+/* Quick actions (replaces "What would you like to do?" cards) */
+.vtx-kid-quick-actions {
+  margin-top: 40px;
+}
+.vtx-kid-quick-actions-label {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vtx-muted, #8a7f6e);
+  margin-bottom: 14px;
+}
+.vtx-kid-quick-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.vtx-kid-quick-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--vtx-ink, #1a1610);
+  background: var(--vtx-cream, #f8f3e8);
+  border: 1px solid var(--vtx-border, rgba(55,45,25,0.10));
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+.vtx-kid-quick-action:hover:not(:disabled) {
+  border-color: var(--vtx-pink, #c8416a);
+  background: rgba(200,65,106,0.06);
+  color: var(--vtx-pink, #c8416a);
+}
+.vtx-kid-quick-action svg {
+  flex-shrink: 0;
+  color: var(--vtx-pink, #c8416a);
+}
+.vtx-kid-quick-action-badge {
+  min-width: 18px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vtx-pink, #c8416a);
+  background: rgba(200,65,106,0.12);
+  border-radius: 999px;
+}
+
+.vtx-kid-unlock-card {
+  padding: 24px;
+  text-align: center;
+  background: var(--vtx-cream, #f8f3e8);
+  border: 1px dashed rgba(0,0,0,0.1);
+  border-radius: 16px;
+}
+
+/* Action grid (legacy, kept for any other use) */
 .vtx-kid-actions-label {
   font-size: 16px;
   letter-spacing: 0.24em;

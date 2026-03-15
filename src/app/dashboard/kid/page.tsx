@@ -20,9 +20,12 @@ import {
   Trash2,
   User,
   ArrowLeft,
-  ArrowRight,
+  Target,
+  Lock,
+  Clock,
+  Trophy,
 } from "lucide-react";
-import { MdWbSunny, MdWbCloudy, MdNightsStay, MdLocalFireDepartment, MdBolt, MdMenuBook } from "react-icons/md";
+import { MdWbSunny, MdWbCloudy, MdNightsStay, MdLocalFireDepartment, MdBolt, MdMenuBook, MdCloudUpload, MdQuiz, MdChat } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { ParentAvatar } from "@/components/session/parent-avatar";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
@@ -71,6 +74,14 @@ export default function KidDashboardPage() {
   const [todoInput, setTodoInput] = useState("");
   const [tutorName, setTutorName] = useState<string>("");
 
+  // Mastery state
+  const [masteryData, setMasteryData] = useState<{
+    strengths: { topic: string; confidence: number; label: string; tier: string }[];
+    weaknesses: { topic: string; confidence: number; label: string; isStale: boolean }[];
+    hasData: boolean;
+  } | null>(null);
+  const [masteryLoading, setMasteryLoading] = useState(true);
+
   const loadTutor = useCallback(async (parentId: string) => {
     try {
       const res = await fetch(`/api/student/tutor?parentId=${encodeURIComponent(parentId)}`);
@@ -95,6 +106,15 @@ export default function KidDashboardPage() {
     } catch { /* ignore */ }
   }, []);
 
+  const loadMastery = useCallback(async (kidSessionId: string) => {
+    try {
+      const res = await fetch(`/api/student/mastery?kidSessionId=${encodeURIComponent(kidSessionId)}`);
+      const data = await res.json();
+      setMasteryData(data);
+    } catch { /* ignore */ }
+    finally { setMasteryLoading(false); }
+  }, []);
+
   // Read session from localStorage after mount (avoids SSR hydration mismatch)
   useEffect(() => {
     const session = readStoredKidSession();
@@ -112,11 +132,12 @@ export default function KidDashboardPage() {
     void loadDocuments(kidSession.parent_id);
     void loadSessions(kidSession.id);
     void loadTutor(kidSession.parent_id);
+    void loadMastery(kidSession.id);
     try {
       const raw = localStorage.getItem(`${TODO_STORAGE_KEY}_${kidSession.id}`);
       if (raw) setTodos(JSON.parse(raw));
     } catch { /* ignore */ }
-  }, [mounted, kidSession, loadDocuments, loadSessions, loadTutor, router]);
+  }, [mounted, kidSession, loadDocuments, loadSessions, loadTutor, loadMastery, router]);
 
   function saveTodos(next: { id: string; label: string; done: boolean }[]) {
     setTodos(next);
@@ -277,33 +298,96 @@ export default function KidDashboardPage() {
                     <ChevronRight size={18} style={{ color: "var(--vtx-muted, #8a7f6e)" }} />
                   </motion.button>
 
-                  <motion.div className="vtx-kid-actions-label" variants={stagger} initial="hidden" animate="show" custom={5}>
-                    What would you like to do?
+                  {/* Topic Mastery Section */}
+                  <motion.div variants={stagger} initial="hidden" animate="show" custom={4} style={{ marginTop: 32 }}>
+                    
+                    {masteryLoading ? (
+                      <motion.div style={{ display: "flex", gap: 12 }} variants={stagger} initial="hidden" animate="show" custom={4}>
+                        <motion.div style={{ flex: 1, height: 80, background: "rgba(0,0,0,0.03)", borderRadius: 16, animation: "pulse 2s infinite" }} variants={stagger} custom={4} />
+                        <motion.div style={{ flex: 1, height: 80, background: "rgba(0,0,0,0.03)", borderRadius: 16, animation: "pulse 2s infinite" }} variants={stagger} custom={5} />
+                      </motion.div>
+                    ) : masteryData?.hasData ? (
+                      <motion.div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} variants={stagger} initial="hidden" animate="show" custom={4}>
+                        {/* Strengths */}
+                        {masteryData.strengths.length > 0 && (
+                          <motion.div variants={stagger} initial="hidden" animate="show" custom={5}>
+                            <span style={{ display: "block", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a7f6e", marginBottom: 8 }}>
+                              Strengths
+                            </span>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                              {masteryData.strengths.map((t, i) => (
+                                <motion.div key={t.topic} style={{
+                                  display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+                                  background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: 12
+                                }} variants={stagger} initial="hidden" animate="show" custom={6 + i}>
+                                  <div style={{
+                                    width: 32, height: 32, borderRadius: "50%", background: "rgba(245,158,11,0.15)",
+                                    display: "flex", alignItems: "center", justifyContent: "center"
+                                  }}>
+                                    {t.tier === "fire" ? <Sparkles size={16} style={{ color: "#f59e0b" }} /> : <Trophy size={16} style={{ color: "#d97706" }} />}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>{t.topic}</div>
+                                    <div style={{ fontSize: 11, color: "#b45309" }}>{t.label}</div>
+                                  </div>
+                                </motion.div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* Needs Work */}
+                        {masteryData.weaknesses.length > 0 && (
+                          <motion.div variants={stagger} initial="hidden" animate="show" custom={6}>
+                            <span style={{ display: "block", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a7f6e", marginBottom: 8 }}>
+                              Needs Work
+                            </span>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                              {masteryData.weaknesses.map((t, i) => (
+                                <motion.div key={t.topic} style={{
+                                  display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+                                  background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.12)", borderRadius: 12
+                                }} variants={stagger} initial="hidden" animate="show" custom={7 + i}>
+                                  <div style={{
+                                    width: 32, height: 32, borderRadius: "50%", background: "rgba(139,92,246,0.1)",
+                                    display: "flex", alignItems: "center", justifyContent: "center"
+                                  }}>
+                                    {t.isStale ? <Clock size={16} style={{ color: "#7c3aed" }} /> : <Target size={16} style={{ color: "#8b5cf6" }} />}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: "#5b21b6" }}>{t.topic}</div>
+                                    <div style={{ fontSize: 11, color: "#7c3aed" }}>{t.label}</div>
+                                  </div>
+                                </motion.div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        className="vtx-kid-unlock-card"
+                        variants={stagger}
+                        initial="hidden"
+                        animate="show"
+                        custom={4}
+                      >
+                        <Lock size={24} style={{ color: "#8a7f6e", margin: "0 auto 8px" }} />
+                        <div style={{ fontSize: 15, fontWeight: 600, color: "#1a1610", marginBottom: 4 }}>Unlock your stats</div>
+                        <div style={{ fontSize: 13, color: "#8a7f6e" }}>Finish your first study session to see your progress here.</div>
+                      </motion.div>
+                    )}
                   </motion.div>
 
-                  <div className="vtx-kid-action-grid">
-                  <motion.button type="button" className="vtx-kid-action-card" onClick={() => setHomeView("homework")} variants={stagger} initial="hidden" animate="show" custom={6}>
-                    <span className="vtx-kid-action-arrow"><ArrowRight size={16} /></span>
-                    <div className="vtx-kid-action-icon"><Upload size={22} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
-                    <div className="vtx-kid-action-title">Upload homework</div>
-                    <div className="vtx-kid-action-desc">Add a PDF to study from</div>
-                    {documents.length > 0 && (
-                      <div className="vtx-kid-action-badge">{documents.length} file{documents.length !== 1 ? "s" : ""}</div>
-                    )}
-                  </motion.button>
-                  <motion.button type="button" className={cn("vtx-kid-action-card", quizLoading && "opacity-60")} onClick={startQuiz} disabled={quizLoading} variants={stagger} initial="hidden" animate="show" custom={7}>
-                    <span className="vtx-kid-action-arrow"><ArrowRight size={16} /></span>
-                    <div className="vtx-kid-action-icon"><Sparkles size={22} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
-                    <div className="vtx-kid-action-title">{quizLoading ? "Loading…" : "Take a quiz"}</div>
-                    <div className="vtx-kid-action-desc">Practice with math questions</div>
-                  </motion.button>
-                  <motion.button type="button" className="vtx-kid-action-card" onClick={() => setActiveTab("study")} variants={stagger} initial="hidden" animate="show" custom={8}>
-                    <span className="vtx-kid-action-arrow"><ArrowRight size={16} /></span>
-                    <div className="vtx-kid-action-icon"><MessageCircle size={22} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
-                    <div className="vtx-kid-action-title">Start studying</div>
-                    <div className="vtx-kid-action-desc">Get help with math</div>
-                  </motion.button>
-                  </div>
+                  {/* Secondary Actions */}
+                  <motion.div style={{ display: "flex", gap: 12, marginTop: 24 }} variants={stagger} initial="hidden" animate="show" custom={5}>
+                    <button type="button" onClick={() => setHomeView("homework")} className="vtx-kid-quick-action">
+                      <MdCloudUpload size={18} />
+                      <span>Upload Homework</span>
+                      {documents.length > 0 && <span className="vtx-kid-quick-action-badge">{documents.length}</span>}
+                    </button>
+                  </motion.div>
 
                 </div>
 
@@ -324,7 +408,7 @@ export default function KidDashboardPage() {
                 </div>
 
                 <aside className="vtx-kid-home-right">
-                  <div className="vtx-kid-sidebar-block">
+                  <motion.div className="vtx-kid-sidebar-block" variants={stagger} initial="hidden" animate="show" custom={6}>
                     <div className="vtx-kid-sidebar-heading">
                       <ListTodo size={16} style={{ color: "var(--vtx-pink, #c8416a)" }} />
                       <span>To-do</span>
@@ -356,9 +440,9 @@ export default function KidDashboardPage() {
                       ))}
                     </ul>
                     {todos.length === 0 && <p className="vtx-kid-sidebar-muted">No tasks yet. Add one above.</p>}
-                  </div>
+                  </motion.div>
 
-                  <div className="vtx-kid-sidebar-block">
+                  <motion.div className="vtx-kid-sidebar-block" variants={stagger} initial="hidden" animate="show" custom={7}>
                     <div className="vtx-kid-sidebar-heading">
                       <BarChart3 size={16} style={{ color: "#8b5cf6" }} />
                       <span>How you&apos;re doing</span>
@@ -397,9 +481,9 @@ export default function KidDashboardPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="vtx-kid-sidebar-block">
+                  <motion.div className="vtx-kid-sidebar-block" variants={stagger} initial="hidden" animate="show" custom={8}>
                     <div className="vtx-kid-sidebar-heading">
                       <MessageSquare size={16} style={{ color: "#3b82f6" }} />
                       <span>Past study sessions</span>
@@ -423,7 +507,7 @@ export default function KidDashboardPage() {
                       ))}
                     </ul>
                     {sessions.length === 0 && <p className="vtx-kid-sidebar-muted">No sessions yet. Start one above.</p>}
-                  </div>
+                  </motion.div>
                 </aside>
               </motion.div>
             )}
@@ -592,24 +676,8 @@ export default function KidDashboardPage() {
                     <span className="vtx-kid-profile-value">{childName}</span>
                   </div>
 
-                  {/* Streak & XP stats on profile */}
-                  <div className="vtx-kid-profile-stats">
-                    <div className="vtx-kid-profile-stat">
-                      <MdLocalFireDepartment className="vtx-kid-profile-stat-icon" style={{ color: "#ef4444" }} />
-                      <span className="vtx-kid-profile-stat-value">{streak}</span>
-                      <span className="vtx-kid-profile-stat-label">Streak</span>
-                    </div>
-                    <div className="vtx-kid-profile-stat">
-                      <MdBolt className="vtx-kid-profile-stat-icon" style={{ color: "#f59e0b" }} />
-                      <span className="vtx-kid-profile-stat-value">{xp}</span>
-                      <span className="vtx-kid-profile-stat-label">XP</span>
-                    </div>
-                    <div className="vtx-kid-profile-stat">
-                      <MdMenuBook className="vtx-kid-profile-stat-icon" style={{ color: "#3b82f6" }} />
-                      <span className="vtx-kid-profile-stat-value">{sessions.length}</span>
-                      <span className="vtx-kid-profile-stat-label">Sessions</span>
-                    </div>
-                  </div>
+
+
 
                   <button
                     type="button"
