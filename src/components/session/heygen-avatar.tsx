@@ -109,9 +109,7 @@ export function HeyGenAvatar({
         }
       });
 
-      // Only use avatarName if it's a known streaming avatar ID.
-      // Photo avatar (talking photo) IDs are NOT compatible with the streaming API.
-      // Pass "default" to use HeyGen's default streaming avatar.
+      // avatarName can be a streaming avatar ID, talking photo ID, or "default".
       await avatar.createStartAvatar({
         avatarName,
         quality: AvatarQuality.Medium,
