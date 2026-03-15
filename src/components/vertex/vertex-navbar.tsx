@@ -14,8 +14,8 @@ export function VertexNavbar() {
     >
       <VertexLogo href="/" height={52} className="vtx-nav-logo" />
       <ul className="vtx-nav-links">
-        {["Login", "Register", "I'm a Student", "Mission", "Dashboard"].map((label, i) => {
-          const hrefs = ["/login", "/signup", "/student", "/mission", "/dashboard/parent"];
+        {["Login", "Register", "I'm a Student", "Dashboard"].map((label, i) => {
+          const hrefs = ["/login", "/signup", "/student", "/dashboard/parent"];
           return (
             <motion.li
               key={label}
