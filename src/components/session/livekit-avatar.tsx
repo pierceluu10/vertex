@@ -582,7 +582,7 @@ export function LiveKitAvatar({
         overflow: "hidden",
         borderRadius: 24,
         background:
-          "radial-gradient(circle at top, rgba(255,255,255,0.16), transparent 45%), linear-gradient(180deg, #1d2431 0%, #111723 100%)",
+          "#1d2431",
         boxShadow: "0 24px 44px rgba(17, 23, 35, 0.18)",
       }}
     >
@@ -607,7 +607,7 @@ export function LiveKitAvatar({
             background:
               status === "audio-only"
                 ? "rgba(15,21,32,0.72)"
-                : "linear-gradient(180deg, rgba(10,14,24,0.82), rgba(10,14,24,0.66))",
+                : "rgba(10,14,24,0.82)",
             color: "#f7efe2",
           }}
         >

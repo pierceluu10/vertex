@@ -22,10 +22,10 @@ export function ParentAvatar({
   }[focusLevel];
 
   const bgColor = {
-    high: "from-violet-500 to-violet-700",
-    medium: "from-yellow-500 to-orange-500",
-    low: "from-orange-500 to-red-500",
-    critical: "from-red-500 to-red-700",
+    high: "bg-violet-600",
+    medium: "bg-yellow-500",
+    low: "bg-orange-500",
+    critical: "bg-red-600",
   }[focusLevel];
 
   return (
@@ -37,7 +37,7 @@ export function ParentAvatar({
     >
       <div className="relative">
         <motion.div
-          className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${bgColor} flex items-center justify-center ring-4 ${ringColor} shadow-lg`}
+          className={`w-20 h-20 rounded-2xl ${bgColor} flex items-center justify-center ring-4 ${ringColor} shadow-lg`}
           animate={
             isSpeaking
               ? { scale: [1, 1.05, 1], transition: { repeat: Infinity, duration: 0.8 } }

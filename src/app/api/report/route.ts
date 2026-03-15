@@ -143,7 +143,7 @@ export async function POST(request: Request) {
           subject: `${child.name}'s Study Session Report`,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: linear-gradient(135deg, #7c3aed, #6d28d9); padding: 24px; border-radius: 16px 16px 0 0;">
+              <div style="background: #7c3aed; padding: 24px; border-radius: 16px 16px 0 0;">
                 <h1 style="color: white; margin: 0; font-size: 24px;">Vertex Study Report</h1>
                 <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0;">Session for ${child.name}</p>
               </div>

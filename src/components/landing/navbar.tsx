@@ -13,7 +13,7 @@ export function Navbar() {
       transition={{ duration: 0.5 }}
     >
       <Link href="/" className="flex items-center gap-2">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center shadow-lg shadow-violet-500/25">
+        <div className="w-10 h-10 rounded-xl bg-violet-700 flex items-center justify-center shadow-lg shadow-violet-500/25">
           <svg
             viewBox="0 0 24 24"
             className="w-6 h-6 text-white"

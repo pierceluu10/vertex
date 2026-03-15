@@ -291,7 +291,7 @@ function KidSessionContent() {
       style={{
         minHeight: "100vh",
         background:
-          "radial-gradient(circle at top, rgba(252, 236, 220, 0.8), transparent 34%), linear-gradient(180deg, #fef7ee 0%, #f8ebdb 100%)",
+          "#fef7ee",
         fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
         color: "#1e1a12",
       }}
@@ -417,7 +417,7 @@ function KidSessionContent() {
                       gap: 12,
                       padding: 24,
                       borderRadius: 24,
-                      background: "linear-gradient(180deg, #1d2431 0%, #111723 100%)",
+                      background: "#1d2431",
                       color: "#fff4e6",
                       textAlign: "center",
                     }}
@@ -494,7 +494,7 @@ function KidSessionContent() {
                       boxShadow: "0 12px 24px rgba(52, 39, 29, 0.06)",
                       ...(message.role === "user"
                         ? {
-                            background: "linear-gradient(135deg, #c8416a 0%, #a83355 100%)",
+                            background: "#c8416a",
                             color: "#fff",
                             borderBottomRightRadius: 6,
                           }

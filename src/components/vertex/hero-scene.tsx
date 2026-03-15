@@ -21,28 +21,6 @@ export function HeroScene() {
         transition={{ duration: 0.7, delay: 0.25, ease: "easeOut" }}
       >
         <svg className="vtx-scene-svg" viewBox="0 0 860 460" xmlns="http://www.w3.org/2000/svg" fill="none">
-          <defs>
-            <radialGradient id="brainAura" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="rgba(200,65,106,.18)"/>
-              <stop offset="100%" stopColor="rgba(200,65,106,0)"/>
-            </radialGradient>
-            <linearGradient id="connL" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(26,22,14,.1)"/>
-              <stop offset="100%" stopColor="rgba(200,65,106,.75)"/>
-            </linearGradient>
-            <linearGradient id="connR" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(200,65,106,.75)"/>
-              <stop offset="100%" stopColor="rgba(26,22,14,.1)"/>
-            </linearGradient>
-            <linearGradient id="manGrad" x1="30%" y1="0%" x2="70%" y2="100%">
-              <stop offset="0%" stopColor="#2c2720"/>
-              <stop offset="100%" stopColor="#16130e"/>
-            </linearGradient>
-            <linearGradient id="girlGrad" x1="30%" y1="0%" x2="70%" y2="100%">
-              <stop offset="0%" stopColor="#201c16"/>
-              <stop offset="100%" stopColor="#0e0c08"/>
-            </linearGradient>
-          </defs>
 
           {/* Ghost title */}
           <text x="430" y="54" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="50" fontWeight="700" fill="rgba(26,22,14,.35)" letterSpacing="22">VERTEX</text>
@@ -78,7 +56,7 @@ export function HeroScene() {
           </g>
 
           {/* Connection lines (drawn under logo): parent → logo → student — paths meet the triangle */}
-          <path d="M262 210 Q318 208 378 207" stroke="url(#connL)" strokeWidth="1.5">
+          <path d="M262 210 Q318 208 378 207" stroke="rgba(200,65,106,0.5)" strokeWidth="1.5">
             <animate attributeName="opacity" values=".3;.85;.3" dur="2.6s" repeatCount="indefinite"/>
           </path>
           <circle r="3.5" fill="#c8416a">
@@ -89,7 +67,7 @@ export function HeroScene() {
             <animateMotion dur="2s" begin=".65s" repeatCount="indefinite" path="M262 210 Q318 208 378 207"/>
             <animate attributeName="opacity" values="0;.7;0" dur="2s" begin=".65s" repeatCount="indefinite"/>
           </circle>
-          <path d="M482 207 Q546 208 598 210" stroke="url(#connR)" strokeWidth="1.5">
+          <path d="M482 207 Q546 208 598 210" stroke="rgba(200,65,106,0.5)" strokeWidth="1.5">
             <animate attributeName="opacity" values=".3;.85;.3" dur="2.6s" begin=".35s" repeatCount="indefinite"/>
           </path>
           <circle r="3.5" fill="#c8416a">

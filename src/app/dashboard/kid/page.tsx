@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -21,12 +21,8 @@ import {
   User,
   ArrowLeft,
   ArrowRight,
-  Zap,
 } from "lucide-react";
-import { 
-  MdLocalFireDepartment, MdBolt, MdCelebration, MdMenuBook,
-  MdWbSunny, MdWbCloudy, MdNightsStay 
-} from "react-icons/md";
+import { MdWbSunny, MdWbCloudy, MdNightsStay } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ParentAvatar } from "@/components/session/parent-avatar";
@@ -35,8 +31,6 @@ import type { KidSession, UploadedDocument, Quiz, TutoringSession } from "@/type
 import "@/styles/vertex.css";
 
 const TODO_STORAGE_KEY = "vertex_kid_todos";
-const STREAK_STORAGE_KEY = "vertex_kid_streak";
-const XP_STORAGE_KEY = "vertex_kid_xp";
 
 type Tab = "home" | "study" | "profile";
 type HomeView = "main" | "homework" | "quiz";
@@ -54,59 +48,6 @@ const tabTransition = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" as const } },
   exit: { opacity: 0, y: -8, transition: { duration: 0.18 } },
 };
-
-/* ─── Daily challenge prompts ─── */
-const DAILY_CHALLENGES = [
-  "Try solving 3 multiplication problems without a calculator today!",
-  "Can you find 5 different ways to make the number 24 using +, -, ×, ÷?",
-  "What's the biggest number you can make with the digits 3, 7, and 5?",
-  "Try to estimate how many steps it takes to walk around your house!",
-  "Draw a shape with exactly 5 sides. What's it called?",
-  "Count by 7s as high as you can go!",
-  "What fraction of your day do you spend sleeping?",
-  "Find 3 objects at home that are shaped like cylinders.",
-  "If you had 100 coins, how many ways could you split them into equal groups?",
-  "Measure something using only your hand span. How many spans is it?",
-  "What's half of half of 100?",
-  "Try to add up all the numbers from 1 to 10 in your head!",
-  "How many rectangles can you spot in your room right now?",
-  "If you save $2 a day, how much will you have after a month?",
-  "What's the next number in this pattern: 2, 6, 12, 20, __?",
-  "Draw a symmetrical butterfly using only triangles!",
-  "Estimate how tall you are in centimeters. Then measure to check!",
-  "How many minutes are in a full day?",
-  "Create your own word problem for a friend to solve.",
-  "Find 3 things that weigh about the same as 1 kilogram.",
-  "What shape has the most sides that you know? Draw it!",
-  "Skip count by 9s — do you notice a pattern in the digits?",
-  "If a pizza has 8 slices and you eat 3, what fraction is left?",
-  "Time yourself: how long can you hold your breath? Round to the nearest 5 seconds.",
-  "What's 15% of 200? Try to figure it out without paper!",
-  "Build something using exactly 10 blocks or LEGO pieces.",
-  "How many different 3-digit numbers can you make with 1, 2, and 3?",
-  "Estimate how many grains of rice fit in a cup.",
-  "What's the perimeter of your desk or table?",
-  "Draw a graph of your mood throughout the day!",
-];
-
-/* ─── Confetti colors ─── */
-const CONFETTI_COLORS = ["#c8416a", "#e8a87c", "#8b5cf6", "#3b82f6", "#10b981", "#f59e0b"];
-
-function generateConfettiPieces(count: number) {
-  return Array.from({ length: count }, (_, i) => ({
-    id: i,
-    left: `${Math.random() * 100}%`,
-    top: `${40 + Math.random() * 30}%`,
-    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-    driftX: `${(Math.random() - 0.5) * 200}px`,
-    driftY: `${-80 - Math.random() * 160}px`,
-    driftR: `${(Math.random() - 0.5) * 720}deg`,
-    delay: `${Math.random() * 0.3}s`,
-    width: `${6 + Math.random() * 8}px`,
-    height: `${6 + Math.random() * 8}px`,
-    borderRadius: Math.random() > 0.5 ? "50%" : "2px",
-  }));
-}
 
 export default function KidDashboardPage() {
   const router = useRouter();
@@ -128,57 +69,6 @@ export default function KidDashboardPage() {
   const [todos, setTodos] = useState<{ id: string; label: string; done: boolean }[]>(() => []);
   const [todoInput, setTodoInput] = useState("");
   const [tutorName, setTutorName] = useState<string>("");
-  const [streak, setStreak] = useState(0);
-  const [xp, setXp] = useState(0);
-  const [showConfetti, setShowConfetti] = useState(false);
-
-  const confettiPieces = useMemo(() => generateConfettiPieces(40), []);
-
-  /* ─── Load streak & XP from localStorage ─── */
-  function loadGamification(sessionId: string) {
-    try {
-      const streakData = localStorage.getItem(`${STREAK_STORAGE_KEY}_${sessionId}`);
-      if (streakData) {
-        const parsed = JSON.parse(streakData);
-        const today = new Date().toDateString();
-        const yesterday = new Date(Date.now() - 86400000).toDateString();
-        if (parsed.lastDate === today) {
-          setStreak(parsed.count);
-        } else if (parsed.lastDate === yesterday) {
-          setStreak(parsed.count);
-        } else {
-          setStreak(0);
-          localStorage.setItem(`${STREAK_STORAGE_KEY}_${sessionId}`, JSON.stringify({ count: 0, lastDate: today }));
-        }
-      }
-      const xpData = localStorage.getItem(`${XP_STORAGE_KEY}_${sessionId}`);
-      if (xpData) setXp(parseInt(xpData, 10) || 0);
-    } catch { /* ignore */ }
-  }
-
-  function incrementStreak(sessionId: string) {
-    try {
-      const today = new Date().toDateString();
-      const streakData = localStorage.getItem(`${STREAK_STORAGE_KEY}_${sessionId}`);
-      let count = 1;
-      if (streakData) {
-        const parsed = JSON.parse(streakData);
-        const yesterday = new Date(Date.now() - 86400000).toDateString();
-        if (parsed.lastDate === today) return; // Already counted today
-        if (parsed.lastDate === yesterday) count = parsed.count + 1;
-      }
-      localStorage.setItem(`${STREAK_STORAGE_KEY}_${sessionId}`, JSON.stringify({ count, lastDate: today }));
-      setStreak(count);
-    } catch { /* ignore */ }
-  }
-
-  function addXp(sessionId: string, amount: number) {
-    setXp(prev => {
-      const next = prev + amount;
-      try { localStorage.setItem(`${XP_STORAGE_KEY}_${sessionId}`, String(next)); } catch { /* ignore */ }
-      return next;
-    });
-  }
 
   const loadTutor = useCallback(async (parentId: string) => {
     try {
@@ -221,7 +111,6 @@ export default function KidDashboardPage() {
     void loadDocuments(kidSession.parent_id);
     void loadSessions(kidSession.id);
     void loadTutor(kidSession.parent_id);
-    loadGamification(kidSession.id);
     try {
       const raw = localStorage.getItem(`${TODO_STORAGE_KEY}_${kidSession.id}`);
       if (raw) setTodos(JSON.parse(raw));
@@ -303,18 +192,9 @@ export default function KidDashboardPage() {
       answer.toLowerCase().trim() === q.correct_answer.toLowerCase().trim();
     const newAnswers = [...quizData.answers, { answer, correct: isCorrect }];
 
-    // Award XP for correct answers
-    if (isCorrect) addXp(kidSession.id, 10);
-
     const nextIdx = quizData.current + 1;
     if (nextIdx >= quizData.questions.length) {
       setQuizData({ ...quizData, answers: newAnswers, done: true });
-      // Trigger confetti
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 1800);
-      // Increment streak on quiz completion
-      incrementStreak(kidSession.id);
-      addXp(kidSession.id, 25);
     } else {
       setQuizData({ ...quizData, current: nextIdx, answers: newAnswers });
     }
@@ -322,9 +202,6 @@ export default function KidDashboardPage() {
 
   function startTutorSession(documentId?: string) {
     if (!kidSession) return;
-    // Increment streak when starting a session
-    incrementStreak(kidSession.id);
-    addXp(kidSession.id, 25);
     const params = new URLSearchParams({
       kidSessionId: kidSession.id,
       parentId: kidSession.parent_id,
@@ -347,7 +224,6 @@ export default function KidDashboardPage() {
 
   const { greeting, icon, motivational } = getGreetingData();
   const childName = kidSession.child_name?.trim() || "there";
-  const dailyChallenge = DAILY_CHALLENGES[Math.floor(Date.now() / 86400000) % DAILY_CHALLENGES.length];
 
   /* Computed stats */
   const sessionsThisWeek = sessions.filter((s) => {
@@ -375,37 +251,6 @@ export default function KidDashboardPage() {
         <VertexLogo href="/" height={52} className="vtx-kid-logo" />
       </header>
 
-      {/* Confetti overlay */}
-      <AnimatePresence>
-        {showConfetti && (
-          <motion.div
-            className="vtx-kid-confetti-container"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            {confettiPieces.map((p) => (
-              <div
-                key={p.id}
-                className="vtx-kid-confetti-piece"
-                style={{
-                  left: p.left,
-                  top: p.top,
-                  backgroundColor: p.color,
-                  width: p.width,
-                  height: p.height,
-                  borderRadius: p.borderRadius,
-                  animationDelay: p.delay,
-                  // @ts-expect-error CSS custom properties
-                  "--drift-x": p.driftX,
-                  "--drift-y": p.driftY,
-                  "--drift-r": p.driftR,
-                }}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <ScrollArea className="kid-dashboard-scroll flex-1 [&_[data-slot=scroll-area-scrollbar]]:hidden">
         <div className={cn("vtx-kid-scroll-padding", activeTab === "home" && homeView === "main" && "vtx-kid-fit-viewport")}>
           <div className="vtx-kid-content">
@@ -424,20 +269,6 @@ export default function KidDashboardPage() {
                     {motivational}
                   </motion.p>
 
-                  {/* Streak & XP Badges */}
-                  <motion.div className="vtx-kid-badges-row" variants={stagger} initial="hidden" animate="show" custom={2.5}>
-                    <div className="vtx-kid-badge">
-                      <MdLocalFireDepartment className="vtx-kid-badge-icon vtx-kid-flame-pulse" style={{ color: "#ef4444" }} />
-                      <span className="vtx-kid-badge-value">{streak}</span>
-                      <span className="vtx-kid-badge-label">day streak</span>
-                    </div>
-                    <div className="vtx-kid-badge">
-                      <span className="vtx-kid-badge-icon"><Zap size={16} style={{ color: "#f59e0b" }} /></span>
-                      <span className="vtx-kid-badge-value">{xp}</span>
-                      <span className="vtx-kid-badge-label">XP</span>
-                    </div>
-                  </motion.div>
-
                   <motion.button type="button" className="vtx-kid-cta" onClick={() => startTutorSession()} variants={stagger} initial="hidden" animate="show" custom={3}>
                     <div className="vtx-kid-cta-icon"><MessageCircle size={20} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                     <div className="vtx-kid-cta-text">
@@ -446,17 +277,6 @@ export default function KidDashboardPage() {
                     </div>
                     <ChevronRight size={18} style={{ color: "var(--vtx-muted, #8a7f6e)" }} />
                   </motion.button>
-
-                  {/* Daily Challenge Card */}
-                  <motion.div className="vtx-kid-daily-challenge" variants={stagger} initial="hidden" animate="show" custom={4}>
-                    <div className="vtx-kid-challenge-icon">
-                      <Sparkles size={22} style={{ color: "var(--vtx-pink, #c8416a)" }} />
-                    </div>
-                    <div>
-                      <div className="vtx-kid-challenge-label">Daily Challenge</div>
-                      <div className="vtx-kid-challenge-text">{dailyChallenge}</div>
-                    </div>
-                  </motion.div>
 
                   <motion.div className="vtx-kid-actions-label" variants={stagger} initial="hidden" animate="show" custom={5}>
                     What would you like to do?
@@ -477,14 +297,12 @@ export default function KidDashboardPage() {
                     <div className="vtx-kid-action-icon"><Sparkles size={22} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                     <div className="vtx-kid-action-title">{quizLoading ? "Loading…" : "Take a quiz"}</div>
                     <div className="vtx-kid-action-desc">Practice with math questions</div>
-                    <div className="vtx-kid-action-badge vtx-kid-action-badge-new">+10 XP</div>
                   </motion.button>
                   <motion.button type="button" className="vtx-kid-action-card" onClick={() => setActiveTab("study")} variants={stagger} initial="hidden" animate="show" custom={8}>
                     <span className="vtx-kid-action-arrow"><ArrowRight size={16} /></span>
                     <div className="vtx-kid-action-icon"><MessageCircle size={22} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                     <div className="vtx-kid-action-title">Start studying</div>
                     <div className="vtx-kid-action-desc">Get help with math</div>
-                    <div className="vtx-kid-action-badge vtx-kid-action-badge-new">+25 XP</div>
                   </motion.button>
                   </div>
 
@@ -672,16 +490,12 @@ export default function KidDashboardPage() {
                 ) : quizData.done ? (
                   <div className="vtx-kid-quiz-card">
                     <span className="vtx-kid-section-num">Complete</span>
-                    <h2 className="vtx-kid-quiz-title">Quiz complete, {childName}! <MdCelebration style={{ display: "inline", color: "var(--vtx-pink)" }} /></h2>
+                    <h2 className="vtx-kid-quiz-title">Quiz complete, {childName}!</h2>
                     <div className="vtx-kid-quiz-result">
                       {quizData.answers.filter((a) => a.correct).length}/{quizData.questions.length}
                     </div>
                     <p className="vtx-kid-quiz-desc">
-                      {quizData.answers.filter((a) => a.correct).length}/{quizData.questions.length} correct — you earned{" "}
-                      <strong style={{ color: "var(--vtx-pink)" }}>
-                        {quizData.answers.filter((a) => a.correct).length * 10 + 25} XP
-                      </strong>
-                      !
+                      {quizData.answers.filter((a) => a.correct).length}/{quizData.questions.length} correct
                     </p>
                     <button type="button" className="vtx-kid-quiz-btn" onClick={() => { setQuizData(null); startQuiz(); }}>
                       Try another quiz

@@ -321,7 +321,7 @@ export default function ParentProfilePage() {
                 borderRadius: 18,
                 overflow: "hidden",
                 background:
-                  "radial-gradient(circle at top, rgba(255,255,255,0.16), transparent 45%), linear-gradient(180deg, #1d2431 0%, #111723 100%)",
+                  "#1d2431",
                 border: "1px solid rgba(55,45,25,0.08)",
                 display: "flex",
                 flexDirection: "column",

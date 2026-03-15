@@ -43,9 +43,7 @@ function generateQuestion(diff: number): Question {
 
 export function MathQuiz() {
   const [diff, setDiff] = useState(1);
-  const [score, setScore] = useState(0);
   const [qCnt, setQCnt] = useState(0);
-  const [streak, setStreak] = useState(0);
   const [question, setQuestion] = useState<Question | null>(null);
   const [answered, setAnswered] = useState(false);
   const [results, setResults] = useState<Record<number, "correct" | "wrong">>({});
@@ -69,13 +67,10 @@ export function MathQuiz() {
 
     if (val === question.correct) {
       setResults({ [idx]: "correct" });
-      setScore(s => s + diff * 10);
-      setStreak(s => Math.min(s + 1, 5));
       setDisplayAnswer(String(val));
     } else {
       const correctIdx = question.choices.indexOf(question.correct);
       setResults({ [idx]: "wrong", [correctIdx]: "correct" });
-      setStreak(0);
     }
 
     setTimeout(() => nextQuestion(), 880);
@@ -139,23 +134,8 @@ export function MathQuiz() {
             </div>
             <div className="vtx-math-sidebar">
               <div>
-                <div className="vtx-stat-label">Score</div>
-                <div className="vtx-stat-value pink">{score}</div>
-              </div>
-              <div>
                 <div className="vtx-stat-label">Questions</div>
                 <div className="vtx-stat-value">{qCnt}</div>
-                <div className="vtx-progress-track">
-                  <div className="vtx-progress-fill" style={{ width: `${Math.min(qCnt * 10, 100)}%` }} />
-                </div>
-              </div>
-              <div>
-                <div className="vtx-stat-label">Streak</div>
-                <div className="vtx-streak-row">
-                  {[0, 1, 2, 3, 4].map(i => (
-                    <span key={i} className={`vtx-streak-dot ${i < streak ? "lit" : ""}`} />
-                  ))}
-                </div>
               </div>
               <button className="vtx-next-btn" onClick={() => nextQuestion()}>Next &rarr;</button>
             </div>

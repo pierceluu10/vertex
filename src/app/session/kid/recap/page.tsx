@@ -15,7 +15,7 @@ function RecapContent() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "linear-gradient(180deg, #fef7ee 0%, #fdf2e6 100%)",
+      minHeight: "100vh", background: "#fef7ee",
       fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       padding: "40px 24px", textAlign: "center",

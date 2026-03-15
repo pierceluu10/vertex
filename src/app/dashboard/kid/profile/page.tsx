@@ -12,78 +12,15 @@ import {
   Clock,
   Target,
   BookOpen,
-  Flame,
-  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
-import type { KidSession, KidBadge } from "@/types";
-import { 
-  MdSchool, MdLocalFireDepartment, MdShield, MdEmojiEvents,
-  MdAssignment, MdWorkspacePremium, MdPsychology, MdNightsStay,
-  MdBolt, MdMenuBook, MdAutoAwesome, MdCalendarMonth, MdStars
-} from "react-icons/md";
+import type { KidSession } from "@/types";
+import { MdSchool, MdBolt } from "react-icons/md";
 import "@/styles/vertex.css";
 
-const IconMap: Record<string, React.ElementType> = {
-  MdSchool, MdLocalFireDepartment, MdShield, MdEmojiEvents,
-  MdAssignment, MdWorkspacePremium, MdPsychology, MdNightsStay,
-  MdBolt, MdMenuBook, MdAutoAwesome, MdCalendarMonth, MdStars
-};
-
-/* ─── Level system constants ─── */
-const LEVEL_THRESHOLDS = [
-  0, 50, 120, 220, 350, 520, 730, 1000, 1350, 1800,
-  2350, 3000, 3800, 4800, 6000, 7500, 9500, 12000, 15000, 20000,
-];
-
-const LEVEL_TITLES: Record<number, string> = {
-  1: "Math Rookie",
-  2: "Number Newbie",
-  3: "Problem Solver",
-  4: "Quick Thinker",
-  5: "Number Ninja",
-  6: "Math Maverick",
-  7: "Brain Builder",
-  8: "Equation Expert",
-  9: "Logic Lord",
-  10: "Algebra Ace",
-  11: "Geometry Guru",
-  12: "Fraction Fighter",
-  13: "Data Dragon",
-  14: "Proof Prodigy",
-  15: "Calculus Cadet",
-  16: "Math Magician",
-  17: "Theorem Titan",
-  18: "Infinity Explorer",
-  19: "Math Mastermind",
-  20: "Legendary Scholar",
-};
-
-function getLevel(xp: number): { level: number; title: string; xpInLevel: number; xpForNext: number } {
-  let level = 1;
-  for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
-    if (xp >= LEVEL_THRESHOLDS[i]) level = i + 1;
-    else break;
-  }
-  const xpBase = LEVEL_THRESHOLDS[level - 1] ?? 0;
-  const xpNext = LEVEL_THRESHOLDS[level] ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1] + 5000;
-  return {
-    level,
-    title: LEVEL_TITLES[level] ?? "Legendary Scholar",
-    xpInLevel: xp - xpBase,
-    xpForNext: xpNext - xpBase,
-  };
-}
-
-/* ─── Badge shape (from API) ─── */
-interface BadgeDefinition {
-  id: string;
-  title: string;
-  icon: string;
-  description: string;
-}
+const IconMap: Record<string, React.ElementType> = { MdSchool, MdBolt };
 
 /* ─── Activity entry ─── */
 interface ActivityEntry {
@@ -120,8 +57,6 @@ export default function KidProfilePage() {
     messageCount: number;
   } | null>(null);
 
-  const [badgeDefinitions, setBadgeDefinitions] = useState<BadgeDefinition[]>([]);
-  const [earnedBadges, setEarnedBadges] = useState<KidBadge[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -138,25 +73,18 @@ export default function KidProfilePage() {
 
   const loadProfile = useCallback(async (sessionId: string) => {
     try {
-      const [profileRes, badgesRes, activityRes] = await Promise.all([
+      const [profileRes, activityRes] = await Promise.all([
         fetch(`/api/student/profile?kidSessionId=${encodeURIComponent(sessionId)}`),
-        fetch("/api/student/badges", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ kidSessionId: sessionId }),
-        }),
         fetch(`/api/student/activity?kidSessionId=${encodeURIComponent(sessionId)}`),
       ]);
 
-      const [profileJson, badgesJson, activityJson] = await Promise.all([
+      const [profileJson, activityJson] = await Promise.all([
         profileRes.json(),
-        badgesRes.json(),
         activityRes.json(),
       ]);
 
       if (profileJson.kidSession) {
-        // Update the stored session with latest XP/streak from server
-        setKidSession((prev) => prev ? { ...prev, xp_points: profileJson.kidSession.xp_points, streak_count: profileJson.kidSession.streak_count } : prev);
+        setKidSession((prev) => prev ? { ...prev, ...profileJson.kidSession } : prev);
       }
 
       setProfileData({
@@ -169,8 +97,6 @@ export default function KidProfilePage() {
         messageCount: profileJson.messageCount ?? 0,
       });
 
-      setBadgeDefinitions(badgesJson.definitions ?? []);
-      setEarnedBadges(badgesJson.earned ?? []);
       setActivity(activityJson.entries ?? []);
     } catch { /* ignore */ }
     setLoading(false);
@@ -195,14 +121,6 @@ export default function KidProfilePage() {
   }
 
   const childName = kidSession.child_name?.trim() || "there";
-  const xp = kidSession.xp_points ?? 0;
-  const streak = kidSession.streak_count ?? 0;
-  const levelInfo = getLevel(xp);
-  const xpPercent = levelInfo.xpForNext > 0
-    ? Math.min((levelInfo.xpInLevel / levelInfo.xpForNext) * 100, 100)
-    : 100;
-
-  const earnedIds = new Set(earnedBadges.map((b) => b.badge_id));
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "study", label: "Study", icon: <MessageCircle size={18} /> },
@@ -224,36 +142,15 @@ export default function KidProfilePage() {
               <ArrowLeft size={16} /> Back to Dashboard
             </button>
 
-            {/* ─── Level & XP Hero ─── */}
+            {/* ─── Profile heading ─── */}
             <motion.div
-              className="vtx-kid-gp-level-hero"
+              className="vtx-kid-gp-profile-heading"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <div className="vtx-kid-gp-level-badge">
-                <span className="vtx-kid-gp-level-number">{levelInfo.level}</span>
-              </div>
-              <h1 className="vtx-kid-gp-level-title">{levelInfo.title}</h1>
+              <h1 className="vtx-kid-gp-profile-title">Profile</h1>
               <p className="vtx-kid-gp-level-name">{childName}</p>
-
-              <div className="vtx-kid-gp-xp-bar-wrap">
-                <div className="vtx-kid-gp-xp-labels">
-                  <span>{xp.toLocaleString()} XP</span>
-                  <span>Level {levelInfo.level + 1}</span>
-                </div>
-                <div className="vtx-kid-gp-xp-track">
-                  <motion.div
-                    className="vtx-kid-gp-xp-fill"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${xpPercent}%` }}
-                    transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
-                  />
-                </div>
-                <div className="vtx-kid-gp-xp-subtitle">
-                  {levelInfo.xpInLevel} / {levelInfo.xpForNext} XP to next level
-                </div>
-              </div>
             </motion.div>
 
             {/* ─── Stats Row ─── */}
@@ -283,67 +180,6 @@ export default function KidProfilePage() {
                   <div className="vtx-kid-gp-stat-icon"><BookOpen size={22} /></div>
                   <div className="vtx-kid-gp-stat-value">{profileData.avgQuizScore != null ? `${profileData.avgQuizScore}%` : "—"}</div>
                   <div className="vtx-kid-gp-stat-label">Avg score</div>
-                </div>
-                <div className="vtx-kid-gp-stat-card">
-                  <div className="vtx-kid-gp-stat-icon"><Flame size={22} /></div>
-                  <div className="vtx-kid-gp-stat-value">{streak}</div>
-                  <div className="vtx-kid-gp-stat-label">Day streak</div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ─── Streak Calendar ─── */}
-            {!loading && profileData && (
-              <motion.div
-                className="vtx-kid-gp-section"
-                variants={stagger}
-                initial="hidden"
-                animate="show"
-                custom={5}
-              >
-                <h2 className="vtx-kid-gp-section-heading">
-                  <MdCalendarMonth className="vtx-kid-gp-section-icon" /> Study Calendar
-                </h2>
-                <StreakCalendar sessionDates={profileData.sessionDates} />
-              </motion.div>
-            )}
-
-            {/* ─── Badges ─── */}
-            {!loading && (
-              <motion.div
-                className="vtx-kid-gp-section"
-                variants={stagger}
-                initial="hidden"
-                animate="show"
-                custom={7}
-              >
-                <h2 className="vtx-kid-gp-section-heading">
-                  <MdStars className="vtx-kid-gp-section-icon" /> Badges
-                  <span className="vtx-kid-gp-badge-count">{earnedBadges.length}/{badgeDefinitions.length}</span>
-                </h2>
-                <div className="vtx-kid-gp-badges-grid">
-                  {badgeDefinitions.map((badge) => {
-                    const isEarned = earnedIds.has(badge.id);
-                    return (
-                      <div
-                        key={badge.id}
-                        className={cn("vtx-kid-gp-badge-card", isEarned && "earned")}
-                      >
-                        <div className="vtx-kid-gp-badge-icon-wrap">
-                          {(() => {
-                            const BadgeIcon = IconMap[badge.icon] || MdStars;
-                            return <BadgeIcon className="vtx-kid-gp-badge-emoji" style={{ color: "var(--vtx-pink, #c8416a)", margin: "0 auto" }} />;
-                          })()}
-                          {isEarned && <div className="vtx-kid-gp-badge-shine" />}
-                        </div>
-                        <div className="vtx-kid-gp-badge-title">{badge.title}</div>
-                        <div className="vtx-kid-gp-badge-desc">{badge.description}</div>
-                        {isEarned && (
-                          <div className="vtx-kid-gp-badge-earned-tag">Unlocked!</div>
-                        )}
-                      </div>
-                    );
-                  })}
                 </div>
               </motion.div>
             )}
@@ -376,7 +212,7 @@ export default function KidProfilePage() {
                       >
                         <span className="vtx-kid-gp-activity-icon">
                           {(() => {
-                            const ActivityIcon = IconMap[entry.icon] || MdStars;
+                            const ActivityIcon = IconMap[entry.icon] || MdBolt;
                             return <ActivityIcon style={{ color: "var(--vtx-pink, #c8416a)" }} />;
                           })()}
                         </span>
@@ -423,57 +259,6 @@ export default function KidProfilePage() {
           </button>
         ))}
       </nav>
-    </div>
-  );
-}
-
-/* ─── Streak Calendar Component ─── */
-function StreakCalendar({ sessionDates }: { sessionDates: string[] }) {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
-  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const todayDate = today.getDate();
-
-  const dateSet = new Set(sessionDates);
-  const monthNames = ["January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"];
-  const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
-
-  const cells: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
-  return (
-    <div className="vtx-kid-gp-calendar">
-      <div className="vtx-kid-gp-calendar-header">{monthNames[month]} {year}</div>
-      <div className="vtx-kid-gp-calendar-grid">
-        {dayLabels.map((d, i) => (
-          <div key={`label-${i}`} className="vtx-kid-gp-cal-label">{d}</div>
-        ))}
-        {cells.map((day, i) => {
-          if (day === null) {
-            return <div key={`empty-${i}`} className="vtx-kid-gp-cal-empty" />;
-          }
-          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const isStudied = dateSet.has(dateStr);
-          const isToday = day === todayDate;
-          return (
-            <div
-              key={dateStr}
-              className={cn(
-                "vtx-kid-gp-cal-day",
-                isStudied && "studied",
-                isToday && "today"
-              )}
-            >
-              <span>{day}</span>
-              {isStudied && <div className="vtx-kid-gp-cal-stamp" />}
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
