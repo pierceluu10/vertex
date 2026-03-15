@@ -12,6 +12,7 @@ export type TutorContext = {
   mathTopics: string[];
   learningGoals: string | null;
   documentContext: string | null;
+  lessonPlan: Record<string, unknown> | null;
 };
 
 export async function loadTutorContext(
@@ -33,6 +34,7 @@ export async function loadTutorContext(
     mathTopics: [],
     learningGoals: null,
     documentContext: null,
+    lessonPlan: null,
   };
 
   let resolvedKidSessionId = params.kidSessionId ?? null;
@@ -160,12 +162,15 @@ export async function loadTutorContext(
   if (resolvedDocumentId) {
     const { data: document } = await supabase
       .from("uploaded_documents")
-      .select("extracted_text")
+      .select("extracted_text, lesson_plan")
       .eq("id", resolvedDocumentId)
       .maybeSingle();
 
     if (document?.extracted_text) {
       context.documentContext = document.extracted_text.slice(0, 4000);
+    }
+    if (document?.lesson_plan) {
+      context.lessonPlan = document.lesson_plan as Record<string, unknown>;
     }
   }
 

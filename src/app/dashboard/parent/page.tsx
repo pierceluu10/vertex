@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3, BookOpen, FileText, Settings, Copy, Plus,
   LogOut, ChevronRight, Users, Eye, X, TrendingUp, Activity,
-  Brain,
+  Brain, Sparkles, CheckCircle, Loader2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type {
@@ -65,6 +65,7 @@ export default function ParentDashboardPage() {
   const [insightMastery, setInsightMastery] = useState<{ topic: string; adjustedConfidence: number; daysSinceActive: number; isStale: boolean; last_active_at: string }[]>([]);
   const [selectedInsightSession, setSelectedInsightSession] = useState<string | null>(null);
   const [insightsLoaded, setInsightsLoaded] = useState(false);
+  const [generatingLesson, setGeneratingLesson] = useState<string | null>(null);
 
   const topicOptions = [
     "Addition", "Subtraction", "Multiplication", "Division",
@@ -219,6 +220,21 @@ export default function ParentDashboardPage() {
       body: JSON.stringify({ codeId }),
     });
     await loadData();
+  }
+
+  async function createLesson(documentId: string) {
+    setGeneratingLesson(documentId);
+    try {
+      const res = await fetch("/api/documents/lesson", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId }),
+      });
+      if (res.ok) {
+        await loadData();
+      }
+    } catch { /* ignore */ }
+    setGeneratingLesson(null);
   }
 
   async function handleSignOut() {
@@ -533,15 +549,44 @@ export default function ParentDashboardPage() {
 
               {documents.length > 0 && (
                 <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={1}>
-                  <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Files</h2>
+                  <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Uploaded Files</h2>
                   <div className="vtx-parent-doc-list">
                     {documents.map((doc, i) => (
-                      <motion.div key={doc.id} className="vtx-parent-doc-item" variants={fadeUp} initial="hidden" animate="show" custom={i}>
-                        <FileText size={16} style={{ color: "#c8416a" }} />
-                        <div style={{ flex: 1 }}>
+                      <motion.div key={doc.id} className="vtx-parent-doc-item" variants={fadeUp} initial="hidden" animate="show" custom={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(26,22,14,.06)" }}>
+                        <FileText size={18} style={{ color: "#c8416a", flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="vtx-parent-doc-name">{doc.file_name}</div>
                           <div className="vtx-parent-doc-date">{new Date(doc.uploaded_at).toLocaleDateString()}</div>
+                          {doc.extracted_text && (
+                            <div style={{ fontSize: 11, color: "rgba(26,22,14,.4)", marginTop: 2 }}>
+                              {doc.extracted_text.slice(0, 80)}…
+                            </div>
+                          )}
                         </div>
+                        {doc.lesson_plan ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#4aaa6a", background: "rgba(74,170,106,.08)", padding: "4px 10px", borderRadius: 20, whiteSpace: "nowrap" }}>
+                            <CheckCircle size={13} /> Lesson Ready
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => createLesson(doc.id)}
+                            disabled={generatingLesson === doc.id}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 5,
+                              fontSize: 11, fontWeight: 600, color: "#fff",
+                              background: generatingLesson === doc.id ? "rgba(200,65,106,.5)" : "#c8416a",
+                              border: "none", padding: "6px 14px", borderRadius: 20,
+                              cursor: generatingLesson === doc.id ? "wait" : "pointer",
+                              whiteSpace: "nowrap", transition: "background .2s",
+                            }}
+                          >
+                            {generatingLesson === doc.id ? (
+                              <><Loader2 size={13} className="vtx-spin" /> Generating…</>
+                            ) : (
+                              <><Sparkles size={13} /> Create Lesson</>
+                            )}
+                          </button>
+                        )}
                       </motion.div>
                     ))}
                   </div>

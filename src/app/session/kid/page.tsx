@@ -201,9 +201,12 @@ function KidSessionContent() {
         setLiveTutorEnabled(Boolean(data.liveTutorEnabled));
         setMicEnabled(false);
 
-        // Generate lesson if document present
+        // Use pre-generated lesson plan if available, otherwise generate from document text
         let lesson: LessonPlan | null = null;
-        if (documentId && data.documentContext) {
+        if (data.lessonPlan) {
+          setLessonPlan(data.lessonPlan);
+          lesson = data.lessonPlan as LessonPlan;
+        } else if (documentId && data.documentContext) {
           lesson = await generateLessonPlan(data.documentContext);
         }
 

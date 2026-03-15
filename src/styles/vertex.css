@@ -3509,3 +3509,7 @@ a.vtx-auth-logo {
   .vtx-kid-gp-level-number { font-size: 38px; }
   .vtx-kid-gp-level-title { font-size: 22px; }
 }
+
+/* Spinner animation */
+@keyframes vtx-spin-anim { to { transform: rotate(360deg); } }
+.vtx-spin { animation: vtx-spin-anim 1s linear infinite; }

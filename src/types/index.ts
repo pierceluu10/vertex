@@ -77,6 +77,7 @@ export interface UploadedDocument {
   file_url: string;
   extracted_text: string | null;
   chunks: DocumentChunk[] | null;
+  lesson_plan: Record<string, unknown> | null;
   uploaded_at: string;
 }
 
