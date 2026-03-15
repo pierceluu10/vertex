@@ -580,38 +580,50 @@ export default function ParentDashboardPage() {
                   <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={6}>
                     <h2 className="vtx-parent-card-title" style={{ marginBottom: 4 }}>Focus score trend</h2>
                     <p className="vtx-parent-muted-text" style={{ marginBottom: 16 }}>Average focus for recent completed sessions</p>
-                    <div className="vtx-parent-bar-chart" style={{ height: 120 }}>
-                      {completedSessions.slice(0, 7).reverse().map((session, i) => {
-                        const score = session.focus_score_avg ?? 0;
-                        return (
-                          <div key={session.id} className="vtx-parent-bar-col">
-                            <motion.div className={`vtx-parent-bar${score >= 75 ? " good" : score >= 50 ? " ok" : " low"}`} initial={{ height: 0 }} animate={{ height: `${Math.min(100, score)}%` }} transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }} style={{ minHeight: score > 0 ? 16 : 4 }} />
-                            <span className="vtx-parent-bar-value" style={{ fontWeight: 500 }}>{Math.round(score)}%</span>
-                            <span className="vtx-parent-bar-label">S{completedSessions.length - i}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {completedSessions.length === 0 ? (
+                      <div className="vtx-parent-bar-chart" style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <p className="vtx-parent-muted-text" style={{ margin: 0 }}>No data yet because no sessions have been done.</p>
+                      </div>
+                    ) : (
+                      <div className="vtx-parent-bar-chart" style={{ height: 120 }}>
+                        {completedSessions.slice(0, 7).reverse().map((session, i) => {
+                          const score = session.focus_score_avg ?? 0;
+                          return (
+                            <div key={session.id} className="vtx-parent-bar-col">
+                              <motion.div className={`vtx-parent-bar${score >= 75 ? " good" : score >= 50 ? " ok" : " low"}`} initial={{ height: 0 }} animate={{ height: `${Math.min(100, score)}%` }} transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }} style={{ minHeight: score > 0 ? 16 : 4 }} />
+                              <span className="vtx-parent-bar-value" style={{ fontWeight: 500 }}>{Math.round(score)}%</span>
+                              <span className="vtx-parent-bar-label">S{completedSessions.length - i}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </motion.div>
 
                   <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={7}>
                     <h2 className="vtx-parent-card-title" style={{ marginBottom: 4 }}>Learning comprehension</h2>
                     <p className="vtx-parent-muted-text" style={{ marginBottom: 16 }}>Estimated understanding based on focus and session duration</p>
-                    <div className="vtx-parent-bar-chart" style={{ height: 120 }}>
-                      {completedSessions.slice(0, 10).reverse().map((session, i) => {
-                        const focus = session.focus_score_avg ?? 50;
-                        const durationMin = session.ended_at ? (new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 60000 : 0;
-                        const durationFactor = Math.min(1, durationMin / 30);
-                        const comprehension = Math.round(focus * 0.6 + durationFactor * 100 * 0.4);
-                        return (
-                          <div key={session.id} className="vtx-parent-bar-col">
-                            <motion.div className={`vtx-parent-bar${comprehension >= 70 ? " good" : comprehension >= 45 ? " ok" : " low"}`} initial={{ height: 0 }} animate={{ height: `${Math.min(100, comprehension)}%` }} transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }} style={{ minHeight: comprehension > 0 ? 16 : 4 }} />
-                            <span className="vtx-parent-bar-value" style={{ fontWeight: 500 }}>{comprehension}%</span>
-                            <span className="vtx-parent-bar-label">S{completedSessions.length - i}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {completedSessions.length === 0 ? (
+                      <div className="vtx-parent-bar-chart" style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <p className="vtx-parent-muted-text" style={{ margin: 0 }}>No data yet because no sessions have been done.</p>
+                      </div>
+                    ) : (
+                      <div className="vtx-parent-bar-chart" style={{ height: 120 }}>
+                        {completedSessions.slice(0, 10).reverse().map((session, i) => {
+                          const focus = session.focus_score_avg ?? 50;
+                          const durationMin = session.ended_at ? (new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 60000 : 0;
+                          const durationFactor = Math.min(1, durationMin / 30);
+                          const comprehension = Math.round(focus * 0.6 + durationFactor * 100 * 0.4);
+                          return (
+                            <div key={session.id} className="vtx-parent-bar-col">
+                              <motion.div className={`vtx-parent-bar${comprehension >= 70 ? " good" : comprehension >= 45 ? " ok" : " low"}`} initial={{ height: 0 }} animate={{ height: `${Math.min(100, comprehension)}%` }} transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }} style={{ minHeight: comprehension > 0 ? 16 : 4 }} />
+                              <span className="vtx-parent-bar-value" style={{ fontWeight: 500 }}>{comprehension}%</span>
+                              <span className="vtx-parent-bar-label">S{completedSessions.length - i}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </motion.div>
 
                   {visibleFocusEvents.length > 0 && (
@@ -779,11 +791,14 @@ export default function ParentDashboardPage() {
               </motion.div>
 
               {/* Avatar */}
-              <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={2}>
+              <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={2} style={{ display: "flex", flexDirection: "column", minHeight: 170 }}>
                 <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Tutor Avatar</h2>
                 <motion.button onClick={() => router.push("/parent")} className="vtx-parent-btn" whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
                   <Eye size={14} /> Manage Avatar
                 </motion.button>
+                <div style={{ marginTop: "auto", alignSelf: "flex-end", fontSize: 12, fontWeight: 600, color: "#8a7f6e" }}>
+                  Demo Mode
+                </div>
               </motion.div>
             </motion.div>
           )}

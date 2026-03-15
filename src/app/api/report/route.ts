@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     // Fetch session data
     const { data: session } = await supabase
       .from("tutoring_sessions")
-      .select("*, children(*)")
+      .select("*")
       .eq("id", sessionId)
       .single();
 
@@ -23,7 +23,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    const child = session.children as { name: string; parent_id: string };
+    let childName = "Your child";
+    let parentId: string | null = null;
+
+    if (session.kid_session_id) {
+      const { data: kidSession } = await supabase
+        .from("kids_sessions")
+        .select("parent_id, child_name")
+        .eq("id", session.kid_session_id)
+        .maybeSingle();
+
+      if (kidSession) {
+        parentId = kidSession.parent_id;
+        childName = kidSession.child_name?.trim() || childName;
+      }
+    }
+
+    if (!parentId && session.child_id) {
+      const { data: child } = await supabase
+        .from("children")
+        .select("parent_id, name")
+        .eq("id", session.child_id)
+        .maybeSingle();
+
+      if (child) {
+        parentId = child.parent_id;
+        childName = child.name?.trim() || childName;
+      }
+    }
+
+    if (!parentId) {
+      return NextResponse.json({ error: "Parent not found for session" }, { status: 404 });
+    }
 
     // Fetch related data
     const [messagesRes, focusRes, quizRes, parentRes] = await Promise.all([
@@ -43,7 +74,7 @@ export async function POST(request: Request) {
       supabase
         .from("parents")
         .select("*")
-        .eq("id", child.parent_id)
+        .eq("id", parentId)
         .single(),
     ]);
 
@@ -83,7 +114,7 @@ export async function POST(request: Request) {
 
     // Generate report via OpenAI
     const reportPrompt = buildReportPrompt({
-      childName: child.name,
+      childName,
       sessionDuration: `${durationMins} minutes`,
       messageCount: messages.length,
       topicsCovered: extractTopics(topicsMentioned),
@@ -111,7 +142,7 @@ export async function POST(request: Request) {
       .from("parent_reports")
       .insert({
         session_id: sessionId,
-        parent_id: child.parent_id,
+        parent_id: parentId,
         summary,
         topics_covered: topicsCovered,
         struggles,
@@ -143,14 +174,14 @@ export async function POST(request: Request) {
     if (resend && parent?.email) {
       try {
         await resend.emails.send({
-          from: "Vertex <onboarding@resend.dev>",
+          from: "Vertex <hello@vertextutor.com>",
           to: parent.email,
-          subject: `${child.name}'s lesson recap`,
+          subject: `${childName}'s lesson recap`,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: #1f6feb; padding: 20px; border-radius: 16px 16px 0 0;">
                 <h1 style="color: white; margin: 0; font-size: 22px;">Vertex lesson recap</h1>
-                <p style="color: rgba(255,255,255,0.82); margin: 8px 0 0;">${child.name}'s session summary</p>
+                <p style="color: rgba(255,255,255,0.82); margin: 8px 0 0;">${childName}'s session summary</p>
               </div>
               <div style="padding: 24px; background: #f8fbff; border-radius: 0 0 16px 16px; border: 1px solid #dbeafe;">
                 <div style="display: inline-block; padding: 8px 14px; border-radius: 999px; background: #e0f2fe; color: #0c4a6e; font-weight: 700; font-size: 14px; margin-bottom: 16px;">
