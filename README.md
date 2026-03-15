@@ -1,14 +1,14 @@
 # Vertex — AI Math Tutoring
 
-A full-stack AI math tutoring web app built with Next.js. Parents set up accounts and configure learning preferences; kids enter a 6-digit access code to start learning with an AI tutor powered by OpenAI GPT-4o and a HeyGen streaming avatar.
+A full-stack AI math tutoring web app built with Next.js. Parents set up accounts and configure learning preferences; kids enter a 6-digit access code to start learning with an AI tutor powered by OpenAI and a Simli avatar delivered through LiveKit.
 
 ## Tech Stack
 
 - **Framework:** Next.js 16 App Router, TypeScript, Tailwind CSS
 - **UI:** Shadcn UI components + custom Vertex design system
 - **Auth & DB:** Supabase (Auth + PostgreSQL + Storage)
-- **AI:** OpenAI GPT-4o for tutoring and quiz generation
-- **Avatar:** HeyGen Streaming Avatar SDK
+- **AI:** OpenAI for tutoring, quizzes, and real-time voice tutoring
+- **Avatar:** Simli rendered through a LiveKit room
 - **Email:** Resend for parent notifications
 - **Attention:** Real-time focus tracking (tab visibility, mouse activity, webcam face detection)
 
@@ -41,6 +41,18 @@ cp .env.example .env.local
 npm run dev
 ```
 
+### 5. Start the live tutor stack
+
+The Tina avatar uses a local LiveKit dev server plus a Python agent worker.
+
+```bash
+livekit-server --dev
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r agents/requirements.txt
+npm run agent:simli
+```
+
 Open [http://localhost:3000](http://localhost:3000).
 
 ## Architecture
@@ -58,9 +70,9 @@ Open [http://localhost:3000](http://localhost:3000).
 | `/dashboard/kid` | Kid | Fun dashboard: Home, Homework, Quiz, Ask Tutor (bottom nav) |
 | `/kid/onboarding` | Kid | Avatar picker (choose tutor character) |
 | `/session/[id]` | Parent | Tutoring session (parent flow) |
-| `/session/kid` | Kid | Tutoring session (kid flow with avatar) |
+| `/session/kid` | Kid | Tutoring session (kid flow with Tina in a LiveKit room) |
 | `/session/kid/recap` | Kid | Post-session recap (XP earned, focus score) |
-| `/parent` | Parent | Parent profile (avatar recording, homework upload, settings) |
+| `/parent` | Parent | Parent profile (Tina status, homework upload, settings) |
 | `/mission` | Public | About page |
 
 ### Database Tables
@@ -87,13 +99,14 @@ Open [http://localhost:3000](http://localhost:3000).
 - Auto-generated 6-digit access codes (one per child)
 - Dashboard with session history, focus charts, homework management
 - Reports sent via email (Resend) after each session
-- Avatar recording for personalized AI tutor
+- Live tutor status page for the Tina avatar workflow
 
 **Kid Flow:**
-- Enter 6-digit code → pick avatar → start learning
+- Enter 6-digit code → start learning
 - Fun dashboard with streak (Duolingo-style) and XP system
 - Upload homework PDFs → AI parses and creates study material
 - Chat with AI tutor (GPT-4o) with LaTeX math, JSXGraph diagrams
+- Talk to Tina in real time through LiveKit + Simli
 - Take quizzes (5 questions, multiple choice + open) based on homework
 - Session recap with XP earned and focus score
 

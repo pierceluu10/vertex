@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Send, ArrowLeft, Sparkles, Lightbulb, Mic, MicOff, Video, VideoOff, Gamepad2 } from "lucide-react";
 import { FlappyQuiz } from "@/components/vertex/flappy-quiz";
 import { createClient } from "@/lib/supabase/client";
-import { HeyGenAvatar } from "@/components/session/heygen-avatar";
+import { LiveKitAvatar } from "@/components/session/livekit-avatar";
 import { useAttention } from "@/hooks/use-attention";
 import { getInterventionMessage } from "@/lib/attention";
 import { MathVisual } from "@/components/session/math-visual";
@@ -33,16 +33,13 @@ export default function SessionPage() {
   const [childName, setChildName] = useState("");
   const [childAge, setChildAge] = useState(8);
   const [parentName, setParentName] = useState("");
-  const [parentAvatarId, setParentAvatarId] = useState<string | undefined>();
+  const [parentId, setParentId] = useState("");
   const [documentContext, setDocumentContext] = useState<string | null>(null);
   const [adaptiveState, setAdaptiveState] = useState<AdaptiveState>(
     createInitialAdaptiveState()
   );
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [speakText, setSpeakText] = useState<string | null>(null);
   const [micEnabled, setMicEnabled] = useState(false);
   const [webcamOn, setWebcamOn] = useState(true);
-  const [liveTranscript, setLiveTranscript] = useState("");
   const [showGame, setShowGame] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -66,7 +63,6 @@ export default function SessionPage() {
         setAdaptiveState((prev) => handleDistraction(prev));
       }
 
-      setSpeakText(message);
     },
     [childName]
   );
@@ -103,17 +99,15 @@ export default function SessionPage() {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        setParentId(user.id);
         const { data: parent } = await supabase
           .from("parents")
-          .select("name, heygen_avatar_id, heygen_talking_photo_id")
+          .select("name")
           .eq("id", user.id)
           .single();
         if (parent) {
           setParentName(parent.name);
-          // Only use heygen_avatar_id (streaming avatar) for live sessions.
-          // heygen_talking_photo_id is NOT compatible with the streaming API —
-          // it only works for pre-rendered video generation (Studio API).
-          setParentAvatarId(parent.heygen_avatar_id ?? undefined);
+          setMicEnabled(false);
         }
       }
 
@@ -153,7 +147,6 @@ export default function SessionPage() {
           content: greeting,
           type: "chat",
         }]);
-        setSpeakText(greeting);
       }
     }
 
@@ -223,7 +216,6 @@ export default function SessionPage() {
           jsxGraph: graphs.length > 0 ? graphs : undefined,
         };
         setMessages((prev) => [...prev, assistantMsg]);
-        setSpeakText(cleanContent);
 
         if (data.isCorrect !== undefined) {
           setAdaptiveState((prev) =>
@@ -246,17 +238,6 @@ export default function SessionPage() {
 
     setLoading(false);
     inputRef.current?.focus();
-  }
-
-  function handleUserVoiceMessage(transcript: string) {
-    if (transcript.trim()) {
-      setLiveTranscript("");
-      sendMessage(transcript);
-    }
-  }
-
-  function handleUserSpeaking(text: string) {
-    setLiveTranscript(text);
   }
 
   async function endSession() {
@@ -409,22 +390,6 @@ export default function SessionPage() {
                 </div>
               ))}
 
-              {liveTranscript && (
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-                  <div style={{
-                    maxWidth: "80%", padding: "10px 14px", borderRadius: 6,
-                    fontSize: 14, lineHeight: 1.65, borderBottomRightRadius: 2,
-                    background: "rgba(158,107,117,0.25)", color: "#fff",
-                    fontStyle: "italic", opacity: 0.8,
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <Mic size={12} />
-                      <span>{liveTranscript}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {loading && (
                 <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 12 }}>
                   <div style={{
@@ -487,16 +452,12 @@ export default function SessionPage() {
         }}>
           {/* Parent avatar (main feed) */}
           <div style={{ position: "relative", flex: 1 }}>
-          {parentAvatarId ? (
-            <HeyGenAvatar
+          {parentName ? (
+            <LiveKitAvatar
               className=""
-              avatarName={parentAvatarId}
-              onAvatarReady={() => {}}
-              onAvatarSpeaking={setIsSpeaking}
-              onUserMessage={handleUserVoiceMessage}
-              onUserSpeaking={handleUserSpeaking}
-              speakQueue={speakText}
-              onSpeakComplete={() => setSpeakText(null)}
+              sessionId={sessionId}
+              parentId={parentId}
+              micEnabled={micEnabled}
             />
           ) : (
             <div style={{
@@ -505,8 +466,8 @@ export default function SessionPage() {
               background: "rgba(248,243,232,0.9)", color: "#8a7f6e", fontSize: 12,
               textAlign: "center", lineHeight: 1.5,
             }}>
-              <span>Tutor avatar isn&apos;t set up.</span>
-              <span style={{ marginTop: 8 }}>Create a video avatar in Parent Profile (training + consent videos) so this session can use your likeness.</span>
+              <span>Live tutor isn&apos;t configured.</span>
+              <span style={{ marginTop: 8 }}>Add the Simli and LiveKit keys to bring Tina online in this session.</span>
             </div>
           )}
 
@@ -519,17 +480,8 @@ export default function SessionPage() {
                 color: "#fff", background: "rgba(0,0,0,0.5)", padding: "3px 8px",
                 borderRadius: 3,
               }}>
-                {parentName || "Parent"} Tutor
+                {parentName ? `${parentName} x Tina` : "Tina Tutor"}
               </div>
-              {isSpeaking && (
-                <div style={{
-                  fontSize: 9, color: "#5a9e76", letterSpacing: "0.12em",
-                  textTransform: "uppercase" as const,
-                  background: "rgba(0,0,0,0.5)", padding: "3px 8px", borderRadius: 3,
-                }}>
-                  Speaking...
-                </div>
-              )}
             </div>
 
             {/* Kid self-view PiP */}

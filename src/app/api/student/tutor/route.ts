@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  getLiveAvatarSupport,
+  getLiveKitConfig,
+  getSimliAvatarConfig,
+} from "@/lib/avatar-config";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -13,7 +18,7 @@ export async function GET(request: Request) {
     const supabase = await createServiceClient();
     const { data: parent, error } = await supabase
       .from("parents")
-      .select("name, heygen_avatar_id")
+      .select("name")
       .eq("id", parentId)
       .maybeSingle();
 
@@ -26,10 +31,16 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Tutor not found" }, { status: 404 });
     }
 
+    const simliConfig = getSimliAvatarConfig();
+    const avatarSupport = getLiveAvatarSupport(getLiveKitConfig().url);
+
     return NextResponse.json({
       tutor: {
         name: parent.name,
-        heygenAvatarId: parent.heygen_avatar_id,
+        liveTutorEnabled: simliConfig.ready,
+        avatarName: simliConfig.displayName,
+        avatarVideoSupported: avatarSupport.supported,
+        avatarVideoReason: avatarSupport.reason,
       },
     });
   } catch (error) {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { getSimliAvatarConfig } from "@/lib/avatar-config";
 import { createServiceClient } from "@/lib/supabase/server";
+import { loadTutorContext } from "@/lib/tutor-context";
 
 export async function POST(request: Request) {
   try {
@@ -10,69 +12,109 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createServiceClient();
-
-    const { data: session, error } = await supabase
-      .from("tutoring_sessions")
-      .insert({
-        kid_session_id: kidSessionId,
-        document_id: documentId || null,
-        status: "active",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Session creation error:", error);
-      return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
-    }
-
-    let documentContext = null;
-    let parentName: string | null = null;
-    let parentAvatarId: string | null = null;
-    if (documentId) {
-      const { data: doc } = await supabase
-        .from("uploaded_documents")
-        .select("extracted_text")
-        .eq("id", documentId)
-        .single();
-      if (doc?.extracted_text) {
-        documentContext = doc.extracted_text.slice(0, 4000);
-      }
-    }
+    let childId: string | null = null;
 
     if (parentId) {
-      const { data: parent } = await supabase
-        .from("parents")
-        .select("name, heygen_avatar_id")
-        .eq("id", parentId)
+      const { data: kidSession } = await supabase
+        .from("kids_sessions")
+        .select("child_name")
+        .eq("id", kidSessionId)
         .maybeSingle();
 
-      if (parent) {
-        parentName = parent.name;
-        parentAvatarId = parent.heygen_avatar_id;
+      const { data: children } = await supabase
+        .from("children")
+        .select("id, name")
+        .eq("parent_id", parentId)
+        .order("created_at", { ascending: true });
+
+      if (children?.length) {
+        const childName = kidSession?.child_name?.trim().toLowerCase();
+        const matchedChild =
+          (childName
+            ? children.find((child) => child.name?.trim().toLowerCase() === childName)
+            : null) || children[0];
+
+        childId = matchedChild.id;
       }
     }
 
-    // Award XP for starting a session
-    try {
-      const { data: ks } = await supabase
-        .from("kids_sessions")
-        .select("xp_points")
-        .eq("id", kidSessionId)
+    if (!childId) {
+      return NextResponse.json(
+        { error: "No child record found for this tutoring session" },
+        { status: 400 }
+      );
+    }
+
+    let session = null;
+
+    const existingSessionQuery = supabase
+      .from("tutoring_sessions")
+      .select("*")
+      .eq("child_id", childId)
+      .eq("status", "active")
+      .order("started_at", { ascending: false })
+      .limit(1);
+
+    const { data: existingSessions, error: existingSessionError } = documentId
+      ? await existingSessionQuery.eq("document_id", documentId)
+      : await existingSessionQuery.is("document_id", null);
+
+    if (existingSessionError) {
+      console.error("Session reuse lookup error:", existingSessionError);
+    }
+
+    session = existingSessions?.[0] || null;
+
+    if (!session) {
+      const { data: createdSession, error } = await supabase
+        .from("tutoring_sessions")
+        .insert({
+          child_id: childId,
+          document_id: documentId || null,
+          status: "active",
+        })
+        .select()
         .single();
-      if (ks) {
-        await supabase
-          .from("kids_sessions")
-          .update({ xp_points: (ks.xp_points || 0) + 5 })
-          .eq("id", kidSessionId);
+
+      if (error) {
+        console.error("Session creation error:", error);
+        return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
       }
-    } catch { /* non-blocking */ }
+
+      session = createdSession;
+    }
+
+    const tutorContext = await loadTutorContext(supabase, {
+      sessionId: session.id,
+      kidSessionId,
+      parentId,
+      documentId,
+    });
+    const simliConfig = getSimliAvatarConfig();
+
+    // Award XP for starting a session
+    if (!existingSessions?.[0]) {
+      try {
+        const { data: ks } = await supabase
+          .from("kids_sessions")
+          .select("xp_points")
+          .eq("id", kidSessionId)
+          .single();
+        if (ks) {
+          await supabase
+            .from("kids_sessions")
+            .update({ xp_points: (ks.xp_points || 0) + 5 })
+            .eq("id", kidSessionId);
+        }
+      } catch { /* non-blocking */ }
+    }
 
     return NextResponse.json({
       sessionId: session.id,
-      documentContext,
-      parentName,
-      parentAvatarId,
+      documentContext: tutorContext.documentContext,
+      parentName: tutorContext.parentName,
+      liveTutorEnabled: simliConfig.ready,
+      tutorAvatarName: simliConfig.displayName,
     });
   } catch (error) {
     console.error("Student session error:", error);

@@ -1,32 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState, Component, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Home, BookOpen, Sparkles, MessageCircle, Upload, Flame, Star, FileText, Play, ChevronRight } from "lucide-react";
+import { Home, BookOpen, Sparkles, MessageCircle, Upload, Flame, Star, FileText, Play, ChevronRight, Video } from "lucide-react";
 import type { KidSession, UploadedDocument, Quiz } from "@/types";
-import { HeyGenAvatar } from "@/components/session/heygen-avatar";
 import "@/styles/vertex.css";
-
-/** Catches SDK/404 errors from HeyGen so the dashboard doesn't crash; shows placeholder instead. */
-class AvatarErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }> {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback;
-    }
-    return this.props.children;
-  }
-}
 
 type Tab = "home" | "homework" | "quiz" | "tutor";
 type TutorPreview = {
   name: string;
-  heygenAvatarId: string | null;
+  liveTutorEnabled: boolean;
+  avatarName: string;
 };
 
 export default function KidDashboardPage() {
@@ -202,7 +186,8 @@ export default function KidDashboardPage() {
           <TutorPreviewCard
             childName={childName}
             tutorName={tutor?.name || null}
-            avatarName={tutor?.heygenAvatarId || null}
+            liveTutorEnabled={Boolean(tutor?.liveTutorEnabled)}
+            avatarName={tutor?.avatarName || "Tina"}
           />
         )}
 
@@ -645,11 +630,13 @@ function QuizOpenInput({ onSubmit }: { onSubmit: (answer: string) => void }) {
 function TutorPreviewCard({
   childName,
   tutorName,
+  liveTutorEnabled,
   avatarName,
 }: {
   childName: string;
   tutorName: string | null;
-  avatarName: string | null;
+  liveTutorEnabled: boolean;
+  avatarName: string;
 }) {
   const tutorFirstName = tutorName?.trim().split(" ")[0] || "Your tutor";
 
@@ -670,39 +657,39 @@ function TutorPreviewCard({
         margin: "0 auto 16px",
         borderRadius: 16,
         overflow: "hidden",
-        background: "#fff",
+        background:
+          "radial-gradient(circle at top, rgba(255,255,255,0.16), transparent 45%), linear-gradient(180deg, #1d2431 0%, #111723 100%)",
         border: "1px solid rgba(158,107,117,0.12)",
+        position: "relative",
       }}>
-        {avatarName ? (
-          <AvatarErrorBoundary
-            fallback={
-              <div style={{
-                width: "100%", height: "100%", display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center", padding: 20,
-                background: "rgba(254,247,238,0.8)", color: "#8a7f6e", fontSize: 12,
-                textAlign: "center", lineHeight: 1.5,
-              }}>
-                <span>Avatar unavailable. Ask your parent to create a new video avatar in Parent Profile.</span>
-              </div>
-            }
-          >
-            <HeyGenAvatar
-              className="h-full w-full"
-              avatarName={avatarName}
-              enableVoiceChat={false}
-              onAvatarReady={() => {}}
-            />
-          </AvatarErrorBoundary>
-        ) : (
+        <div style={{
+          position: "absolute", top: 12, left: 12, padding: "6px 10px", borderRadius: 999,
+          background: "rgba(255,255,255,0.14)", color: "#fff6eb", fontSize: 10,
+          fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase",
+          display: "flex", alignItems: "center", gap: 6,
+        }}>
+          <Video size={12} />
+          {liveTutorEnabled ? "Live Tutor Ready" : "Setup Needed"}
+        </div>
+        <div style={{
+          width: "100%", height: "100%", display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center", padding: 20, color: "#fff6eb",
+          textAlign: "center",
+        }}>
           <div style={{
-            width: "100%", height: "100%", display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", padding: 20,
-            background: "rgba(254,247,238,0.8)", color: "#8a7f6e", fontSize: 12,
-            textAlign: "center", lineHeight: 1.5,
+            width: 104, height: 104, borderRadius: "50%", background: "rgba(255,255,255,0.12)",
+            border: "1px solid rgba(255,255,255,0.2)", display: "grid", placeItems: "center",
+            fontSize: 36, fontWeight: 700, marginBottom: 16,
           }}>
-            <span>Tutor avatar will appear here once your parent creates a video avatar in Parent Profile.</span>
+            {avatarName.charAt(0).toUpperCase()}
           </div>
-        )}
+          <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 6 }}>{avatarName}</div>
+          <div style={{ fontSize: 12, lineHeight: 1.6, color: "rgba(255,246,235,0.78)", maxWidth: 180 }}>
+            {liveTutorEnabled
+              ? "Tina appears live with voice as soon as you start your study session."
+              : "The live tutor is not configured yet."}
+          </div>
+        </div>
       </div>
       <div style={{
         display: "inline-flex",
@@ -722,7 +709,9 @@ function TutorPreviewCard({
         Live Tutor
       </div>
       <p style={{ fontSize: 15, lineHeight: 1.6, color: "#3d3126", margin: 0 }}>
-        {tutorFirstName} is ready to help you, {childName}.
+        {liveTutorEnabled
+          ? `${avatarName} is ready to help you, ${childName}. ${tutorFirstName} set up the session for you.`
+          : `${tutorFirstName} still needs to finish the live tutor setup.`}
       </p>
     </div>
   );

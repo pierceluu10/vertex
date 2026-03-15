@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { openai, buildTutorSystemPrompt } from "@/lib/openai";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
+import { loadTutorContext } from "@/lib/tutor-context";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
       sessionId,
+      kidSessionId,
+      parentId,
       message,
       messageType,
       childName,
@@ -14,21 +17,35 @@ export async function POST(request: Request) {
       documentContext,
       adaptiveState,
       recentMessages,
+      persistMessages = true,
     } = body;
 
-    const supabase = await createClient();
+    const supabase = await createServiceClient();
+    const learningConfig = await loadTutorContext(supabase, { sessionId, kidSessionId, parentId });
+    const resolvedChildName =
+      (typeof childName === "string" && childName.trim()) ||
+      learningConfig.childName ||
+      "student";
+    const resolvedChildAge =
+      typeof childAge === "number" && childAge > 0
+        ? childAge
+        : learningConfig.childAge || 10;
 
-    // Store user message
-    await supabase.from("messages").insert({
-      session_id: sessionId,
-      role: "user",
-      content: message,
-      message_type: messageType || "chat",
-    });
+    if (persistMessages && sessionId) {
+      await supabase.from("messages").insert({
+        session_id: sessionId,
+        role: "user",
+        content: message,
+        message_type: messageType || "chat",
+      });
+    }
 
     const systemPrompt = buildTutorSystemPrompt({
-      childName,
-      childAge,
+      childName: resolvedChildName,
+      childAge: resolvedChildAge,
+      grade: learningConfig.gradeLevel || undefined,
+      learningPace: learningConfig.learningPace || undefined,
+      mathTopics: learningConfig.mathTopics,
       documentContext: documentContext || undefined,
       adaptiveState,
     });
@@ -54,16 +71,16 @@ export async function POST(request: Request) {
     const responseContent =
       completion.choices[0]?.message?.content || "I'm not sure how to help with that. Can you try asking differently?";
 
-    // Store assistant message
-    await supabase.from("messages").insert({
-      session_id: sessionId,
-      role: "assistant",
-      content: responseContent,
-      message_type: messageType || "chat",
-    });
+    if (persistMessages && sessionId) {
+      await supabase.from("messages").insert({
+        session_id: sessionId,
+        role: "assistant",
+        content: responseContent,
+        message_type: messageType || "chat",
+      });
+    }
 
     // Check if response contains quiz answer validation
-    const isQuizResponse = responseContent.includes("[QUIZ]");
     const hasCorrectIndicator =
       responseContent.toLowerCase().includes("correct") ||
       responseContent.toLowerCase().includes("right") ||

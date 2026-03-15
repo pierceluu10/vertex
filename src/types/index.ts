@@ -10,8 +10,6 @@ export interface Parent {
   notification_daily: boolean;
   notification_daily_time: string;
   avatar_url: string | null;
-  heygen_avatar_id: string | null;
-  heygen_talking_photo_id: string | null;
   created_at: string;
 }
 

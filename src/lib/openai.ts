@@ -8,6 +8,8 @@ export function buildTutorSystemPrompt(context: {
   childName: string;
   childAge: number;
   grade?: string;
+  learningPace?: "slow" | "medium" | "fast";
+  mathTopics?: string[];
   documentContext?: string;
   adaptiveState?: {
     shouldSimplify: boolean;
@@ -21,6 +23,8 @@ export function buildTutorSystemPrompt(context: {
     childName,
     childAge,
     grade,
+    learningPace,
+    mathTopics,
     documentContext,
     adaptiveState,
     recentMistakes,
@@ -38,6 +42,17 @@ export function buildTutorSystemPrompt(context: {
       ? "Be extra warm, patient, and encouraging. The child needs support right now."
       : "Be friendly, warm, and encouraging.";
 
+  const paceInstruction =
+    learningPace === "slow"
+      ? "The parent selected a slow pace. Move one small step at a time, check understanding often, and avoid rushing ahead."
+      : learningPace === "fast"
+      ? "The parent selected a fast pace. Keep explanations concise, reduce repetition, and move to the next challenge sooner once the child understands."
+      : "The parent selected a balanced pace. Use clear step-by-step help without over-explaining, and introduce challenge at a steady rhythm.";
+
+  const topicInstruction = mathTopics?.length
+    ? `The parent wants extra focus on these math topics: ${mathTopics.join(", ")}. Prioritize them when choosing examples, practice, hints, and quiz questions unless the child clearly asks for something else.`
+    : "No special focus topics were selected, so you can choose the most relevant math examples for the child's question.";
+
   return `You are a kind, patient math tutor helping ${childName}, who is ${childAge} years old${grade ? ` and in ${grade}` : ""}.
 
 CORE RULES:
@@ -52,6 +67,8 @@ CORE RULES:
 
 ${difficultyInstruction}
 ${toneInstruction}
+${paceInstruction}
+${topicInstruction}
 
 ${
   documentContext
@@ -118,7 +135,66 @@ Circle: [JSXGRAPH]{"type":"geometry","circles":[{"cx":0,"cy":0,"r":3,"label":"ra
 WHEN TO USE VISUALS:
 - Always include a diagram when the child asks to "see", "show", "draw", "picture", "graph", "plot", or "visualize" something
 - Proactively add visuals when explaining geometry, graphing, fractions, data, or any spatial concept
-- Combine LaTeX equations with diagrams for the best learning experience`;
+  - Combine LaTeX equations with diagrams for the best learning experience`;
+}
+
+export function buildRealtimeTutorInstructions(context: {
+  childName: string;
+  childAge: number;
+  grade?: string;
+  learningPace?: "slow" | "medium" | "fast";
+  mathTopics?: string[];
+  documentContext?: string;
+}) {
+  const {
+    childName,
+    childAge,
+    grade,
+    learningPace,
+    mathTopics,
+    documentContext,
+  } = context;
+
+  const paceInstruction =
+    learningPace === "slow"
+      ? "Move slowly, explain one small step at a time, and check understanding often."
+      : learningPace === "fast"
+      ? "Keep the pace brisk, avoid over-explaining, and move on once the child understands."
+      : "Use a balanced pace with clear steps and short check-ins.";
+
+  const topicInstruction = mathTopics?.length
+    ? `Prioritize these math topics whenever possible: ${mathTopics.join(", ")}.`
+    : "Focus on the math topic the child brings up.";
+
+  return `You are Tina, a warm real-time math tutor helping ${childName}, who is ${childAge} years old${grade ? ` and in ${grade}` : ""}.
+
+GOAL:
+- Help the child learn math with patience, encouragement, and very clear steps.
+
+SCOPE:
+- Only discuss math or schoolwork directly related to math.
+- If the child asks about unrelated topics, gently redirect them back to math help.
+
+STYLE:
+- Speak like a calm, friendly tutor.
+- Keep responses short and natural for live conversation.
+- Ask one question at a time.
+- Never shame the child for mistakes.
+- Do not give the full answer immediately unless the child is completely stuck after guidance.
+- Praise effort, not just correctness.
+
+PACED LEARNING:
+- ${paceInstruction}
+- ${topicInstruction}
+
+VOICE RULES:
+- Read equations naturally instead of saying punctuation literally.
+- Prefer spoken explanations over heavy formatting.
+- Avoid long monologues.
+
+${documentContext ? `HOMEWORK CONTEXT:\n${documentContext}\n` : ""}
+
+Stay focused on helping ${childName} succeed in math.`;
 }
 
 export function buildQuizPrompt(context: {

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  BarChart3, BookOpen, FileText, Settings, Clock, Copy, Plus,
+  BarChart3, BookOpen, FileText, Settings, Copy, Plus,
   LogOut, ChevronRight, Users, Eye, X, TrendingUp, Activity,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -14,6 +14,11 @@ import type {
 import "@/styles/vertex.css";
 
 type Tab = "overview" | "progress" | "homework" | "analytics" | "settings";
+type SettingsSaveSection = "account" | "learning" | "notifications";
+type SettingsFeedback = {
+  type: "success" | "error";
+  message: string;
+};
 
 export default function ParentDashboardPage() {
   const router = useRouter();
@@ -40,8 +45,10 @@ export default function ParentDashboardPage() {
   const [settingsAccountEditing, setSettingsAccountEditing] = useState(false);
   const [settingsAccountForm, setSettingsAccountForm] = useState({ name: "", childName: "", gradeLevel: "" });
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsSavingSection, setSettingsSavingSection] = useState<SettingsSaveSection | null>(null);
   const [settingsLearningTopics, setSettingsLearningTopics] = useState<string[]>([]);
   const [settingsLearningPace, setSettingsLearningPace] = useState<"slow" | "medium" | "fast">("medium");
+  const [settingsLearningFeedback, setSettingsLearningFeedback] = useState<SettingsFeedback | null>(null);
 
   const topicOptions = [
     "Addition", "Subtraction", "Multiplication", "Division",
@@ -99,8 +106,12 @@ export default function ParentDashboardPage() {
     }
   }, [activeTab, parent]);
 
-  async function updateParentProfile(payload: Record<string, unknown>) {
+  async function updateParentProfile(
+    payload: Record<string, unknown>,
+    section: SettingsSaveSection
+  ): Promise<{ ok: true; data: Parent } | { ok: false; error: string }> {
     setSettingsSaving(true);
+    setSettingsSavingSection(section);
     try {
       const res = await fetch("/api/parent", {
         method: "PATCH",
@@ -110,13 +121,14 @@ export default function ParentDashboardPage() {
       const data = await res.json();
       if (res.ok && data) {
         setParent(data);
-        return true;
+        return { ok: true, data };
       }
-      return false;
+      return { ok: false, error: data?.error || "Could not save changes. Please try again." };
     } catch {
-      return false;
+      return { ok: false, error: "Could not save changes. Please try again." };
     } finally {
       setSettingsSaving(false);
+      setSettingsSavingSection(null);
     }
   }
 
@@ -133,33 +145,47 @@ export default function ParentDashboardPage() {
 
   async function saveAccountSettings(e: React.FormEvent) {
     e.preventDefault();
-    const ok = await updateParentProfile({
+    const result = await updateParentProfile({
       name: settingsAccountForm.name.trim(),
       child_name: settingsAccountForm.childName.trim() || null,
       grade_level: settingsAccountForm.gradeLevel.trim() || null,
-    });
-    if (ok) setSettingsAccountEditing(false);
+    }, "account");
+    if (result.ok) setSettingsAccountEditing(false);
   }
 
   function toggleSettingsTopic(topic: string) {
+    setSettingsLearningFeedback(null);
     setSettingsLearningTopics((prev) =>
       prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
     );
   }
 
   async function saveLearningSettings() {
-    await updateParentProfile({
+    const result = await updateParentProfile({
       math_topics: settingsLearningTopics,
       learning_pace: settingsLearningPace,
+    }, "learning");
+
+    if (result.ok) {
+      setSettingsLearningFeedback({
+        type: "success",
+        message: buildLearningConfigSuccessMessage(settingsLearningTopics, settingsLearningPace),
+      });
+      return;
+    }
+
+    setSettingsLearningFeedback({
+      type: "error",
+      message: result.error,
     });
   }
 
   async function toggleNotificationRealtime() {
-    await updateParentProfile({ notification_realtime: !parent?.notification_realtime });
+    await updateParentProfile({ notification_realtime: !parent?.notification_realtime }, "notifications");
   }
 
   async function toggleNotificationDaily() {
-    await updateParentProfile({ notification_daily: !parent?.notification_daily });
+    await updateParentProfile({ notification_daily: !parent?.notification_daily }, "notifications");
   }
 
   async function submitCodeForm(e: React.FormEvent) {
@@ -199,7 +225,7 @@ export default function ParentDashboardPage() {
       } else {
         setCodeError(data.error || "Failed to create access code");
       }
-    } catch (e) {
+    } catch {
       setCodeError("Could not create access code. Please try again.");
     }
     setGeneratingCode(false);
@@ -235,6 +261,10 @@ export default function ParentDashboardPage() {
   const avgFocus = completedSessions.length
     ? Math.round(completedSessions.reduce((sum, s) => sum + (s.focus_score_avg || 0), 0) / completedSessions.length)
     : 0;
+  const settingsLearningDirty = parent
+    ? !haveSameTopicSelections(parent.math_topics || [], settingsLearningTopics) ||
+      (parent.learning_pace || "medium") !== settingsLearningPace
+    : false;
 
   const sidebarItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "overview", label: "Overview", icon: <BarChart3 size={18} /> },
@@ -764,7 +794,7 @@ export default function ParentDashboardPage() {
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button type="submit" style={s.btn} disabled={settingsSaving}>
-                      {settingsSaving ? "Saving..." : "Save"}
+                      {settingsSaving && settingsSavingSection === "account" ? "Saving..." : "Save"}
                     </button>
                     <button type="button" onClick={() => setSettingsAccountEditing(false)} style={s.btnOutline}>
                       Cancel
@@ -826,7 +856,10 @@ export default function ParentDashboardPage() {
                     <button
                       key={pace}
                       type="button"
-                      onClick={() => setSettingsLearningPace(pace)}
+                      onClick={() => {
+                        setSettingsLearningFeedback(null);
+                        setSettingsLearningPace(pace);
+                      }}
                       style={{
                         padding: "8px 14px", fontSize: 12, borderRadius: 3,
                         border: `1.5px solid ${settingsLearningPace === pace ? "#c8416a" : "rgba(55,45,25,0.12)"}`,
@@ -841,9 +874,28 @@ export default function ParentDashboardPage() {
                   ))}
                 </div>
               </div>
-              <button type="button" onClick={saveLearningSettings} style={s.btn} disabled={settingsSaving}>
-                {settingsSaving ? "Saving..." : "Save learning config"}
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <button type="button" onClick={saveLearningSettings} style={s.btn} disabled={settingsSaving || !settingsLearningDirty}>
+                  {settingsSaving && settingsSavingSection === "learning" ? "Saving..." : "Save learning config"}
+                </button>
+                <span style={{
+                  fontSize: 12,
+                  color:
+                    settingsLearningFeedback?.type === "error"
+                      ? "#944040"
+                      : settingsLearningFeedback?.type === "success"
+                      ? "#2d7a4a"
+                      : "#8a7f6e",
+                }}>
+                  {settingsSaving && settingsSavingSection === "learning"
+                    ? "Updating your tutor preferences..."
+                    : settingsLearningFeedback?.message
+                    ? settingsLearningFeedback.message
+                    : settingsLearningDirty
+                    ? "You have unsaved changes. Save to update future tutor responses."
+                    : "No changes to save. The tutor is already using these topics and pace."}
+                </span>
+              </div>
             </div>
 
             <div style={s.card}>
@@ -909,4 +961,28 @@ export default function ParentDashboardPage() {
       </main>
     </div>
   );
+}
+
+function haveSameTopicSelections(a: string[], b: string[]) {
+  const normalizedA = [...a].sort().join("|");
+  const normalizedB = [...b].sort().join("|");
+  return normalizedA === normalizedB;
+}
+
+function buildLearningConfigSuccessMessage(
+  topics: string[],
+  pace: "slow" | "medium" | "fast"
+) {
+  const topicSummary = topics.length
+    ? topics.length <= 3
+      ? topics.join(", ")
+      : `${topics.slice(0, 3).join(", ")} +${topics.length - 3} more`
+    : "general math";
+
+  const paceSummary =
+    pace === "slow" ? "slow and steady"
+    : pace === "fast" ? "fast-moving"
+    : "balanced";
+
+  return `Saved. The tutor will now prioritize ${topicSummary} with a ${paceSummary} pace.`;
 }
