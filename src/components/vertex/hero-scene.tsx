@@ -6,15 +6,6 @@ export function HeroScene() {
   return (
     <section className="vtx-hero">
       <motion.div
-        className="vtx-hero-tagline"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.1 }}
-      >
-        <span>AI-Powered Learning for the Next Generation</span>
-      </motion.div>
-
-      <motion.div
         className="vtx-scene-wrapper"
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
