@@ -46,6 +46,7 @@ function KidSessionContent() {
     text: string;
   } | null>(null);
   const greetedSessionIdsRef = useRef<Set<string>>(new Set());
+  const transcriptHistoryRef = useRef<LiveTranscriptEntry[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastVisualRequestRef = useRef<string | null>(null);
@@ -86,6 +87,8 @@ function KidSessionContent() {
         const cachedSession = readCachedLiveSession(cacheKey);
 
         if (cachedSession) {
+          transcriptHistoryRef.current = [];
+          setMessages([]);
           setTutoringSessionId(cachedSession.sessionId);
           setDocumentContext(cachedSession.documentContext);
           setLiveTutorEnabled(Boolean(cachedSession.liveTutorEnabled));
@@ -101,7 +104,11 @@ function KidSessionContent() {
         });
         const data = await res.json();
 
-        if (data.sessionId) setTutoringSessionId(data.sessionId);
+        if (data.sessionId) {
+          transcriptHistoryRef.current = [];
+          setMessages([]);
+          setTutoringSessionId(data.sessionId);
+        }
         if (data.documentContext) setDocumentContext(data.documentContext);
         setLiveTutorEnabled(Boolean(data.liveTutorEnabled));
         setMicEnabled(false);
@@ -155,6 +162,12 @@ function KidSessionContent() {
   }
 
   const appendTranscriptMessage = useCallback((entry: LiveTranscriptEntry) => {
+    transcriptHistoryRef.current = [...transcriptHistoryRef.current.slice(-19), entry];
+
+    if (entry.role !== "assistant") {
+      return;
+    }
+
     setMessages((prev) => [
       ...prev,
       {
@@ -182,12 +195,11 @@ function KidSessionContent() {
           message: text,
           messageType: "chat",
           childName: kidSession?.child_name || "student",
-          childAge: 10,
           documentContext,
           adaptiveState,
-          recentMessages: messages.slice(-10).map((message) => ({
-            role: message.role,
-            content: message.content,
+          recentMessages: transcriptHistoryRef.current.slice(-10).map((entry) => ({
+            role: entry.role,
+            content: entry.text,
           })),
           persistMessages: false,
         }),
@@ -220,7 +232,6 @@ function KidSessionContent() {
     kidSession,
     kidSessionId,
     loading,
-    messages,
     parentId,
     tutoringSessionId,
   ]);
@@ -331,29 +342,49 @@ function KidSessionContent() {
             <ArrowLeft size={14} /> End Session
           </button>
 
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>
-              {childName}&apos;s math call
-            </div>
-            <div
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 16px",
+              borderRadius: 999,
+              background: "rgba(255, 247, 240, 0.92)",
+              border: "1px solid rgba(120, 91, 63, 0.12)",
+            }}
+          >
+            <span
               style={{
-                marginTop: 4,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: 12,
-                color: "#8a7f6e",
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: focusColor,
+                boxShadow: `0 0 0 4px ${focusColor}22`,
+                flexShrink: 0,
               }}
-            >
+            />
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
               <span
                 style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: focusColor,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: "#8a7f6e",
                 }}
-              />
-              Focus score: {attention.score}%
+              >
+                Focus
+              </span>
+              <span
+                style={{
+                  fontSize: 22,
+                  lineHeight: 1,
+                  fontWeight: 800,
+                  color: "#2a2018",
+                }}
+              >
+                {attention.score}%
+              </span>
             </div>
           </div>
         </div>

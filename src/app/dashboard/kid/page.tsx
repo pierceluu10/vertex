@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { MdWbSunny, MdWbCloudy, MdNightsStay } from "react-icons/md";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ParentAvatar } from "@/components/session/parent-avatar";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
 import type { KidSession, UploadedDocument, Quiz, TutoringSession } from "@/types";
@@ -251,7 +250,7 @@ export default function KidDashboardPage() {
         <VertexLogo href="/" height={52} className="vtx-kid-logo" />
       </header>
 
-      <ScrollArea className="kid-dashboard-scroll flex-1 [&_[data-slot=scroll-area-scrollbar]]:hidden">
+      <div className="kid-dashboard-scroll flex-1 min-h-0 overflow-y-auto">
         <div className={cn("vtx-kid-scroll-padding", activeTab === "home" && homeView === "main" && "vtx-kid-fit-viewport")}>
           <div className="vtx-kid-content">
           <AnimatePresence mode="wait">
@@ -631,7 +630,7 @@ export default function KidDashboardPage() {
           </AnimatePresence>
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Bottom nav with active pill */}
       <nav className="vtx-kid-nav">

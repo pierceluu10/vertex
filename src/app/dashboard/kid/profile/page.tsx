@@ -14,7 +14,6 @@ import {
   BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
 import type { KidSession } from "@/types";
 import { MdSchool, MdBolt } from "react-icons/md";
@@ -134,7 +133,7 @@ export default function KidProfilePage() {
         <VertexLogo href="/" height={52} className="vtx-kid-logo" />
       </header>
 
-      <ScrollArea className="kid-dashboard-scroll flex-1 [&_[data-slot=scroll-area-scrollbar]]:hidden">
+      <div className="kid-dashboard-scroll flex-1 min-h-0 overflow-y-auto">
         <div className="vtx-kid-scroll-padding">
           <div className="vtx-kid-content">
             {/* Back button */}
@@ -233,7 +232,7 @@ export default function KidProfilePage() {
             <div style={{ height: 100 }} />
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Bottom nav */}
       <nav className="vtx-kid-nav">

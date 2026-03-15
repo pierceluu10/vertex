@@ -141,16 +141,18 @@ a.vtx-auth-logo {
   padding: 0;
 }
 .vtx-nav-links a {
-  color: var(--vtx-muted);
+  color: rgba(90, 77, 62, 0.92);
   text-decoration: none;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  font-weight: 400;
-  transition: color 0.25s;
+  font-weight: 500;
+  text-shadow: 0 1px 0 rgba(255, 250, 244, 0.7);
+  transition: color 0.25s, opacity 0.25s;
 }
 .vtx-nav-links a:hover {
   color: var(--vtx-ink);
+  opacity: 1;
 }
 
 /* Hero */
@@ -173,10 +175,12 @@ a.vtx-auth-logo {
 }
 .vtx-hero-tagline span {
   font-family: 'Calibri', 'Trebuchet MS', sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.38em;
   text-transform: uppercase;
-  color: var(--vtx-muted);
+  color: rgba(104, 88, 71, 0.92);
+  font-weight: 600;
+  text-shadow: 0 1px 0 rgba(255, 250, 244, 0.9);
 }
 .vtx-scene-wrapper {
   position: relative;
@@ -199,24 +203,25 @@ a.vtx-auth-logo {
   animation: vtxFadeUp 1.2s ease both 0.4s;
 }
 .vtx-hero-bottom p {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--vtx-muted2);
+  color: rgba(114, 97, 80, 0.86);
 }
 .vtx-scroll-hint {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--vtx-muted2);
-  font-size: 10px;
+  color: rgba(114, 97, 80, 0.92);
+  font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+  font-weight: 500;
 }
 .vtx-scroll-line {
   width: 38px;
   height: 1px;
-  background: var(--vtx-muted2);
+  background: rgba(114, 97, 80, 0.72);
   position: relative;
   overflow: hidden;
 }
@@ -1019,24 +1024,24 @@ a.vtx-auth-logo {
 
 /* Home main view: fit on one screen without scrolling */
 .vtx-kid-scroll-padding.vtx-kid-fit-viewport {
-  padding: 20px 44px 120px;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
+  padding: 20px 44px 100px;
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }
 .vtx-kid-scroll-padding.vtx-kid-fit-viewport .vtx-kid-content {
   flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  min-height: auto;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }
 .vtx-kid-scroll-padding.vtx-kid-fit-viewport .vtx-kid-home-layout {
   flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  min-height: auto;
+  overflow: visible;
   align-items: stretch;
   gap: 20px;
 }

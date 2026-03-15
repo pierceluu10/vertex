@@ -23,8 +23,8 @@ export function HeroScene() {
         <svg className="vtx-scene-svg" viewBox="0 0 860 460" xmlns="http://www.w3.org/2000/svg" fill="none">
 
           {/* Ghost title */}
-          <text x="430" y="54" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="50" fontWeight="700" fill="rgba(26,22,14,.35)" letterSpacing="22">VERTEX</text>
-          <text x="430" y="76" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9.5" fill="rgba(138,127,110,.45)" letterSpacing="7">INTELLIGENCE &middot; CURIOSITY &middot; GROWTH</text>
+          <text x="430" y="54" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="50" fontWeight="700" fill="rgba(58,48,38,.44)" letterSpacing="22">VERTEX</text>
+          <text x="430" y="76" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9.5" fontWeight="600" fill="rgba(112,97,80,.8)" letterSpacing="7">INTELLIGENCE &middot; CURIOSITY &middot; GROWTH</text>
 
           {/* Parent — stroke outline: broader shoulders, collar, composed silhouette */}
           <g fill="none" stroke="#1a1610" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -91,8 +91,8 @@ export function HeroScene() {
           <text x="430" y="268" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="10" fill="#c8416a" letterSpacing="5" opacity="0.9">Vertex</text>
 
           {/* Labels */}
-          <text x="210" y="398" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9" fill="#afa598" letterSpacing="3.5">PARENT</text>
-          <text x="650" y="398" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9" fill="#afa598" letterSpacing="3.5">STUDENT</text>
+          <text x="210" y="398" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9.5" fontWeight="600" fill="rgba(112,97,80,.86)" letterSpacing="3.5">PARENT</text>
+          <text x="650" y="398" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9.5" fontWeight="600" fill="rgba(112,97,80,.86)" letterSpacing="3.5">STUDENT</text>
 
           <line x1="60" y1="370" x2="800" y2="370" stroke="rgba(26,22,14,.06)" strokeWidth="1"/>
         </svg>

@@ -10,6 +10,7 @@ export type TutorContext = {
   gradeLevel: string | null;
   learningPace: "slow" | "medium" | "fast" | null;
   mathTopics: string[];
+  learningGoals: string | null;
   documentContext: string | null;
 };
 
@@ -30,6 +31,7 @@ export async function loadTutorContext(
     gradeLevel: null,
     learningPace: null,
     mathTopics: [],
+    learningGoals: null,
     documentContext: null,
   };
 
@@ -106,15 +108,50 @@ export async function loadTutorContext(
       context.childName = context.childName ?? kidSession.child_name ?? null;
 
       if (kidSession.code_used) {
-        const { data: accessCode } = await supabase
+        let accessCode:
+          | {
+              child_age?: number | null;
+              grade_level?: string | null;
+              math_topics?: string[] | null;
+              learning_pace?: "slow" | "medium" | "fast" | null;
+              learning_goals?: string | null;
+            }
+          | null = null;
+
+        const accessCodeLookup = await supabase
           .from("access_codes")
-          .select("child_age, grade_level")
+          .select("child_age, grade_level, math_topics, learning_pace, learning_goals")
           .eq("code", kidSession.code_used)
           .maybeSingle();
+
+        if (
+          accessCodeLookup.error &&
+          (accessCodeLookup.error.message.includes("learning_goals") ||
+            accessCodeLookup.error.message.includes("learning_pace") ||
+            accessCodeLookup.error.message.includes("math_topics"))
+        ) {
+          const fallbackLookup = await supabase
+            .from("access_codes")
+            .select("child_age, grade_level")
+            .eq("code", kidSession.code_used)
+            .maybeSingle();
+
+          accessCode = fallbackLookup.data
+            ? {
+                child_age: fallbackLookup.data.child_age,
+                grade_level: fallbackLookup.data.grade_level,
+              }
+            : null;
+        } else {
+          accessCode = accessCodeLookup.data ?? null;
+        }
 
         if (accessCode) {
           context.childAge = context.childAge ?? accessCode.child_age ?? null;
           context.gradeLevel = context.gradeLevel ?? accessCode.grade_level ?? null;
+          context.learningPace = context.learningPace ?? accessCode.learning_pace ?? null;
+          context.learningGoals = context.learningGoals ?? accessCode.learning_goals ?? null;
+          context.mathTopics = accessCode.math_topics?.length ? accessCode.math_topics : context.mathTopics;
         }
       }
     }
@@ -146,12 +183,16 @@ export async function loadTutorContext(
     return context;
   }
 
+  const mergedMathTopics = Array.from(
+    new Set([...(context.mathTopics || []), ...(parent.math_topics || [])].filter(Boolean))
+  );
+
   return {
     ...context,
     parentName: parent.name,
     childName: context.childName ?? parent.child_name ?? null,
     gradeLevel: context.gradeLevel ?? parent.grade_level ?? null,
-    learningPace: parent.learning_pace || null,
-    mathTopics: parent.math_topics || [],
+    learningPace: context.learningPace ?? (parent.learning_pace || null),
+    mathTopics: mergedMathTopics,
   };
 }

@@ -45,6 +45,11 @@ interface RemoteTrackState {
   video: boolean;
 }
 
+interface RemotePresenceState {
+  agent: boolean;
+  avatar: boolean;
+}
+
 const MIC_CAPTURE_OPTIONS: AudioCaptureOptions = {
   echoCancellation: true,
   noiseSuppression: true,
@@ -78,9 +83,11 @@ export function LiveKitAvatar({
   const lastAgentPromptIdRef = useRef<number | null>(null);
   const pendingAgentPromptRef = useRef<AgentPromptRequest | null>(null);
   const remoteTrackStateRef = useRef<RemoteTrackState>({ audio: false, video: false });
+  const remotePresenceRef = useRef<RemotePresenceState>({ agent: false, avatar: false });
   const remoteElementsRef = useRef<Map<string, HTMLElement>>(new Map());
   const localElementsRef = useRef<Map<string, HTMLElement>>(new Map());
   const connectionTimeoutRef = useRef<number | null>(null);
+  const remoteScanIntervalRef = useRef<number | null>(null);
 
   const remoteVideoHostRef = useRef<HTMLDivElement>(null);
   const remoteAudioHostRef = useRef<HTMLDivElement>(null);
@@ -102,6 +109,34 @@ export function LiveKitAvatar({
   useEffect(() => {
     onTranscriptRef.current = onTranscript;
   }, [onTranscript]);
+
+  const isAgentParticipant = useCallback((participant: Participant) => {
+    return (
+      Boolean(participant.attributes?.lkAgentName) ||
+      participant.identity?.startsWith("agent-") ||
+      participant.identity?.startsWith("simli-avatar-")
+    );
+  }, []);
+
+  const updateRemotePresence = useCallback(
+    (room: Room) => {
+      let agent = false;
+      let avatar = false;
+
+      room.remoteParticipants.forEach((participant) => {
+        if (participant.identity?.startsWith("simli-avatar-")) {
+          avatar = true;
+        }
+
+        if (isAgentParticipant(participant)) {
+          agent = true;
+        }
+      });
+
+      remotePresenceRef.current = { agent, avatar };
+    },
+    [isAgentParticipant]
+  );
 
   const detachElement = useCallback((store: Map<string, HTMLElement>, key: string) => {
     const element = store.get(key);
@@ -142,6 +177,7 @@ export function LiveKitAvatar({
   const updateStatusFromTracks = useCallback(
     (fallback?: string) => {
       const remoteTracks = remoteTrackStateRef.current;
+      const remotePresence = remotePresenceRef.current;
 
       if (remoteTracks.video) {
         if (!readyRef.current) {
@@ -162,6 +198,16 @@ export function LiveKitAvatar({
                 "Tina's voice is connected, but Simli has not published a video track to this LiveKit room."
             : avatarVideoReasonRef.current ||
                 "Tina's live face needs a public wss:// LiveKit room so Simli can join and publish video."
+        );
+        return;
+      }
+
+      if (remotePresence.agent || remotePresence.avatar) {
+        setStatus("connecting");
+        setErrorMsg(
+          remotePresence.avatar
+            ? "Tina joined the room and is getting her live face ready."
+            : "Tina is joining the room now."
         );
         return;
       }
@@ -253,10 +299,21 @@ export function LiveKitAvatar({
 
   const syncMicState = useCallback(async (room: Room, nextMicEnabled: boolean) => {
     try {
-      await room.localParticipant.setMicrophoneEnabled(
-        nextMicEnabled,
-        MIC_CAPTURE_OPTIONS
-      );
+      const localParticipant = room.localParticipant;
+      await localParticipant.setMicrophoneEnabled(nextMicEnabled, MIC_CAPTURE_OPTIONS);
+
+      if (!nextMicEnabled) {
+        const micPublication = localParticipant.getTrackPublication(Track.Source.Microphone);
+        const micTrack = micPublication?.track;
+
+        if (micTrack) {
+          micTrack.mediaStreamTrack.enabled = false;
+          micTrack.stop();
+          if (micPublication.track) {
+            await localParticipant.unpublishTrack(micPublication.track, false);
+          }
+        }
+      }
     } catch (error) {
       console.warn("LiveKit mic toggle failed:", error);
       setErrorMsg("Microphone access was blocked. Allow mic access to talk with Tina.");
@@ -266,9 +323,21 @@ export function LiveKitAvatar({
   const syncCameraState = useCallback(
     async (room: Room, nextCameraEnabled: boolean) => {
       try {
-        await room.localParticipant.setCameraEnabled(nextCameraEnabled);
+        const localParticipant = room.localParticipant;
+        await localParticipant.setCameraEnabled(nextCameraEnabled);
 
         if (!nextCameraEnabled) {
+          const cameraPublication = localParticipant.getTrackPublication(Track.Source.Camera);
+          const cameraTrack = cameraPublication?.track;
+
+          if (cameraTrack) {
+            cameraTrack.mediaStreamTrack.enabled = false;
+            cameraTrack.stop();
+            if (cameraPublication.track) {
+              await localParticipant.unpublishTrack(cameraPublication.track, false);
+            }
+          }
+
           localElementsRef.current.forEach((element) => element.remove());
           localElementsRef.current.clear();
           setCameraActive(false);
@@ -343,6 +412,7 @@ export function LiveKitAvatar({
     mountedRef.current = true;
     readyRef.current = false;
     remoteTrackStateRef.current = { audio: false, video: false };
+    remotePresenceRef.current = { agent: false, avatar: false };
     setCameraActive(false);
     setCameraError(null);
     let cancelled = false;
@@ -375,12 +445,20 @@ export function LiveKitAvatar({
 
     room.on(RoomEvent.TrackPublished, (publication, participant) => {
       if (participant instanceof RemoteParticipant) {
+        updateRemotePresence(room);
         ensureRemotePublication(publication as RemoteTrackPublication);
       }
     });
 
     room.on(RoomEvent.ParticipantConnected, (participant) => {
+      updateRemotePresence(room);
       scanRemoteParticipant(participant);
+      updateStatusFromTracks();
+    });
+
+    room.on(RoomEvent.ParticipantDisconnected, () => {
+      updateRemotePresence(room);
+      updateStatusFromTracks();
     });
 
     room.on(RoomEvent.LocalTrackPublished, (publication) => {
@@ -413,11 +491,10 @@ export function LiveKitAvatar({
       if (!mountedRef.current) return;
       readyRef.current = false;
       remoteTrackStateRef.current = { audio: false, video: false };
+      remotePresenceRef.current = { agent: false, avatar: false };
       setCameraActive(false);
-
-      if (room.state !== ConnectionState.Connected) {
-        setStatus("idle");
-      }
+      setStatus("error");
+      setErrorMsg("Tina disconnected from the call. Refresh to reconnect.");
     });
 
     const connect = async () => {
@@ -457,9 +534,11 @@ export function LiveKitAvatar({
         await syncMicState(room, micEnabledRef.current);
         await syncCameraState(room, cameraEnabledRef.current);
 
+        updateRemotePresence(room);
         room.remoteParticipants.forEach((participant) => {
           scanRemoteParticipant(participant);
         });
+        updateStatusFromTracks();
 
         await flushPendingAgentPrompt();
 
@@ -471,14 +550,30 @@ export function LiveKitAvatar({
             return;
           }
 
+          updateRemotePresence(room);
+          if (remotePresenceRef.current.agent || remotePresenceRef.current.avatar) {
+            setStatus("connecting");
+            setErrorMsg("Tina is in the room and warming up her live feed.");
+            return;
+          }
+
           setStatus("error");
           setErrorMsg(
             avatarVideoSupportedRef.current
-              ? "Tina did not publish audio or video to this room. Check the Simli worker and LiveKit room setup."
+              ? "Tina could not join this room yet. Refresh once, and if it keeps happening we need to inspect the Simli worker session."
               : avatarVideoReasonRef.current ||
                   "Tina's live face needs a public wss:// LiveKit room to show video."
           );
-        }, 7000);
+        }, 12000);
+
+        remoteScanIntervalRef.current = window.setInterval(() => {
+          if (!mountedRef.current || room.state !== ConnectionState.Connected) return;
+          updateRemotePresence(room);
+          room.remoteParticipants.forEach((participant) => {
+            scanRemoteParticipant(participant);
+          });
+          updateStatusFromTracks();
+        }, 1500);
       } catch (error) {
         console.error("LiveKit avatar connection error:", error);
         if (!mountedRef.current) return;
@@ -501,6 +596,10 @@ export function LiveKitAvatar({
       if (connectionTimeoutRef.current) {
         window.clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
+      }
+      if (remoteScanIntervalRef.current) {
+        window.clearInterval(remoteScanIntervalRef.current);
+        remoteScanIntervalRef.current = null;
       }
 
       remoteElements.forEach((element) => element.remove());
@@ -531,6 +630,7 @@ export function LiveKitAvatar({
     sessionId,
     syncCameraState,
     syncMicState,
+    updateRemotePresence,
     updateStatusFromTracks,
     flushPendingAgentPrompt,
   ]);
@@ -544,12 +644,12 @@ export function LiveKitAvatar({
   }, [agentPromptRequest, flushPendingAgentPrompt]);
 
   useEffect(() => {
-    if (!roomRef.current || status === "idle" || status === "error") return;
+    if (!roomRef.current || status === "idle") return;
     void syncMicState(roomRef.current, micEnabled);
   }, [micEnabled, status, syncMicState]);
 
   useEffect(() => {
-    if (!roomRef.current || status === "idle" || status === "error") return;
+    if (!roomRef.current || status === "idle") return;
     void syncCameraState(roomRef.current, cameraEnabled);
   }, [cameraEnabled, status, syncCameraState]);
 
@@ -568,7 +668,7 @@ export function LiveKitAvatar({
       : status === "audio-only"
       ? errorMsg
       : status === "connecting"
-      ? "Joining the LiveKit room and waiting for Tina's video feed."
+      ? errorMsg || "Joining the LiveKit room and waiting for Tina's video feed."
       : errorMsg || "The live tutor could not start right now.";
 
   return (

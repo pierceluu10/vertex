@@ -122,6 +122,10 @@
 /* Kid dashboard & profile: hide scrollbar, keep scroll, prevent overscroll (no bounce past page) */
 .kid-dashboard-scroll,
 .kid-dashboard-scroll [data-slot="scroll-area-viewport"] {
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   scrollbar-width: none;
   -ms-overflow-style: none;
   overscroll-behavior: contain;

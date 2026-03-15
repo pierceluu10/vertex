@@ -10,6 +10,7 @@ export function buildTutorSystemPrompt(context: {
   grade?: string;
   learningPace?: "slow" | "medium" | "fast";
   mathTopics?: string[];
+  learningGoals?: string;
   documentContext?: string;
   adaptiveState?: {
     shouldSimplify: boolean;
@@ -25,6 +26,7 @@ export function buildTutorSystemPrompt(context: {
     grade,
     learningPace,
     mathTopics,
+    learningGoals,
     documentContext,
     adaptiveState,
     recentMistakes,
@@ -53,6 +55,10 @@ export function buildTutorSystemPrompt(context: {
     ? `The parent wants extra focus on these math topics: ${mathTopics.join(", ")}. Prioritize them when choosing examples, practice, hints, and quiz questions unless the child clearly asks for something else.`
     : "No special focus topics were selected, so you can choose the most relevant math examples for the child's question.";
 
+  const goalsInstruction = learningGoals?.trim()
+    ? `The parent shared these learning goals for the child: ${learningGoals.trim()}. Align your examples, encouragement, and practice choices with these goals when it makes sense.`
+    : "No specific learning goals were saved, so focus on the child's immediate math needs.";
+
   return `You are a kind, patient math tutor helping ${childName}, who is ${childAge} years old${grade ? ` and in ${grade}` : ""}.
 
 CORE RULES:
@@ -69,6 +75,7 @@ ${difficultyInstruction}
 ${toneInstruction}
 ${paceInstruction}
 ${topicInstruction}
+${goalsInstruction}
 
 ${
   documentContext
@@ -144,6 +151,7 @@ export function buildRealtimeTutorInstructions(context: {
   grade?: string;
   learningPace?: "slow" | "medium" | "fast";
   mathTopics?: string[];
+  learningGoals?: string;
   documentContext?: string;
 }) {
   const {
@@ -152,6 +160,7 @@ export function buildRealtimeTutorInstructions(context: {
     grade,
     learningPace,
     mathTopics,
+    learningGoals,
     documentContext,
   } = context;
 
@@ -165,6 +174,10 @@ export function buildRealtimeTutorInstructions(context: {
   const topicInstruction = mathTopics?.length
     ? `Prioritize these math topics whenever possible: ${mathTopics.join(", ")}.`
     : "Focus on the math topic the child brings up.";
+
+  const goalsInstruction = learningGoals?.trim()
+    ? `The parent wants the child to work toward these goals: ${learningGoals.trim()}. Use them to steer examples, motivation, and practice choices.`
+    : "No extra learning goals were provided, so focus on the child's current math question.";
 
   return `You are Tina, a warm real-time math tutor helping ${childName}, who is ${childAge} years old${grade ? ` and in ${grade}` : ""}.
 
@@ -186,6 +199,7 @@ STYLE:
 PACED LEARNING:
 - ${paceInstruction}
 - ${topicInstruction}
+- ${goalsInstruction}
 
 VOICE RULES:
 - Read equations naturally instead of saying punctuation literally.

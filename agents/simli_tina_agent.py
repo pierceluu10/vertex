@@ -4,14 +4,12 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 
-import aiohttp
 import certifi
 from dotenv import load_dotenv
-from livekit import agents, api
-from livekit.agents import Agent, AgentServer, AgentSession, cli, get_job_context
-from livekit.agents.voice.avatar import DataStreamAudioOutput
-from livekit.agents.voice.room_io import ATTRIBUTE_PUBLISH_ON_BEHALF
+from livekit import agents
+from livekit.agents import Agent, AgentServer, AgentSession, cli
 from livekit.plugins import openai, simli
+from openai.types import realtime
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT_DIR / ".env.local", override=True)
@@ -49,6 +47,14 @@ def _build_instructions(metadata: dict[str, object]) -> str:
     )
 
 
+def _build_greeting(metadata: dict[str, object]) -> str:
+    child_name = str(metadata.get("childName") or "friend").strip() or "friend"
+    return (
+        f"Hi {child_name}! I'm Tina. I'm happy to work on math with you today. "
+        "What math problem would you like to start with?"
+    )
+
+
 def _can_publish_avatar_video(livekit_url: str) -> tuple[bool, str | None]:
     try:
         parsed = urlparse(livekit_url)
@@ -72,77 +78,6 @@ def _can_publish_avatar_video(livekit_url: str) -> tuple[bool, str | None]:
         return False, "The LiveKit URL is invalid for Simli avatar video."
 
 
-async def _start_simli_avatar(
-    *,
-    room,
-    local_participant_identity: str,
-    livekit_url: str,
-) -> str | None:
-    face_id = os.getenv("SIMLI_FACE_ID", "cace3ef7-a4c4-425d-a8cf-a5358eb0c427")
-    avatar_identity = f"simli-avatar-{room.name[:12]}"
-    avatar_name = os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", "Tina")
-
-    livekit_token = (
-        api.AccessToken(
-            api_key=_required_env("LIVEKIT_API_KEY"),
-            api_secret=_required_env("LIVEKIT_API_SECRET"),
-        )
-        .with_kind("agent")
-        .with_identity(avatar_identity)
-        .with_name(avatar_name)
-        .with_grants(api.VideoGrants(room_join=True, room=room.name))
-        .with_attributes({ATTRIBUTE_PUBLISH_ON_BEHALF: local_participant_identity})
-        .to_jwt()
-    )
-
-    payload = simli.SimliConfig(
-        api_key=_required_env("SIMLI_API_KEY"),
-        face_id=face_id,
-        max_session_length=int(os.getenv("SIMLI_MAX_SESSION_LENGTH", "1800")),
-        max_idle_time=int(os.getenv("SIMLI_MAX_IDLE_TIME", "120")),
-    ).create_json()
-
-    timeout = aiohttp.ClientTimeout(total=30)
-    async with aiohttp.ClientSession(timeout=timeout) as http_session:
-        try:
-            compose_response = await http_session.post(
-                "https://api.simli.ai/compose/token",
-                json=payload,
-                headers={"x-simli-api-key": _required_env("SIMLI_API_KEY")},
-            )
-            compose_body = await compose_response.text()
-            compose_response.raise_for_status()
-            session_token = json.loads(compose_body)["session_token"]
-        except Exception:
-            logger.exception("Failed to create Simli session token")
-            return None
-
-        try:
-            connect_response = await http_session.post(
-                "https://api.simli.ai/integrations/livekit/agents",
-                json={
-                    "session_token": session_token,
-                    "livekit_token": livekit_token,
-                    "livekit_url": livekit_url,
-                },
-            )
-            connect_body = await connect_response.text()
-            connect_response.raise_for_status()
-            logger.info(
-                "Simli avatar joined room",
-                extra={
-                    "room": room.name,
-                    "avatar_identity": avatar_identity,
-                    "response": connect_body,
-                },
-            )
-        except Exception:
-            logger.exception("Failed to connect Simli avatar to LiveKit room")
-            return None
-
-    return avatar_identity
-
-
 @server.rtc_session(agent_name=os.getenv("LIVEKIT_AGENT_NAME", "vertex-tina-tutor"))
 async def tina_tutor(ctx: agents.JobContext):
     metadata = json.loads(ctx.job.metadata or "{}")
@@ -153,26 +88,42 @@ async def tina_tutor(ctx: agents.JobContext):
     session = AgentSession(
         llm=openai.realtime.RealtimeModel(
             model=os.getenv("OPENAI_REALTIME_MODEL", "gpt-realtime"),
-            voice=os.getenv("OPENAI_REALTIME_VOICE", "alloy"),
+            voice=os.getenv("OPENAI_REALTIME_VOICE", "marin"),
+            modalities=["audio", "text"],
+            input_audio_transcription=realtime.AudioTranscription(
+                model=os.getenv("OPENAI_TRANSCRIPTION_MODEL", "gpt-4o-transcribe"),
+            ),
+            input_audio_noise_reduction="near_field",
+            turn_detection=realtime.realtime_audio_input_turn_detection.SemanticVad(
+                type="semantic_vad",
+                create_response=True,
+                eagerness="auto",
+                interrupt_response=True,
+            ),
+            speed=float(os.getenv("OPENAI_REALTIME_SPEED", "0.96")),
         ),
     )
 
     avatar_supported, avatar_reason = _can_publish_avatar_video(livekit_url)
     if avatar_supported:
-        job_ctx = get_job_context()
-        avatar_identity = await _start_simli_avatar(
-            room=ctx.room,
-            local_participant_identity=job_ctx.local_participant_identity,
-            livekit_url=livekit_url,
+        avatar_session = simli.AvatarSession(
+            simli_config=simli.SimliConfig(
+                api_key=_required_env("SIMLI_API_KEY"),
+                face_id=os.getenv("SIMLI_FACE_ID", "cace3ef7-a4c4-425d-a8cf-a5358eb0c427"),
+                max_session_length=int(os.getenv("SIMLI_MAX_SESSION_LENGTH", "1800")),
+                max_idle_time=int(os.getenv("SIMLI_MAX_IDLE_TIME", "120")),
+            ),
+            avatar_participant_identity=f"simli-avatar-{ctx.room.name[:12]}",
+            avatar_participant_name=os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", "Tina"),
         )
-        if avatar_identity:
-            session.output.audio = DataStreamAudioOutput(
-                room=ctx.room,
-                destination_identity=avatar_identity,
-                sample_rate=SIMLI_SAMPLE_RATE,
-            )
-        else:
-            logger.warning("Simli avatar start failed; continuing voice-only agent")
+        await avatar_session.start(
+            session,
+            room=ctx.room,
+            livekit_url=livekit_url,
+            livekit_api_key=_required_env("LIVEKIT_API_KEY"),
+            livekit_api_secret=_required_env("LIVEKIT_API_SECRET"),
+        )
+        logger.info("Simli avatar start requested", extra={"room": ctx.room.name})
     else:
         logger.warning("Skipping Simli avatar video", extra={"reason": avatar_reason, "livekit_url": livekit_url})
 
@@ -182,6 +133,7 @@ async def tina_tutor(ctx: agents.JobContext):
             instructions=_build_instructions(metadata),
         ),
     )
+    session.say(_build_greeting(metadata), add_to_chat_ctx=False)
 
 
 if __name__ == "__main__":
