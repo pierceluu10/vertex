@@ -22,7 +22,7 @@ import {
   ArrowLeft,
   ArrowRight,
 } from "lucide-react";
-import { MdWbSunny, MdWbCloudy, MdNightsStay } from "react-icons/md";
+import { MdWbSunny, MdWbCloudy, MdNightsStay, MdLocalFireDepartment, MdBolt, MdMenuBook } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { ParentAvatar } from "@/components/session/parent-avatar";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
@@ -65,6 +65,8 @@ export default function KidDashboardPage() {
     done: boolean;
   } | null>(null);
   const [sessions, setSessions] = useState<TutoringSession[]>([]);
+  const [streak] = useState(0);
+  const [xp] = useState(0);
   const [todos, setTodos] = useState<{ id: string; label: string; done: boolean }[]>(() => []);
   const [todoInput, setTodoInput] = useState("");
   const [tutorName, setTutorName] = useState<string>("");
@@ -207,10 +209,8 @@ export default function KidDashboardPage() {
     });
     if (documentId) {
       params.set("documentId", documentId);
-      router.push(`/lesson?${params.toString()}`);
-    } else {
-      router.push(`/session/kid?${params.toString()}`);
     }
+    router.push(`/session/kid?${params.toString()}`);
   }
 
   if (!kidSession) {

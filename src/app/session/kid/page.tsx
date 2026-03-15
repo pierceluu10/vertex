@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Mic, MicOff, Video, VideoOff } from "lucide-react";
+import { ArrowLeft, Mic, MicOff, Video, VideoOff, MessageCircle, X, Send } from "lucide-react";
 import {
   LiveKitAvatar,
   type LiveTranscriptEntry,
@@ -10,6 +10,7 @@ import {
 import { useAttention } from "@/hooks/use-attention";
 import { getInterventionMessage } from "@/lib/attention";
 import { MathVisual } from "@/components/session/math-visual";
+import { MessageContent } from "@/components/session/message-content";
 import type { AdaptiveState, KidSession } from "@/types";
 import {
   createInitialAdaptiveState,
@@ -23,6 +24,13 @@ interface DisplayMessage {
   content: string;
   type: "chat" | "quiz" | "hint" | "reminder";
   jsxGraph?: unknown;
+}
+
+interface LessonPlan {
+  title: string;
+  overview: string;
+  sections: { heading: string; content: string; examples: { problem: string; steps: string[]; answer: string }[] }[];
+  practiceProblems: { id: number; question: string; hint: string; solution: string; answer: string }[];
 }
 
 function KidSessionContent() {
@@ -48,7 +56,17 @@ function KidSessionContent() {
   const greetedSessionIdsRef = useRef<Set<string>>(new Set());
   const transcriptHistoryRef = useRef<LiveTranscriptEntry[]>([]);
 
+  // Chat panel state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+
+  // Lesson plan state
+  const [lessonPlan, setLessonPlan] = useState<LessonPlan | null>(null);
+  const [lessonLoading, setLessonLoading] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
   const lastVisualRequestRef = useRef<string | null>(null);
 
   const childName = kidSession?.child_name?.trim() || "there";
@@ -70,14 +88,49 @@ function KidSessionContent() {
 
   const attention = useAttention(tutoringSessionId || "none", handleIntervention, false);
 
-  const queueInitialGreeting = useCallback((sessionId: string, name: string) => {
+  // Generate lesson plan from document
+  const generateLessonPlan = useCallback(async (docText: string) => {
+    setLessonLoading(true);
+    try {
+      const res = await fetch("/api/lesson/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentText: docText,
+          childName,
+          childAge: 10,
+        }),
+      });
+      const data = await res.json();
+      if (data.lesson) {
+        setLessonPlan(data.lesson);
+        return data.lesson as LessonPlan;
+      }
+    } catch {
+      // lesson generation failed, avatar will still work without it
+    }
+    setLessonLoading(false);
+    return null;
+  }, [childName]);
+
+  const queueInitialGreeting = useCallback((sessionId: string, name: string, lesson: LessonPlan | null) => {
     if (greetedSessionIdsRef.current.has(sessionId)) return;
 
     greetedSessionIdsRef.current.add(sessionId);
-    setAgentPromptRequest({
-      id: Date.now(),
-      text: `Start the session now. Greet ${name} warmly, introduce yourself as Tina, and ask what math problem they want to work on first.`,
-    });
+
+    if (lesson) {
+      // Build a lesson script for the avatar
+      const lessonScript = buildLessonScript(lesson);
+      setAgentPromptRequest({
+        id: Date.now(),
+        text: `You have a prepared lesson plan for ${name} based on their homework. Here is the lesson plan:\n\n${lessonScript}\n\nStart by greeting ${name} warmly, introduce yourself as Tina, and then ask: "I've prepared a lesson based on your homework about ${lesson.title}. Would you like me to walk you through it step by step, or do you have a specific question you'd like help with first?" Then follow their choice. If they want the lesson, teach it section by section in a conversational way, using the examples from the plan. If they have a question, answer it using the lesson content as context.`,
+      });
+    } else {
+      setAgentPromptRequest({
+        id: Date.now(),
+        text: `Start the session now. Greet ${name} warmly, introduce yourself as Tina, and ask what math problem they want to work on first.`,
+      });
+    }
   }, []);
 
   const initSession = useCallback(
@@ -93,7 +146,13 @@ function KidSessionContent() {
           setDocumentContext(cachedSession.documentContext);
           setLiveTutorEnabled(Boolean(cachedSession.liveTutorEnabled));
           setMicEnabled(false);
-          queueInitialGreeting(cachedSession.sessionId, session.child_name?.trim() || "there");
+
+          // Generate lesson if document present
+          let lesson: LessonPlan | null = null;
+          if (documentId && cachedSession.documentContext) {
+            lesson = await generateLessonPlan(cachedSession.documentContext);
+          }
+          queueInitialGreeting(cachedSession.sessionId, session.child_name?.trim() || "there", lesson);
           return;
         }
 
@@ -112,8 +171,15 @@ function KidSessionContent() {
         if (data.documentContext) setDocumentContext(data.documentContext);
         setLiveTutorEnabled(Boolean(data.liveTutorEnabled));
         setMicEnabled(false);
+
+        // Generate lesson if document present
+        let lesson: LessonPlan | null = null;
+        if (documentId && data.documentContext) {
+          lesson = await generateLessonPlan(data.documentContext);
+        }
+
         if (data.sessionId) {
-          queueInitialGreeting(data.sessionId, session.child_name?.trim() || "there");
+          queueInitialGreeting(data.sessionId, session.child_name?.trim() || "there", lesson);
         }
 
         if (data.sessionId) {
@@ -128,7 +194,7 @@ function KidSessionContent() {
         // ignore
       }
     },
-    [documentId, parentId, queueInitialGreeting]
+    [documentId, parentId, queueInitialGreeting, generateLessonPlan]
   );
 
   useEffect(() => {
@@ -260,6 +326,60 @@ function KidSessionContent() {
     [appendTranscriptMessage, maybeRequestVisualAid]
   );
 
+  // Send text chat message
+  async function sendChatMessage() {
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg = chatInput.trim();
+    setChatInput("");
+    setChatLoading(true);
+
+    const newUserMsg: DisplayMessage = {
+      id: `user-typed-${Date.now()}`,
+      role: "user",
+      content: userMsg,
+      type: "chat",
+    };
+    setMessages((prev) => [...prev, newUserMsg]);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: tutoringSessionId,
+          message: userMsg,
+          messageType: "chat",
+          childName: kidSession?.child_name || "student",
+          childAge: 10,
+          documentContext,
+          adaptiveState,
+          recentMessages: messages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.content) {
+        const { cleanContent, graphs } = parseJsxGraph(data.content);
+        setMessages((prev) => [...prev, {
+          id: `assistant-typed-${Date.now()}`,
+          role: "assistant",
+          content: cleanContent,
+          type: "chat",
+          jsxGraph: graphs.length > 0 ? graphs : undefined,
+        }]);
+      }
+    } catch {
+      setMessages((prev) => [...prev, {
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: "Oops, something went wrong. Try again!",
+        type: "chat",
+      }]);
+    }
+    setChatLoading(false);
+    chatInputRef.current?.focus();
+  }
+
   async function endSession() {
     if (kidSessionId) {
       clearCachedLiveSession(getLiveSessionCacheKey(kidSessionId, documentId));
@@ -297,16 +417,18 @@ function KidSessionContent() {
 
   type MathVisualConfig = { type: string; [key: string]: unknown };
 
+  const unreadCount = messages.filter((m) => m.role === "assistant").length;
+
   return (
     <div
       style={{
         minHeight: "100vh",
-        background:
-          "#fef7ee",
+        background: "#fef7ee",
         fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
         color: "#1e1a12",
       }}
     >
+      {/* Header */}
       <header
         style={{
           position: "sticky",
@@ -342,6 +464,11 @@ function KidSessionContent() {
             <ArrowLeft size={14} /> End Session
           </button>
 
+          {lessonPlan && (
+            <span style={{ fontSize: 12, color: "#8a7f6e", fontWeight: 400 }}>
+              {lessonPlan.title}
+            </span>
+          )}
           <div
             style={{
               display: "flex",
@@ -390,6 +517,9 @@ function KidSessionContent() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {lessonLoading && (
+            <span style={{ fontSize: 11, color: "#8a7f6e" }}>Preparing lesson...</span>
+          )}
           <MediaToggleButton
             active={micEnabled}
             disabled={!liveTutorEnabled}
@@ -411,73 +541,143 @@ function KidSessionContent() {
         </div>
       </header>
 
-      <main style={{ padding: "22px 20px 28px" }}>
-        <div className="vtx-kid-call-layout">
-          <section className="vtx-kid-stage-panel">
-            <div
-              style={{
-                padding: 16,
-                borderRadius: 28,
-                background: "rgba(255,255,255,0.74)",
-                border: "1px solid rgba(120, 91, 63, 0.08)",
-                boxShadow: "0 18px 40px rgba(94, 70, 48, 0.08)",
-              }}
-            >
-              <div style={{ width: "100%", minHeight: 500 }}>
-                {liveTutorEnabled && tutoringSessionId ? (
-                  <LiveKitAvatar
-                    className="h-full w-full"
-                    sessionId={tutoringSessionId}
-                    kidSessionId={kidSessionId}
-                    parentId={parentId}
-                    documentId={documentId}
-                    micEnabled={micEnabled}
-                    cameraEnabled={cameraEnabled}
-                    childName={childName}
-                    onTranscript={handleTranscript}
-                    agentPromptRequest={agentPromptRequest}
-                  />
-                ) : (
+      <main style={{ padding: "22px 20px 28px", height: "calc(100vh - 73px)", display: "flex", gap: 0 }}>
+        {/* Avatar panel — takes full width when chat closed, left half when open */}
+        <section style={{
+          flex: chatOpen ? "0 0 50%" : "1 1 100%",
+          transition: "flex 0.3s ease",
+          minWidth: 0,
+        }}>
+          <div
+            style={{
+              height: "100%",
+              padding: 16,
+              borderRadius: 28,
+              background: "rgba(255,255,255,0.74)",
+              border: "1px solid rgba(120, 91, 63, 0.08)",
+              boxShadow: "0 18px 40px rgba(94, 70, 48, 0.08)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div style={{ flex: 1, minHeight: 0 }}>
+              {liveTutorEnabled && tutoringSessionId ? (
+                <LiveKitAvatar
+                  className="h-full w-full"
+                  sessionId={tutoringSessionId}
+                  kidSessionId={kidSessionId}
+                  parentId={parentId}
+                  documentId={documentId}
+                  micEnabled={micEnabled}
+                  cameraEnabled={cameraEnabled}
+                  childName={childName}
+                  onTranscript={handleTranscript}
+                  agentPromptRequest={agentPromptRequest}
+                />
+              ) : (
+                <div
+                  style={{
+                    height: "100%",
+                    minHeight: 400,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 12,
+                    padding: 24,
+                    borderRadius: 24,
+                    background: "#1d2431",
+                    color: "#fff4e6",
+                    textAlign: "center",
+                  }}
+                >
                   <div
                     style={{
-                      minHeight: 500,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 12,
-                      padding: 24,
-                      borderRadius: 24,
-                      background: "#1d2431",
-                      color: "#fff4e6",
-                      textAlign: "center",
+                      width: 84,
+                      height: 84,
+                      borderRadius: "50%",
+                      display: "grid",
+                      placeItems: "center",
+                      background: "rgba(255,255,255,0.08)",
+                      fontSize: 32,
+                      fontWeight: 700,
                     }}
                   >
-                    <div
-                      style={{
-                        width: 84,
-                        height: 84,
-                        borderRadius: "50%",
-                        display: "grid",
-                        placeItems: "center",
-                        background: "rgba(255,255,255,0.08)",
-                        fontSize: 32,
-                        fontWeight: 700,
-                      }}
-                    >
-                      T
-                    </div>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>Tina is offline</div>
-                    <div style={{ maxWidth: 380, fontSize: 13, lineHeight: 1.6, color: "rgba(255,244,230,0.76)" }}>
-                      Add the Simli and LiveKit environment variables to bring Tina online as a live call tutor.
-                    </div>
+                    T
                   </div>
-                )}
-              </div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>Tina is offline</div>
+                  <div style={{ maxWidth: 380, fontSize: 13, lineHeight: 1.6, color: "rgba(255,244,230,0.76)" }}>
+                    Add the Simli and LiveKit environment variables to bring Tina online as a live call tutor.
+                  </div>
+                </div>
+              )}
             </div>
-          </section>
+          </div>
+        </section>
 
-          <aside className="vtx-kid-chat-panel">
+        {/* Chat toggle button — visible when chat is closed */}
+        {!chatOpen && (
+          <button
+            onClick={() => { setChatOpen(true); setTimeout(() => chatInputRef.current?.focus(), 200); }}
+            style={{
+              position: "fixed",
+              bottom: 28,
+              right: 28,
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              background: "#c8416a",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 8px 24px rgba(200,65,106,0.35)",
+              zIndex: 30,
+              transition: "transform 0.2s",
+            }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.transform = "scale(1.1)"; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.transform = "scale(1)"; }}
+          >
+            <MessageCircle size={24} />
+            {messages.length > 0 && (
+              <span style={{
+                position: "absolute",
+                top: -2,
+                right: -2,
+                width: 20,
+                height: 20,
+                borderRadius: "50%",
+                background: "#f5a623",
+                color: "#fff",
+                fontSize: 10,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                {Math.min(unreadCount, 99)}
+              </span>
+            )}
+          </button>
+        )}
+
+        {/* Chat panel — right half when open */}
+        {chatOpen && (
+          <aside style={{
+            flex: "0 0 50%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            marginLeft: 20,
+            borderRadius: 28,
+            overflow: "hidden",
+            background: "rgba(255,255,255,0.78)",
+            border: "1px solid rgba(120, 91, 63, 0.08)",
+            boxShadow: "0 18px 40px rgba(94, 70, 48, 0.08)",
+          }}>
+            {/* Chat header */}
             <div
               style={{
                 display: "flex",
@@ -486,16 +686,38 @@ function KidSessionContent() {
                 gap: 12,
                 padding: "18px 18px 14px",
                 borderBottom: "1px solid rgba(120, 91, 63, 0.08)",
+                flexShrink: 0,
               }}
             >
               <div>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>Chat</div>
                 <div style={{ marginTop: 4, fontSize: 12, color: "#8a7f6e" }}>
-                  Tina&apos;s live speech shows up here, and graphs appear when you ask to see one.
+                  {lessonPlan
+                    ? "Lesson transcript and typed messages. Ask questions anytime!"
+                    : "Tina's live speech shows up here, and graphs appear when you ask to see one."}
                 </div>
               </div>
+              <button
+                onClick={() => setChatOpen(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "rgba(120, 91, 63, 0.06)",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#8a7f6e",
+                  flexShrink: 0,
+                }}
+              >
+                <X size={16} />
+              </button>
             </div>
 
+            {/* Messages */}
             <div
               ref={scrollRef}
               style={{
@@ -544,7 +766,7 @@ function KidSessionContent() {
                           }),
                     }}
                   >
-                    <span style={{ whiteSpace: "pre-wrap" }}>{message.content}</span>
+                    <MessageContent content={message.content} />
                     {message.jsxGraph
                       ? (message.jsxGraph as MathVisualConfig[]).map((config, index) => (
                           <MathVisual key={index} config={config} />
@@ -554,7 +776,7 @@ function KidSessionContent() {
                 </div>
               ))}
 
-              {loading && (
+              {(loading || chatLoading) && (
                 <div style={{ display: "flex", justifyContent: "flex-start" }}>
                   <div
                     style={{
@@ -593,48 +815,64 @@ function KidSessionContent() {
                     background: "rgba(255,255,255,0.56)",
                   }}
                 >
-                  Start talking to Tina. This panel will mirror the live conversation and show visuals when you ask her to graph or draw something.
+                  {lessonPlan
+                    ? `Tina is teaching you about "${lessonPlan.title}". The conversation will appear here. You can also type questions below!`
+                    : "Start talking to Tina. This panel will mirror the live conversation and show visuals when you ask her to graph or draw something."}
                 </div>
               )}
             </div>
+
+            {/* Text input */}
+            <div style={{
+              padding: "12px 18px",
+              borderTop: "1px solid rgba(120, 91, 63, 0.08)",
+              flexShrink: 0,
+            }}>
+              <form onSubmit={(e) => { e.preventDefault(); sendChatMessage(); }} style={{
+                display: "flex", gap: 8,
+              }}>
+                <input
+                  ref={chatInputRef}
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Type a question..."
+                  disabled={chatLoading}
+                  style={{
+                    flex: 1,
+                    padding: "12px 16px",
+                    border: "1.5px solid rgba(120, 91, 63, 0.12)",
+                    borderRadius: 999,
+                    fontSize: 14,
+                    outline: "none",
+                    background: "#fef7ee",
+                    fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={chatLoading || !chatInput.trim()}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: "50%",
+                    background: "#c8416a",
+                    color: "#fff",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: chatLoading || !chatInput.trim() ? 0.4 : 1,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Send size={16} />
+                </button>
+              </form>
+            </div>
           </aside>
-        </div>
+        )}
       </main>
-
-      <style>{`
-        .vtx-kid-call-layout {
-          display: grid;
-          grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.88fr);
-          gap: 20px;
-          align-items: start;
-        }
-
-        .vtx-kid-stage-panel {
-          min-width: 0;
-        }
-
-        .vtx-kid-chat-panel {
-          min-width: 0;
-          min-height: 720px;
-          display: flex;
-          flex-direction: column;
-          border-radius: 28px;
-          overflow: hidden;
-          background: rgba(255,255,255,0.78);
-          border: 1px solid rgba(120, 91, 63, 0.08);
-          box-shadow: 0 18px 40px rgba(94, 70, 48, 0.08);
-        }
-
-        @media (max-width: 1024px) {
-          .vtx-kid-call-layout {
-            grid-template-columns: 1fr;
-          }
-
-          .vtx-kid-chat-panel {
-            min-height: 520px;
-          }
-        }
-      `}</style>
 
       <style>{`
         @keyframes vtxBounce {
@@ -773,4 +1011,30 @@ function shouldGenerateVisual(text: string) {
     /(graph|plot|draw|show|visualize|sketch)/.test(normalized) &&
     /(function|equation|line|curve|parabola|x|y|coordinate)/.test(normalized)
   );
+}
+
+function buildLessonScript(lesson: LessonPlan): string {
+  let script = `LESSON: ${lesson.title}\n`;
+  script += `OVERVIEW: ${lesson.overview}\n\n`;
+
+  lesson.sections.forEach((section, i) => {
+    script += `--- SECTION ${i + 1}: ${section.heading} ---\n`;
+    script += `${section.content}\n\n`;
+    section.examples.forEach((ex, j) => {
+      script += `EXAMPLE ${j + 1}: ${ex.problem}\n`;
+      ex.steps.forEach((step) => {
+        script += `  ${step}\n`;
+      });
+      script += `  ANSWER: ${ex.answer}\n\n`;
+    });
+  });
+
+  if (lesson.practiceProblems.length > 0) {
+    script += `--- PRACTICE PROBLEMS ---\n`;
+    lesson.practiceProblems.forEach((p) => {
+      script += `Q${p.id}: ${p.question} (Answer: ${p.answer})\n`;
+    });
+  }
+
+  return script;
 }
