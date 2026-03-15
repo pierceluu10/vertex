@@ -7,7 +7,7 @@ const CHUNK_OVERLAP = 200;
 export async function extractTextFromPdf(
   buffer: Buffer
 ): Promise<{ text: string; chunks: DocumentChunk[] }> {
-  const parser = new PDFParse({ data: buffer });
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
   const result = await parser.getText();
   const text = result.text || "";
   const chunks = chunkText(text);
