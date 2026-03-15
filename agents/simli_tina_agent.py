@@ -31,33 +31,33 @@ def _required_env(name: str) -> str:
 
 def _build_instructions(metadata: dict[str, object]) -> str:
     tutor_name = os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", "Tina").strip() or "Tina"
+    child_name = str(metadata.get("childName") or "friend").strip() or "friend"
     instructions = str(metadata.get("instructions") or "").strip()
-    if instructions:
-        return instructions
+    greeting = (
+        f"Begin the session by immediately greeting {child_name} warmly. "
+        f"Say something like: \"Hi {child_name}! I'm {tutor_name}. I'm happy to work on math with you today. "
+        "What math problem would you like to start with?\""
+    )
+    lang_rule = "IMPORTANT: Always respond in English only, regardless of what language the student speaks."
 
-    child_name = str(metadata.get("childName") or "friend")
+    if instructions:
+        return instructions + "\n\n" + lang_rule + "\n\n" + greeting
+
     return (
         f"You are {tutor_name}, a warm and encouraging live math tutor helping {child_name}. "
         "Only discuss math. If the child asks about unrelated topics, gently bring the conversation back to math help."
-    )
-
-
-def _build_greeting(metadata: dict[str, object]) -> str:
-    tutor_name = os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", "Tina").strip() or "Tina"
-    child_name = str(metadata.get("childName") or "friend").strip() or "friend"
-    return (
-        f"Hi {child_name}! I'm {tutor_name}. I'm happy to work on math with you today. "
-        "What math problem would you like to start with?"
+        "\n\n" + lang_rule + "\n\n" + greeting
     )
 
 
 async def entrypoint(ctx: JobContext):
+    await ctx.connect()
     metadata = json.loads(ctx.job.metadata or "{}")
     logger.info("Starting live tutor", extra={"metadata": metadata})
 
     session = AgentSession(
         llm=openai.realtime.RealtimeModel(
-            model=os.getenv("OPENAI_REALTIME_MODEL", "gpt-realtime"),
+            model=os.getenv("OPENAI_REALTIME_MODEL", "gpt-4o-realtime-preview"),
             voice=os.getenv("OPENAI_REALTIME_VOICE", "alloy"),
             modalities=["audio", "text"],
             input_audio_transcription=realtime.AudioTranscription(
@@ -103,7 +103,7 @@ async def entrypoint(ctx: JobContext):
         except Exception as e:
             logger.exception("Simli avatar failed to start: %s", e, extra={"room": ctx.room.name})
 
-    await session.generate_reply(instructions=_build_greeting(metadata))
+    await session.generate_reply()
 
 
 if __name__ == "__main__":
