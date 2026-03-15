@@ -3,15 +3,15 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 /** Badge definitions — all possible badges a kid can earn. */
 export const BADGE_DEFINITIONS = [
-  { id: "first_session", title: "First Session", icon: "🎓", description: "Complete your first study session" },
-  { id: "streak_3", title: "3-Day Streak", icon: "🔥", description: "Study 3 days in a row" },
-  { id: "streak_7", title: "Weekly Warrior", icon: "⚔️", description: "Study 7 days in a row" },
-  { id: "streak_30", title: "Monthly Master", icon: "👑", description: "Study 30 days in a row" },
-  { id: "first_quiz", title: "Quiz Starter", icon: "📝", description: "Complete your first quiz" },
-  { id: "perfect_quiz", title: "Perfect Score", icon: "💯", description: "Get 100% on a quiz" },
-  { id: "questions_10", title: "Curious Mind", icon: "🧠", description: "Ask 10 questions to your tutor" },
-  { id: "night_owl", title: "Night Owl", icon: "🦉", description: "Study after 8pm" },
-  { id: "speed_demon", title: "Speed Demon", icon: "⚡", description: "Finish a quiz in under 2 minutes" },
+  { id: "first_session", title: "First Session", icon: "MdSchool", description: "Complete your first study session" },
+  { id: "streak_3", title: "3-Day Streak", icon: "MdLocalFireDepartment", description: "Study 3 days in a row" },
+  { id: "streak_7", title: "Weekly Warrior", icon: "MdShield", description: "Study 7 days in a row" },
+  { id: "streak_30", title: "Monthly Master", icon: "MdEmojiEvents", description: "Study 30 days in a row" },
+  { id: "first_quiz", title: "Quiz Starter", icon: "MdAssignment", description: "Complete your first quiz" },
+  { id: "perfect_quiz", title: "Perfect Score", icon: "MdWorkspacePremium", description: "Get 100% on a quiz" },
+  { id: "questions_10", title: "Curious Mind", icon: "MdPsychology", description: "Ask 10 questions to your tutor" },
+  { id: "night_owl", title: "Night Owl", icon: "MdNightsStay", description: "Study after 8pm" },
+  { id: "speed_demon", title: "Speed Demon", icon: "MdBolt", description: "Finish a quiz in under 2 minutes" },
 ] as const;
 
 /** GET: return earned badges for a kid session. */

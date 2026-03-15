@@ -14,8 +14,8 @@ export default function LandingPage() {
       <VertexNavbar />
       <HeroScene />
       <FeaturesSection />
-      <MathQuiz />
       <Grapher />
+      <MathQuiz />
       <VertexFooter />
     </div>
   );

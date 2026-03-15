@@ -19,7 +19,18 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
 import type { KidSession, KidBadge } from "@/types";
+import { 
+  MdSchool, MdLocalFireDepartment, MdShield, MdEmojiEvents,
+  MdAssignment, MdWorkspacePremium, MdPsychology, MdNightsStay,
+  MdBolt, MdMenuBook, MdAutoAwesome, MdCalendarMonth, MdStars
+} from "react-icons/md";
 import "@/styles/vertex.css";
+
+const IconMap: Record<string, React.ElementType> = {
+  MdSchool, MdLocalFireDepartment, MdShield, MdEmojiEvents,
+  MdAssignment, MdWorkspacePremium, MdPsychology, MdNightsStay,
+  MdBolt, MdMenuBook, MdAutoAwesome, MdCalendarMonth, MdStars
+};
 
 /* ─── Level system constants ─── */
 const LEVEL_THRESHOLDS = [
@@ -200,7 +211,7 @@ export default function KidProfilePage() {
   ];
 
   return (
-    <div className="vtx-kid-page vtx-kid-ui flex h-screen flex-col overflow-hidden">
+    <div className="vtx-kid-page vtx-kid-ui flex h-screen flex-col overflow-hidden overscroll-none">
       <header className="vtx-kid-header">
         <VertexLogo href="/" height={52} className="vtx-kid-logo" />
       </header>
@@ -291,7 +302,7 @@ export default function KidProfilePage() {
                 custom={5}
               >
                 <h2 className="vtx-kid-gp-section-heading">
-                  <span className="vtx-kid-gp-section-icon">📅</span> Study Calendar
+                  <MdCalendarMonth className="vtx-kid-gp-section-icon" /> Study Calendar
                 </h2>
                 <StreakCalendar sessionDates={profileData.sessionDates} />
               </motion.div>
@@ -307,7 +318,7 @@ export default function KidProfilePage() {
                 custom={7}
               >
                 <h2 className="vtx-kid-gp-section-heading">
-                  <span className="vtx-kid-gp-section-icon">🏅</span> Badges
+                  <MdStars className="vtx-kid-gp-section-icon" /> Badges
                   <span className="vtx-kid-gp-badge-count">{earnedBadges.length}/{badgeDefinitions.length}</span>
                 </h2>
                 <div className="vtx-kid-gp-badges-grid">
@@ -319,7 +330,10 @@ export default function KidProfilePage() {
                         className={cn("vtx-kid-gp-badge-card", isEarned && "earned")}
                       >
                         <div className="vtx-kid-gp-badge-icon-wrap">
-                          <span className="vtx-kid-gp-badge-emoji">{badge.icon}</span>
+                          {(() => {
+                            const BadgeIcon = IconMap[badge.icon] || MdStars;
+                            return <BadgeIcon className="vtx-kid-gp-badge-emoji" style={{ color: "var(--vtx-pink, #c8416a)", margin: "0 auto" }} />;
+                          })()}
                           {isEarned && <div className="vtx-kid-gp-badge-shine" />}
                         </div>
                         <div className="vtx-kid-gp-badge-title">{badge.title}</div>
@@ -344,7 +358,7 @@ export default function KidProfilePage() {
                 custom={9}
               >
                 <h2 className="vtx-kid-gp-section-heading">
-                  <span className="vtx-kid-gp-section-icon">⚡</span> Recent Activity
+                  <MdBolt className="vtx-kid-gp-section-icon" /> Recent Activity
                 </h2>
                 {activity.length === 0 ? (
                   <div className="vtx-kid-gp-empty">
@@ -360,7 +374,12 @@ export default function KidProfilePage() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.03, duration: 0.25 }}
                       >
-                        <span className="vtx-kid-gp-activity-icon">{entry.icon}</span>
+                        <span className="vtx-kid-gp-activity-icon">
+                          {(() => {
+                            const ActivityIcon = IconMap[entry.icon] || MdStars;
+                            return <ActivityIcon style={{ color: "var(--vtx-pink, #c8416a)" }} />;
+                          })()}
+                        </span>
                         <div className="vtx-kid-gp-activity-text">
                           <span className="vtx-kid-gp-activity-desc">{entry.description}</span>
                           <span className="vtx-kid-gp-activity-time">

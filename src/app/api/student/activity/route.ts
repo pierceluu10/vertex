@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       entries.push({
         type: "session",
         timestamp: s.ended_at || s.started_at,
-        icon: "📚",
+        icon: "MdMenuBook",
         description: `Completed a ${durationPart}${focusPart}`,
       });
     }
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
       entries.push({
         type: "quiz",
         timestamp: q.taken_at,
-        icon: "✨",
+        icon: "MdAutoAwesome",
         description: `Completed a quiz (${questionCount} questions)${scorePart}`,
       });
     }
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
       entries.push({
         type: "badge",
         timestamp: b.earned_at,
-        icon: "🏆",
+        icon: "MdEmojiEvents",
         description: `Earned the "${badgeTitles[b.badge_id] || b.badge_id}" badge`,
       });
     }

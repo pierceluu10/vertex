@@ -23,6 +23,10 @@ import {
   ArrowRight,
   Zap,
 } from "lucide-react";
+import { 
+  MdLocalFireDepartment, MdBolt, MdCelebration, MdMenuBook,
+  MdWbSunny, MdWbCloudy, MdNightsStay 
+} from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ParentAvatar } from "@/components/session/parent-avatar";
@@ -341,7 +345,7 @@ export default function KidDashboardPage() {
     );
   }
 
-  const { greeting, emoji, motivational } = getGreetingData();
+  const { greeting, icon, motivational } = getGreetingData();
   const childName = kidSession.child_name?.trim() || "there";
   const dailyChallenge = DAILY_CHALLENGES[Math.floor(Date.now() / 86400000) % DAILY_CHALLENGES.length];
 
@@ -413,7 +417,7 @@ export default function KidDashboardPage() {
                     Dashboard
                   </motion.span>
                   <motion.h1 className="vtx-kid-section-title" variants={stagger} initial="hidden" animate="show" custom={1}>
-                    <span className="vtx-kid-greeting-emoji">{emoji}</span>
+                    <span className="vtx-kid-greeting-emoji">{icon}</span>
                     {greeting}, <em>{childName}</em>.
                   </motion.h1>
                   <motion.p className="vtx-kid-motivational" variants={stagger} initial="hidden" animate="show" custom={2}>
@@ -423,7 +427,7 @@ export default function KidDashboardPage() {
                   {/* Streak & XP Badges */}
                   <motion.div className="vtx-kid-badges-row" variants={stagger} initial="hidden" animate="show" custom={2.5}>
                     <div className="vtx-kid-badge">
-                      <span className="vtx-kid-badge-icon vtx-kid-flame-pulse">🔥</span>
+                      <MdLocalFireDepartment className="vtx-kid-badge-icon vtx-kid-flame-pulse" style={{ color: "#ef4444" }} />
                       <span className="vtx-kid-badge-value">{streak}</span>
                       <span className="vtx-kid-badge-label">day streak</span>
                     </div>
@@ -668,7 +672,7 @@ export default function KidDashboardPage() {
                 ) : quizData.done ? (
                   <div className="vtx-kid-quiz-card">
                     <span className="vtx-kid-section-num">Complete</span>
-                    <h2 className="vtx-kid-quiz-title">Quiz complete, {childName}! 🎉</h2>
+                    <h2 className="vtx-kid-quiz-title">Quiz complete, {childName}! <MdCelebration style={{ display: "inline", color: "var(--vtx-pink)" }} /></h2>
                     <div className="vtx-kid-quiz-result">
                       {quizData.answers.filter((a) => a.correct).length}/{quizData.questions.length}
                     </div>
@@ -778,17 +782,17 @@ export default function KidDashboardPage() {
                   {/* Streak & XP stats on profile */}
                   <div className="vtx-kid-profile-stats">
                     <div className="vtx-kid-profile-stat">
-                      <span className="vtx-kid-profile-stat-icon">🔥</span>
+                      <MdLocalFireDepartment className="vtx-kid-profile-stat-icon" style={{ color: "#ef4444" }} />
                       <span className="vtx-kid-profile-stat-value">{streak}</span>
                       <span className="vtx-kid-profile-stat-label">Streak</span>
                     </div>
                     <div className="vtx-kid-profile-stat">
-                      <span className="vtx-kid-profile-stat-icon">⚡</span>
+                      <MdBolt className="vtx-kid-profile-stat-icon" style={{ color: "#f59e0b" }} />
                       <span className="vtx-kid-profile-stat-value">{xp}</span>
                       <span className="vtx-kid-profile-stat-label">XP</span>
                     </div>
                     <div className="vtx-kid-profile-stat">
-                      <span className="vtx-kid-profile-stat-icon">📚</span>
+                      <MdMenuBook className="vtx-kid-profile-stat-icon" style={{ color: "#3b82f6" }} />
                       <span className="vtx-kid-profile-stat-value">{sessions.length}</span>
                       <span className="vtx-kid-profile-stat-label">Sessions</span>
                     </div>
@@ -895,7 +899,7 @@ function QuizOpenInput({ onSubmit }: { onSubmit: (answer: string) => void }) {
   );
 }
 
-function getGreetingData(): { greeting: string; emoji: string; motivational: string } {
+function getGreetingData(): { greeting: string; icon: React.ReactNode; motivational: string } {
   const hour = new Date().getHours();
   const motivationals = [
     "Ready to learn something new today?",
@@ -906,9 +910,9 @@ function getGreetingData(): { greeting: string; emoji: string; motivational: str
   ];
   const motivational = motivationals[Math.floor(Date.now() / 86400000) % motivationals.length];
 
-  if (hour < 12) return { greeting: "Good morning", emoji: "☀️", motivational };
-  if (hour < 17) return { greeting: "Good afternoon", emoji: "🌤️", motivational };
-  return { greeting: "Good evening", emoji: "🌙", motivational };
+  if (hour < 12) return { greeting: "Good morning", icon: <MdWbSunny style={{ color: "#eab308" }} />, motivational };
+  if (hour < 17) return { greeting: "Good afternoon", icon: <MdWbCloudy style={{ color: "#60a5fa" }} />, motivational };
+  return { greeting: "Good evening", icon: <MdNightsStay style={{ color: "#818cf8" }} />, motivational };
 }
 
 function readStoredKidSession(): KidSession | null {

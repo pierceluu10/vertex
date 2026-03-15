@@ -247,7 +247,7 @@ export function Grapher() {
     <div className="vtx-section-wrap">
       <section className="vtx-graph-section">
         <div className="vtx-section-header">
-          <h2>Explore<br/><em>functions</em></h2>
+          <h2>Interactive<br/><em>Learning</em></h2>
           <p>Type any equation and watch it come alive. Math stops being abstract.</p>
         </div>
         <div className="vtx-grapher-wrap">
