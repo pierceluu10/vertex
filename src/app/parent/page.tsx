@@ -512,11 +512,9 @@ export default function ParentProfilePage() {
                   fontSize: 11,
                 }}
               >
-                {uploading ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
-                {uploading ? "Uploading..." : "Choose PDF File"}
+                {uploading ? "Uploading..." : "Choose File"}
                 <input
                   type="file"
-                  accept="application/pdf"
                   style={{ display: "none" }}
                   onChange={handleFileUpload}
                   disabled={uploading || !selectedChild}

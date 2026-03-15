@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractTextFromPdf } from "@/lib/pdf";
+import { openai } from "@/lib/openai";
 
 export async function POST(request: Request) {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("documents")
       .upload(fileName, buffer, {
-        contentType: "application/pdf",
+        contentType: file.type || "application/octet-stream",
       });
 
     if (uploadError) {
@@ -46,15 +47,48 @@ export async function POST(request: Request) {
       data: { publicUrl },
     } = supabase.storage.from("documents").getPublicUrl(uploadData.path);
 
-    // Extract text from PDF
+    // Extract text from PDF, Text, or Image
     let extractedText = "";
     let chunks = null;
     try {
-      const result = await extractTextFromPdf(buffer);
-      extractedText = result.text;
-      chunks = result.chunks;
+      if (file.type === "application/pdf") {
+        const result = await extractTextFromPdf(buffer);
+        extractedText = result.text;
+        chunks = result.chunks;
+      } else if (file.type.startsWith("text/")) {
+        extractedText = buffer.toString("utf-8");
+      } else if (file.type.startsWith("image/")) {
+        // Use GPT-4o Vision to extract text from images
+        const base64Image = buffer.toString("base64");
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          max_tokens: 1500,
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Please extract all math problems, instructions, and text from this image exactly as written. If it's a worksheet, preserve the structure. Only output the extracted text, no conversational filler.",
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:${file.type};base64,${base64Image}`,
+                  },
+                },
+              ],
+            },
+          ],
+        });
+        extractedText = completion.choices[0]?.message?.content?.trim() || "";
+      } else {
+        // Fallback for other files (Word, etc) - in MVP we might just get a summary if we can't parse it
+        extractedText = `File uploaded: ${file.name} (${file.type})`;
+      }
     } catch (err) {
-      console.error("PDF parsing error:", err);
+      console.error("File parsing error:", err);
+      extractedText = `Failed to parse file: ${file.name}`;
     }
 
     // Store document record

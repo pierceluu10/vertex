@@ -117,7 +117,7 @@ function RecapContent() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "#fef7ee",
+      minHeight: "100vh", background: "var(--vtx-cream, #f8f3e8)",
       fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
       color: "#1a1610", padding: "40px 24px",
       display: "flex", flexDirection: "column", alignItems: "center",

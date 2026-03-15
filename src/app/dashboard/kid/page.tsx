@@ -525,7 +525,7 @@ export default function KidDashboardPage() {
                   <div className="vtx-kid-upload-icon"><Upload size={24} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                   <div className="vtx-kid-upload-title">{uploading ? "Uploading…" : "Drop your homework PDF here"}</div>
                   <div className="vtx-kid-upload-hint">or tap to choose a file</div>
-                  <input type="file" accept=".pdf" style={{ display: "none" }} onChange={handleHomeworkUpload} disabled={uploading} />
+                  <input type="file" style={{ display: "none" }} onChange={handleHomeworkUpload} disabled={uploading} />
                 </label>
 
                 {documents.length === 0 ? (

@@ -520,8 +520,8 @@ export default function ParentDashboardPage() {
                   <h2 className="vtx-parent-card-title">Upload Homework</h2>
                 </div>
                 <label className="vtx-parent-upload-area">
-                  <FileText size={16} style={{ color: "#c8416a" }} /> Choose PDF File
-                  <input type="file" accept=".pdf" style={{ display: "none" }} onChange={async (e) => {
+                  <FileText size={16} style={{ color: "#c8416a" }} /> Choose File
+                  <input type="file" style={{ display: "none" }} onChange={async (e) => {
                     if (!e.target.files?.[0]) return;
                     const formData = new FormData();
                     formData.append("file", e.target.files[0]);
