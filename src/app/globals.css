@@ -119,11 +119,12 @@
   }
 }
 
-/* Hide scrollbar on kid dashboard while keeping scroll behavior */
+/* Kid dashboard & profile: hide scrollbar, keep scroll, prevent overscroll (no bounce past page) */
 .kid-dashboard-scroll,
 .kid-dashboard-scroll [data-slot="scroll-area-viewport"] {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  overscroll-behavior: contain;
 }
 .kid-dashboard-scroll::-webkit-scrollbar,
 .kid-dashboard-scroll [data-slot="scroll-area-viewport"]::-webkit-scrollbar {

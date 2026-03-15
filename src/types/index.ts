@@ -226,3 +226,10 @@ export interface AdaptiveState {
   shouldSimplify: boolean;
   currentTone: "encouraging" | "neutral" | "supportive";
 }
+
+export interface KidBadge {
+  id: string;
+  kid_session_id: string;
+  badge_id: string;
+  earned_at: string;
+}

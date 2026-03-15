@@ -3028,3 +3028,415 @@ a.vtx-auth-logo {
 .vtx-parent-toggle.on .vtx-parent-toggle-thumb {
   left: 18px;
 }
+
+/* ═══════════════════════════════════════════════════════
+   KID GAMIFICATION PROFILE PAGE  (.vtx-kid-gp-*)
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Level Hero ─── */
+.vtx-kid-gp-level-hero {
+  text-align: center;
+  padding: 32px 0 28px;
+}
+
+.vtx-kid-gp-level-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--vtx-pink, #c8416a) 0%, #e85d8a 100%);
+  box-shadow: 0 8px 32px rgba(200,65,106,0.35), 0 0 0 6px rgba(200,65,106,0.12);
+  margin-bottom: 14px;
+}
+
+.vtx-kid-gp-level-number {
+  font-size: 46px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.vtx-kid-gp-level-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--vtx-ink, #1a1610);
+  margin: 0 0 2px;
+}
+
+.vtx-kid-gp-level-name {
+  font-size: 14px;
+  color: var(--vtx-muted, #8a7f6e);
+  margin: 0 0 20px;
+  letter-spacing: 0.08em;
+}
+
+/* XP Bar */
+.vtx-kid-gp-xp-bar-wrap {
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.vtx-kid-gp-xp-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vtx-muted, #8a7f6e);
+  margin-bottom: 6px;
+}
+
+.vtx-kid-gp-xp-track {
+  height: 14px;
+  background: var(--vtx-surface, #e8e2d4);
+  border-radius: 7px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--vtx-border, rgba(55,45,25,0.10));
+}
+
+.vtx-kid-gp-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--vtx-pink, #c8416a) 0%, #e85d8a 60%, #f0a 100%);
+  border-radius: 7px;
+  position: relative;
+  box-shadow: 0 0 12px rgba(200,65,106,0.45), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.vtx-kid-gp-xp-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%);
+  animation: vtxXpShimmer 2s ease-in-out infinite;
+}
+
+@keyframes vtxXpShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.vtx-kid-gp-xp-subtitle {
+  font-size: 11px;
+  color: var(--vtx-muted2, #afa598);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* ─── Stats Row ─── */
+.vtx-kid-gp-stats-row {
+  display: flex;
+  gap: 10px;
+  padding: 0 0 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.vtx-kid-gp-stats-row::-webkit-scrollbar { display: none; }
+
+.vtx-kid-gp-stat-card {
+  flex: 1;
+  min-width: 100px;
+  background: var(--vtx-cream, #f8f3e8);
+  border: 1px solid var(--vtx-border, rgba(55,45,25,0.10));
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.vtx-kid-gp-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(30,26,18,0.08);
+}
+
+.vtx-kid-gp-stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--vtx-pink-soft, rgba(200,65,106,0.07));
+  color: var(--vtx-pink, #c8416a);
+  margin-bottom: 8px;
+}
+
+.vtx-kid-gp-stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--vtx-ink, #1a1610);
+  line-height: 1.1;
+}
+
+.vtx-kid-gp-stat-unit {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--vtx-muted, #8a7f6e);
+  margin-left: 1px;
+}
+
+.vtx-kid-gp-stat-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--vtx-muted, #8a7f6e);
+  margin-top: 4px;
+}
+
+/* ─── Section Wrapper ─── */
+.vtx-kid-gp-section {
+  margin-bottom: 28px;
+}
+
+.vtx-kid-gp-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--vtx-ink, #1a1610);
+  margin: 0 0 14px;
+}
+
+.vtx-kid-gp-section-icon {
+  font-size: 20px;
+}
+
+.vtx-kid-gp-badge-count {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--vtx-muted, #8a7f6e);
+  font-weight: 700;
+}
+
+/* ─── Streak Calendar ─── */
+.vtx-kid-gp-calendar {
+  background: var(--vtx-cream, #f8f3e8);
+  border: 1px solid var(--vtx-border, rgba(55,45,25,0.10));
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.vtx-kid-gp-calendar-header {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--vtx-ink, #1a1610);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.vtx-kid-gp-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.vtx-kid-gp-cal-label {
+  font-size: 10px;
+  text-align: center;
+  color: var(--vtx-muted2, #afa598);
+  font-weight: 700;
+  padding: 4px 0;
+  letter-spacing: 0.05em;
+}
+
+.vtx-kid-gp-cal-empty {
+  aspect-ratio: 1;
+}
+
+.vtx-kid-gp-cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--vtx-muted, #8a7f6e);
+  position: relative;
+  transition: background 0.2s;
+}
+
+.vtx-kid-gp-cal-day.today {
+  border: 2px solid var(--vtx-pink, #c8416a);
+  color: var(--vtx-ink, #1a1610);
+  font-weight: 700;
+}
+
+.vtx-kid-gp-cal-day.studied {
+  background: rgba(200,65,106,0.12);
+  color: var(--vtx-pink, #c8416a);
+  font-weight: 700;
+}
+
+.vtx-kid-gp-cal-stamp {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vtx-pink, #c8416a);
+  box-shadow: 0 0 6px rgba(200,65,106,0.5);
+  position: absolute;
+  bottom: 3px;
+}
+
+/* ─── Badges Grid ─── */
+.vtx-kid-gp-badges-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.vtx-kid-gp-badge-card {
+  background: var(--vtx-cream, #f8f3e8);
+  border: 1px solid var(--vtx-border, rgba(55,45,25,0.10));
+  border-radius: 14px;
+  padding: 18px 12px 14px;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+  /* Locked state: desaturate */
+  filter: grayscale(0.85);
+  opacity: 0.6;
+}
+
+.vtx-kid-gp-badge-card.earned {
+  filter: none;
+  opacity: 1;
+  border-color: rgba(200,65,106,0.2);
+  box-shadow: 0 0 16px rgba(200,65,106,0.1);
+}
+
+.vtx-kid-gp-badge-card.earned:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 6px 24px rgba(200,65,106,0.2);
+}
+
+.vtx-kid-gp-badge-icon-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 6px;
+}
+
+.vtx-kid-gp-badge-emoji {
+  font-size: 34px;
+  display: block;
+  line-height: 1.2;
+}
+
+/* Shine sweep on earned badges */
+.vtx-kid-gp-badge-shine {
+  position: absolute;
+  inset: -8px;
+  background: linear-gradient(
+    120deg,
+    transparent 30%,
+    rgba(255,255,255,0.6) 45%,
+    rgba(255,255,255,0.6) 55%,
+    transparent 70%
+  );
+  animation: vtxBadgeShine 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes vtxBadgeShine {
+  0%, 100% { transform: translateX(-120%); }
+  50% { transform: translateX(120%); }
+}
+
+.vtx-kid-gp-badge-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--vtx-ink, #1a1610);
+  margin-bottom: 2px;
+}
+
+.vtx-kid-gp-badge-desc {
+  font-size: 10px;
+  color: var(--vtx-muted, #8a7f6e);
+  line-height: 1.4;
+}
+
+.vtx-kid-gp-badge-earned-tag {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 10px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--vtx-pink, #c8416a);
+  border-radius: 10px;
+}
+
+/* ─── Activity Feed ─── */
+.vtx-kid-gp-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vtx-kid-gp-activity-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--vtx-cream, #f8f3e8);
+  border: 1px solid var(--vtx-border, rgba(55,45,25,0.10));
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.vtx-kid-gp-activity-item:hover {
+  background: var(--vtx-surface, #e8e2d4);
+}
+
+.vtx-kid-gp-activity-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.vtx-kid-gp-activity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.vtx-kid-gp-activity-desc {
+  font-size: 13px;
+  color: var(--vtx-ink, #1a1610);
+  font-weight: 700;
+}
+
+.vtx-kid-gp-activity-time {
+  font-size: 11px;
+  color: var(--vtx-muted2, #afa598);
+}
+
+.vtx-kid-gp-empty {
+  text-align: center;
+  padding: 28px 16px;
+  color: var(--vtx-muted, #8a7f6e);
+  font-size: 13px;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 640px) {
+  .vtx-kid-gp-stats-row {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .vtx-kid-gp-stat-card {
+    min-width: 80px;
+    padding: 12px 8px;
+  }
+  .vtx-kid-gp-stat-value { font-size: 20px; }
+  .vtx-kid-gp-stat-icon { width: 32px; height: 32px; }
+  .vtx-kid-gp-badges-grid { grid-template-columns: repeat(2, 1fr); }
+  .vtx-kid-gp-level-badge { width: 80px; height: 80px; }
+  .vtx-kid-gp-level-number { font-size: 38px; }
+  .vtx-kid-gp-level-title { font-size: 22px; }
+}

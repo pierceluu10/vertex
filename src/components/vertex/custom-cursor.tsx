@@ -9,35 +9,24 @@ export function CustomCursor() {
   useEffect(() => {
     document.body.style.cursor = "none";
 
-    let cx = 0, cy = 0, rx = 0, ry = 0;
-    let animId: number;
-
     const onMove = (e: MouseEvent) => {
-      cx = e.clientX;
-      cy = e.clientY;
+      const x = e.clientX;
+      const y = e.clientY;
       if (curRef.current) {
-        curRef.current.style.left = cx + "px";
-        curRef.current.style.top = cy + "px";
+        curRef.current.style.left = x + "px";
+        curRef.current.style.top = y + "px";
       }
-    };
-
-    const loop = () => {
-      rx += (cx - rx) * 0.11;
-      ry += (cy - ry) * 0.11;
       if (ringRef.current) {
-        ringRef.current.style.left = rx + "px";
-        ringRef.current.style.top = ry + "px";
+        ringRef.current.style.left = x + "px";
+        ringRef.current.style.top = y + "px";
       }
-      animId = requestAnimationFrame(loop);
     };
 
     document.addEventListener("mousemove", onMove);
-    animId = requestAnimationFrame(loop);
 
     return () => {
       document.body.style.cursor = "";
       document.removeEventListener("mousemove", onMove);
-      cancelAnimationFrame(animId);
     };
   }, []);
 

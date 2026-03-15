@@ -823,6 +823,10 @@ export default function KidDashboardPage() {
             type="button"
             className={`vtx-kid-nav-item${activeTab === item.id ? " active" : ""}`}
             onClick={() => {
+              if (item.id === "profile") {
+                router.push("/dashboard/kid/profile");
+                return;
+              }
               if (item.id === "home") setHomeView("main");
               setActiveTab(item.id);
             }}
