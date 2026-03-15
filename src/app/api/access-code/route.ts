@@ -146,3 +146,69 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const codeId = typeof body.codeId === "string" ? body.codeId : "";
+
+    if (!codeId) {
+      return NextResponse.json({ error: "Access code is required." }, { status: 400 });
+    }
+
+    const updates: Record<string, unknown> = {};
+
+    if (typeof body.childName === "string") {
+      updates.child_name = body.childName.trim() || null;
+    }
+
+    if (body.childAge != null && body.childAge !== "") {
+      const childAge = Number(body.childAge);
+      if (Number.isNaN(childAge) || childAge < 3 || childAge > 18) {
+        return NextResponse.json({ error: "Child age must be between 3 and 18." }, { status: 400 });
+      }
+      updates.child_age = childAge;
+    }
+
+    if (typeof body.gradeLevel === "string") {
+      updates.grade_level = body.gradeLevel.trim() || null;
+    }
+
+    if (Array.isArray(body.mathTopics)) {
+      updates.math_topics = body.mathTopics;
+    }
+
+    if (typeof body.learningGoals === "string") {
+      updates.learning_goals = body.learningGoals.trim() || null;
+    }
+
+    if (body.learningPace === "slow" || body.learningPace === "medium" || body.learningPace === "fast") {
+      updates.learning_pace = body.learningPace;
+    }
+
+    const { data: accessCode, error } = await supabase
+      .from("access_codes")
+      .update(updates)
+      .eq("id", codeId)
+      .eq("parent_id", user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Access code PATCH error:", error);
+      return NextResponse.json({ error: error.message || "Failed to update access code" }, { status: 500 });
+    }
+
+    return NextResponse.json({ accessCode });
+  } catch (error) {
+    console.error("Access code PATCH error:", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}

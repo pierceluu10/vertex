@@ -178,7 +178,7 @@ a.vtx-auth-logo {
 }
 .vtx-hero-tagline {
   position: absolute;
-  top: 132px;
+  top: 116px;
   text-align: center;
   z-index: 10;
   animation: vtxFadeUp 1s ease both;

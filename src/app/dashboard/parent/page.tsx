@@ -4,21 +4,20 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  BarChart3, BookOpen, FileText, Settings, Copy, Plus,
-  LogOut, ChevronRight, Users, Eye, X, TrendingUp, Activity,
-  Brain, Sparkles, CheckCircle, Loader2,
+  BarChart3, Settings, Copy, Plus,
+  LogOut, Users, Eye, X, TrendingUp, Activity,
+  SlidersHorizontal, Upload,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Parent, AccessCode, TutoringSession, UploadedDocument,
   FocusEvent,
 } from "@/types";
-import { Card } from "@/components/ui/card";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import "@/styles/vertex.css";
 
-type Tab = "overview" | "progress" | "homework" | "analytics" | "insights" | "settings";
+type Tab = "overview" | "statistics" | "settings";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -56,8 +55,17 @@ export default function ParentDashboardPage() {
   const [settingsAccountEditing, setSettingsAccountEditing] = useState(false);
   const [settingsAccountForm, setSettingsAccountForm] = useState({ name: "", childName: "", gradeLevel: "" });
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const [settingsLearningTopics, setSettingsLearningTopics] = useState<string[]>([]);
-  const [settingsLearningPace, setSettingsLearningPace] = useState<"slow" | "medium" | "fast">("medium");
+  const [editingCode, setEditingCode] = useState<AccessCode | null>(null);
+  const [codeSettingsForm, setCodeSettingsForm] = useState({
+    childName: "",
+    childAge: "",
+    gradeLevel: "",
+    learningGoals: "",
+    mathTopics: [] as string[],
+    learningPace: "medium" as "slow" | "medium" | "fast",
+  });
+  const [savingCodeSettings, setSavingCodeSettings] = useState(false);
+  const [uploadingCodeId, setUploadingCodeId] = useState<string | null>(null);
 
   // Insights state
   type InsightSession = TutoringSession & { focus_timeline?: { timestamp: number; score: number }[]; distraction_events?: { timestamp: number; type: string; focusScore: number }[]; focus_score?: number; study_duration?: number };
@@ -65,7 +73,6 @@ export default function ParentDashboardPage() {
   const [insightMastery, setInsightMastery] = useState<{ topic: string; adjustedConfidence: number; daysSinceActive: number; isStale: boolean; last_active_at: string }[]>([]);
   const [selectedInsightSession, setSelectedInsightSession] = useState<string | null>(null);
   const [insightsLoaded, setInsightsLoaded] = useState(false);
-  const [generatingLesson, setGeneratingLesson] = useState<string | null>(null);
 
   const topicOptions = [
     "Addition", "Subtraction", "Multiplication", "Division",
@@ -116,13 +123,6 @@ export default function ParentDashboardPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  useEffect(() => {
-    if (activeTab === "settings" && parent) {
-      setSettingsLearningTopics(parent.math_topics || []);
-      setSettingsLearningPace(parent.learning_pace || "medium");
-    }
-  }, [activeTab, parent]);
-
   async function updateParentProfile(payload: Record<string, unknown>) {
     setSettingsSaving(true);
     try {
@@ -158,14 +158,82 @@ export default function ParentDashboardPage() {
     if (ok) setSettingsAccountEditing(false);
   }
 
-  function toggleSettingsTopic(topic: string) {
-    setSettingsLearningTopics((prev) =>
-      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
-    );
+  function toggleCodeSettingsTopic(topic: string) {
+    setCodeSettingsForm((prev) => ({
+      ...prev,
+      mathTopics: prev.mathTopics.includes(topic)
+        ? prev.mathTopics.filter((t) => t !== topic)
+        : [...prev.mathTopics, topic],
+    }));
   }
 
-  async function saveLearningSettings() {
-    await updateParentProfile({ math_topics: settingsLearningTopics, learning_pace: settingsLearningPace });
+  function openCodeSettings(accessCode: AccessCode) {
+    setEditingCode(accessCode);
+    setCodeSettingsForm({
+      childName: accessCode.child_name || "",
+      childAge: accessCode.child_age != null ? String(accessCode.child_age) : "",
+      gradeLevel: accessCode.grade_level || "",
+      learningGoals: accessCode.learning_goals || "",
+      mathTopics: accessCode.math_topics || [],
+      learningPace: accessCode.learning_pace || "medium",
+    });
+    setCodeError(null);
+  }
+
+  async function saveCodeSettings(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingCode) return;
+
+    setSavingCodeSettings(true);
+    setCodeError(null);
+
+    try {
+      const res = await fetch("/api/access-code", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          codeId: editingCode.id,
+          childName: codeSettingsForm.childName,
+          childAge: codeSettingsForm.childAge,
+          gradeLevel: codeSettingsForm.gradeLevel,
+          learningGoals: codeSettingsForm.learningGoals,
+          mathTopics: codeSettingsForm.mathTopics,
+          learningPace: codeSettingsForm.learningPace,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCodeError(data.error || "Could not save settings.");
+        return;
+      }
+
+      setAccessCodes((prev) => prev.map((code) => (code.id === editingCode.id ? data.accessCode : code)));
+      setEditingCode(null);
+    } catch {
+      setCodeError("Could not save settings.");
+    } finally {
+      setSavingCodeSettings(false);
+    }
+  }
+
+  async function uploadHomeworkForCode(accessCode: AccessCode, file: File | null) {
+    if (!file) return;
+
+    setUploadingCodeId(accessCode.id);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("accessCodeId", accessCode.id);
+
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        await loadData();
+      }
+    } catch {
+      // ignore
+    } finally {
+      setUploadingCodeId(null);
+    }
   }
 
   async function toggleNotificationRealtime() {
@@ -222,21 +290,6 @@ export default function ParentDashboardPage() {
     await loadData();
   }
 
-  async function createLesson(documentId: string) {
-    setGeneratingLesson(documentId);
-    try {
-      const res = await fetch("/api/documents/lesson", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentId }),
-      });
-      if (res.ok) {
-        await loadData();
-      }
-    } catch { /* ignore */ }
-    setGeneratingLesson(null);
-  }
-
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.push("/login");
@@ -253,16 +306,12 @@ export default function ParentDashboardPage() {
 
   const sidebarItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "overview", label: "Overview", icon: <BarChart3 size={18} /> },
-    { id: "progress", label: "Progress", icon: <ChevronRight size={18} /> },
-    { id: "homework", label: "Homework", icon: <BookOpen size={18} /> },
-    { id: "analytics", label: "Analytics", icon: <TrendingUp size={18} /> },
-    { id: "insights", label: "Insights", icon: <Brain size={18} /> },
+    { id: "statistics", label: "Student Statistics", icon: <TrendingUp size={18} /> },
     { id: "settings", label: "Settings", icon: <Settings size={18} /> },
   ];
 
-  // Load insights data when tab is selected
   useEffect(() => {
-    if (activeTab !== "insights" || insightsLoaded) return;
+    if (activeTab !== "statistics" || insightsLoaded) return;
     async function loadInsights() {
       try {
         const [sessRes, mastRes] = await Promise.all([
@@ -437,6 +486,22 @@ export default function ParentDashboardPage() {
                           <motion.button type="button" onClick={() => copyCode(ac.code)} className="vtx-parent-btn-outline" whileTap={{ scale: 0.95 }}>
                             <Copy size={12} /> {copiedCode === ac.code ? "Copied!" : "Copy"}
                           </motion.button>
+                          <motion.button type="button" onClick={() => openCodeSettings(ac)} className="vtx-parent-btn-outline" whileTap={{ scale: 0.95 }}>
+                            <SlidersHorizontal size={12} /> Settings
+                          </motion.button>
+                          <label className="vtx-parent-btn-outline" style={{ position: "relative", overflow: "hidden", opacity: uploadingCodeId === ac.id ? 0.6 : 1 }}>
+                            <Upload size={12} /> {uploadingCodeId === ac.id ? "Uploading..." : "Add PDF"}
+                            <input
+                              type="file"
+                              accept=".pdf"
+                              style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
+                              disabled={uploadingCodeId === ac.id}
+                              onChange={(e) => {
+                                void uploadHomeworkForCode(ac, e.target.files?.[0] || null);
+                                e.currentTarget.value = "";
+                              }}
+                            />
+                          </label>
                           <motion.button type="button" onClick={() => deactivateCode(ac.id)} className="vtx-parent-btn-outline vtx-parent-btn-danger" whileTap={{ scale: 0.95 }}>
                             <X size={12} />
                           </motion.button>
@@ -446,13 +511,36 @@ export default function ParentDashboardPage() {
                   </div>
                 ) : null}
               </motion.div>
+            </motion.div>
+          )}
 
-              {/* Recent Sessions */}
+          {/* STUDENT STATISTICS */}
+          {activeTab === "statistics" && (
+            <motion.div key="statistics" {...tabMotion}>
+              <span className="vtx-parent-section-label">Student Statistics</span>
+              <h1 className="vtx-parent-heading">Learning <em>Overview</em></h1>
+              <p className="vtx-parent-subheading">One place for progress, focus trends, recent sessions, and mastery.</p>
+
+              <div className="vtx-parent-stat-grid">
+                {[
+                  { label: "Total sessions", value: completedSessions.length, unit: "completed" },
+                  { label: "Avg focus", value: `${avgFocus}%`, unit: "across sessions" },
+                  { label: "Study this week", value: sessions.filter((s) => { const d = new Date(s.started_at); const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); return d >= weekAgo; }).length, unit: "sessions" },
+                  { label: "Distraction events", value: focusEvents.length, unit: "logged" },
+                ].map((stat, i) => (
+                  <motion.div key={stat.label} className="vtx-parent-stat-card" variants={fadeUp} initial="hidden" animate="show" custom={i}>
+                    <div className="vtx-parent-stat-label">{stat.label}</div>
+                    <div className="vtx-parent-stat-value">{stat.value}</div>
+                    <div className="vtx-parent-stat-unit">{stat.unit}</div>
+                  </motion.div>
+                ))}
+              </div>
+
               {sessions.length > 0 && (
-                <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={8}>
+                <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={5}>
                   <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Recent Sessions</h2>
                   <div className="vtx-parent-session-list">
-                    {sessions.slice(0, 5).map((session, i) => (
+                    {sessions.slice(0, 8).map((session, i) => (
                       <motion.div key={session.id} className="vtx-parent-session-item" variants={fadeUp} initial="hidden" animate="show" custom={i}>
                         <div className="vtx-parent-session-left">
                           <div className={`vtx-parent-session-dot${session.status === "active" ? " live" : ""}`} />
@@ -473,220 +561,52 @@ export default function ParentDashboardPage() {
                   </div>
                 </motion.div>
               )}
-            </motion.div>
-          )}
-
-          {/* PROGRESS */}
-          {activeTab === "progress" && (
-            <motion.div key="progress" {...tabMotion}>
-              <span className="vtx-parent-section-label">Progress</span>
-              <h1 className="vtx-parent-heading">Session <em>History</em></h1>
-              <p className="vtx-parent-subheading">Completed sessions and focus scores.</p>
-
-              {completedSessions.length === 0 ? (
-                <div className="vtx-parent-card">
-                  <p className="vtx-parent-muted-text">No completed sessions yet. They&apos;ll appear here once your child starts studying.</p>
-                </div>
-              ) : (
-                <div className="vtx-parent-progress-list">
-                  {completedSessions.map((session, i) => (
-                    <motion.div key={session.id} className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={i}>
-                      <div className="vtx-parent-progress-row">
-                        <div>
-                          <div className="vtx-parent-progress-date">
-                            {new Date(session.started_at).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-                          </div>
-                          <div className="vtx-parent-progress-duration">
-                            {session.ended_at ? `${Math.round((new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 60000)} min` : "—"}
-                          </div>
-                        </div>
-                        <div className="vtx-parent-progress-metrics">
-                          <div className="vtx-parent-progress-metric">
-                            <div className="vtx-parent-stat-label">Focus</div>
-                            <div className={`vtx-parent-progress-focus${(session.focus_score_avg || 0) >= 75 ? " good" : " low"}`}>
-                              {session.focus_score_avg != null ? `${Math.round(session.focus_score_avg)}%` : "—"}
-                            </div>
-                          </div>
-                          <div className="vtx-parent-progress-metric">
-                            <div className="vtx-parent-stat-label">Status</div>
-                            <div className="vtx-parent-progress-status">{session.status}</div>
-                          </div>
-                        </div>
-                      </div>
-                      {session.session_summary && (
-                        <p className="vtx-parent-progress-summary">{session.session_summary}</p>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* HOMEWORK */}
-          {activeTab === "homework" && (
-            <motion.div key="homework" {...tabMotion}>
-              <span className="vtx-parent-section-label">Homework</span>
-              <h1 className="vtx-parent-heading">Uploaded <em>Files</em></h1>
-              <p className="vtx-parent-subheading">PDFs your child uploaded for study sessions.</p>
-
-              <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={0}>
-                <div className="vtx-parent-card-header-left" style={{ marginBottom: 16 }}>
-                  <BookOpen size={18} style={{ color: "#c8416a" }} />
-                  <h2 className="vtx-parent-card-title">Upload Homework</h2>
-                </div>
-                <label className="vtx-parent-upload-area">
-                  <FileText size={16} style={{ color: "#c8416a" }} /> Choose File
-                  <input type="file" style={{ display: "none" }} onChange={async (e) => {
-                    if (!e.target.files?.[0]) return;
-                    const formData = new FormData();
-                    formData.append("file", e.target.files[0]);
-                    await fetch("/api/upload", { method: "POST", body: formData });
-                    await loadData();
-                  }} />
-                </label>
-              </motion.div>
-
-              {documents.length > 0 && (
-                <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={1}>
-                  <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Uploaded Files</h2>
-                  <div className="vtx-parent-doc-list">
-                    {documents.map((doc, i) => (
-                      <motion.div key={doc.id} className="vtx-parent-doc-item" variants={fadeUp} initial="hidden" animate="show" custom={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(26,22,14,.06)" }}>
-                        <FileText size={18} style={{ color: "#c8416a", flexShrink: 0 }} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="vtx-parent-doc-name">{doc.file_name}</div>
-                          <div className="vtx-parent-doc-date">{new Date(doc.uploaded_at).toLocaleDateString()}</div>
-                          {doc.extracted_text && (
-                            <div style={{ fontSize: 11, color: "rgba(26,22,14,.4)", marginTop: 2 }}>
-                              {doc.extracted_text.slice(0, 80)}…
-                            </div>
-                          )}
-                        </div>
-                        {doc.lesson_plan ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#4aaa6a", background: "rgba(74,170,106,.08)", padding: "4px 10px", borderRadius: 20, whiteSpace: "nowrap" }}>
-                            <CheckCircle size={13} /> Lesson Ready
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => createLesson(doc.id)}
-                            disabled={generatingLesson === doc.id}
-                            style={{
-                              display: "inline-flex", alignItems: "center", gap: 5,
-                              fontSize: 11, fontWeight: 600, color: "#fff",
-                              background: generatingLesson === doc.id ? "rgba(200,65,106,.5)" : "#c8416a",
-                              border: "none", padding: "6px 14px", borderRadius: 20,
-                              cursor: generatingLesson === doc.id ? "wait" : "pointer",
-                              whiteSpace: "nowrap", transition: "background .2s",
-                            }}
-                          >
-                            {generatingLesson === doc.id ? (
-                              <><Loader2 size={13} className="vtx-spin" /> Generating…</>
-                            ) : (
-                              <><Sparkles size={13} /> Create Lesson</>
-                            )}
-                          </button>
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
-
-          {/* ANALYTICS */}
-          {activeTab === "analytics" && (
-            <motion.div key="analytics" {...tabMotion}>
-              <span className="vtx-parent-section-label">Analytics</span>
-              <h1 className="vtx-parent-heading">Learning <em>Insights</em></h1>
-              <p className="vtx-parent-subheading">
-                How {parent?.child_name || "your child"} uses Vertex.
-              </p>
 
               {sessions.length === 0 ? (
                 <div className="vtx-parent-card">
-                  <p className="vtx-parent-muted-text">No activity yet. Analytics will appear once study sessions begin.</p>
+                  <p className="vtx-parent-muted-text">No activity yet. Statistics will appear once study sessions begin.</p>
                 </div>
               ) : (
                 <>
-                  <div className="vtx-parent-stat-grid">
-                    {[
-                      { label: "Total sessions", value: completedSessions.length, unit: "completed" },
-                      { label: "Avg focus", value: `${avgFocus}%`, unit: "across sessions" },
-                      { label: "Distraction events", value: focusEvents.length, unit: "logged" },
-                      { label: "Study this week", value: sessions.filter((s) => { const d = new Date(s.started_at); const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); return d >= weekAgo; }).length, unit: "sessions" },
-                    ].map((stat, i) => (
-                      <motion.div key={stat.label} className="vtx-parent-stat-card" variants={fadeUp} initial="hidden" animate="show" custom={i}>
-                        <div className="vtx-parent-stat-label">{stat.label}</div>
-                        <div className="vtx-parent-stat-value">{stat.value}</div>
-                        <div className="vtx-parent-stat-unit">{stat.unit}</div>
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  {/* Focus trend */}
                   <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={6}>
                     <h2 className="vtx-parent-card-title" style={{ marginBottom: 4 }}>Focus score trend</h2>
-                    <p className="vtx-parent-muted-text" style={{ marginBottom: 16 }}>Average focus % for recent completed sessions</p>
+                    <p className="vtx-parent-muted-text" style={{ marginBottom: 16 }}>Average focus for recent completed sessions</p>
                     <div className="vtx-parent-bar-chart" style={{ height: 120 }}>
                       {completedSessions.slice(0, 7).reverse().map((session, i) => {
                         const score = session.focus_score_avg ?? 0;
                         return (
                           <div key={session.id} className="vtx-parent-bar-col">
-                            <motion.div
-                              className={`vtx-parent-bar${score >= 75 ? " good" : score >= 50 ? " ok" : " low"}`}
-                              initial={{ height: 0 }}
-                              animate={{ height: `${Math.min(100, score)}%` }}
-                              transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }}
-                              style={{ minHeight: score > 0 ? 16 : 4 }}
-                            />
+                            <motion.div className={`vtx-parent-bar${score >= 75 ? " good" : score >= 50 ? " ok" : " low"}`} initial={{ height: 0 }} animate={{ height: `${Math.min(100, score)}%` }} transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }} style={{ minHeight: score > 0 ? 16 : 4 }} />
                             <span className="vtx-parent-bar-value" style={{ fontWeight: 500 }}>{Math.round(score)}%</span>
                             <span className="vtx-parent-bar-label">S{completedSessions.length - i}</span>
                           </div>
                         );
                       })}
-                      {completedSessions.length === 0 && (
-                        <span className="vtx-parent-muted-text">No completed sessions yet</span>
-                      )}
                     </div>
                   </motion.div>
 
-                  {/* Learning comprehension trend */}
                   <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={7}>
                     <h2 className="vtx-parent-card-title" style={{ marginBottom: 4 }}>Learning comprehension</h2>
-                    <p className="vtx-parent-muted-text" style={{ marginBottom: 16 }}>Estimated comprehension based on focus and session duration</p>
+                    <p className="vtx-parent-muted-text" style={{ marginBottom: 16 }}>Estimated understanding based on focus and session duration</p>
                     <div className="vtx-parent-bar-chart" style={{ height: 120 }}>
                       {completedSessions.slice(0, 10).reverse().map((session, i) => {
                         const focus = session.focus_score_avg ?? 50;
-                        const durationMin = session.ended_at
-                          ? (new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 60000
-                          : 0;
+                        const durationMin = session.ended_at ? (new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 60000 : 0;
                         const durationFactor = Math.min(1, durationMin / 30);
                         const comprehension = Math.round(focus * 0.6 + durationFactor * 100 * 0.4);
                         return (
                           <div key={session.id} className="vtx-parent-bar-col">
-                            <motion.div
-                              className={`vtx-parent-bar${comprehension >= 70 ? " good" : comprehension >= 45 ? " ok" : " low"}`}
-                              initial={{ height: 0 }}
-                              animate={{ height: `${Math.min(100, comprehension)}%` }}
-                              transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }}
-                              style={{ minHeight: comprehension > 0 ? 16 : 4 }}
-                            />
+                            <motion.div className={`vtx-parent-bar${comprehension >= 70 ? " good" : comprehension >= 45 ? " ok" : " low"}`} initial={{ height: 0 }} animate={{ height: `${Math.min(100, comprehension)}%` }} transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }} style={{ minHeight: comprehension > 0 ? 16 : 4 }} />
                             <span className="vtx-parent-bar-value" style={{ fontWeight: 500 }}>{comprehension}%</span>
                             <span className="vtx-parent-bar-label">S{completedSessions.length - i}</span>
                           </div>
                         );
                       })}
-                      {completedSessions.length === 0 && (
-                        <span className="vtx-parent-muted-text">No completed sessions yet</span>
-                      )}
                     </div>
                   </motion.div>
 
-                  {/* Distraction breakdown */}
                   {focusEvents.length > 0 && (
-                    <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={7}>
+                    <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={8}>
                       <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Distraction breakdown</h2>
                       <div className="vtx-parent-distraction-grid">
                         {["tab_blur", "inactive", "face_absent", "no_response"].map((eventType, i) => {
@@ -704,34 +624,11 @@ export default function ParentDashboardPage() {
                       </div>
                     </motion.div>
                   )}
-                </>
-              )}
-            </motion.div>
-          )}
 
-          {/* INSIGHTS */}
-          {activeTab === "insights" && (
-            <motion.div key="insights" {...tabMotion}>
-              <span className="vtx-parent-section-label">Insights</span>
-              <h1 className="vtx-parent-heading">Attention <em>Engine</em></h1>
-              <p className="vtx-parent-subheading">Deep dive into {parent?.child_name || "your child"}&apos;s focus, confidence, and mastery.</p>
-
-              {insightSessions.length === 0 ? (
-                <div className="vtx-parent-card">
-                  <p className="vtx-parent-muted-text">No session data yet. Insights will appear once your child completes study sessions with the attention engine active.</p>
-                </div>
-              ) : (
-                <>
-                  {/* Session picker */}
-                  <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={0}>
+                  <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={9}>
                     <h2 className="vtx-parent-card-title" style={{ marginBottom: 12 }}>Focus Timeline</h2>
                     <div style={{ marginBottom: 16 }}>
-                      <select
-                        value={selectedInsightSession || ""}
-                        onChange={(e) => setSelectedInsightSession(e.target.value)}
-                        className="vtx-parent-input"
-                        style={{ maxWidth: 320 }}
-                      >
+                      <select value={selectedInsightSession || ""} onChange={(e) => setSelectedInsightSession(e.target.value)} className="vtx-parent-input" style={{ maxWidth: 320 }}>
                         {insightSessions.map((s) => (
                           <option key={s.id} value={s.id}>
                             {new Date(s.started_at).toLocaleDateString()} — {new Date(s.started_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -740,19 +637,12 @@ export default function ParentDashboardPage() {
                         ))}
                       </select>
                     </div>
-
-                    {/* Recharts Line Chart */}
                     {(() => {
                       const selected = insightSessions.find((s) => s.id === selectedInsightSession);
                       const timeline = (selected?.focus_timeline || []) as { timestamp: number; score: number }[];
-                      if (timeline.length === 0) {
-                        return <p className="vtx-parent-muted-text">No focus timeline data for this session.</p>;
-                      }
+                      if (timeline.length === 0) return <p className="vtx-parent-muted-text">No focus timeline data for this session.</p>;
                       const startTime = timeline[0].timestamp;
-                      const chartData = timeline.map((entry) => ({
-                        minute: Math.round((entry.timestamp - startTime) / 60000),
-                        score: entry.score,
-                      }));
+                      const chartData = timeline.map((entry) => ({ minute: Math.round((entry.timestamp - startTime) / 60000), score: entry.score }));
                       return (
                         <div style={{ width: "100%", height: 220 }}>
                           <ResponsiveContainer>
@@ -771,139 +661,22 @@ export default function ParentDashboardPage() {
                     })()}
                   </motion.div>
 
-                  {/* Distraction Event Log */}
-                  {(() => {
-                    const selected = insightSessions.find((s) => s.id === selectedInsightSession);
-                    const events = (selected?.distraction_events || []) as { timestamp: number; type: string; focusScore: number }[];
-                    if (events.length === 0) return null;
-                    return (
-                      <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={1}>
-                        <h2 className="vtx-parent-card-title" style={{ marginBottom: 12 }}>Distraction Events</h2>
-                        <div style={{ maxHeight: 240, overflowY: "auto" }}>
-                          {events.map((ev, i) => (
-                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                              <span style={{ fontSize: 11, color: "#8a7f6e", width: 70 }}>
-                                {new Date(ev.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                              </span>
-                              <span style={{
-                                padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600,
-                                background: ev.type === "face_absent" ? "rgba(239,68,68,0.1)" : ev.type === "tab_switch" ? "rgba(245,158,11,0.1)" : "rgba(139,92,246,0.1)",
-                                color: ev.type === "face_absent" ? "#ef4444" : ev.type === "tab_switch" ? "#f59e0b" : "#8b5cf6",
-                              }}>
-                                {ev.type.replace("_", " ")}
-                              </span>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: ev.focusScore >= 50 ? "#5a9e76" : "#c8416a" }}>
-                                {ev.focusScore}%
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    );
-                  })()}
-
-                  {/* Content Confidence Breakdown */}
-                  <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={2}>
-                    <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Content Confidence Breakdown</h2>
-                    <p className="vtx-parent-muted-text" style={{ marginBottom: 16 }}>Components of the content confidence score</p>
-                    {[
-                      { label: "Quiz Accuracy", value: 78, color: "#5a9e76" },
-                      { label: "Response Quality", value: 65, color: "#3b82f6" },
-                      { label: "Hint Dependency", value: 85, color: "#8b5cf6" },
-                      { label: "Repeat Questions", value: 90, color: "#06b6d4" },
-                      { label: "Response Speed", value: 72, color: "#f59e0b" },
-                    ].map((bar) => (
-                      <div key={bar.label} style={{ marginBottom: 12 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                          <span style={{ color: "#5c5347" }}>{bar.label}</span>
-                          <span style={{ fontWeight: 600, color: bar.color }}>{bar.value}%</span>
-                        </div>
-                        <div style={{ height: 8, background: "rgba(0,0,0,0.04)", borderRadius: 4, overflow: "hidden" }}>
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${bar.value}%` }}
-                            transition={{ duration: 0.6, ease: "easeOut" }}
-                            style={{ height: "100%", background: bar.color, borderRadius: 4 }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </motion.div>
-
-                  {/* Topic Mastery Map */}
                   {insightMastery.length > 0 && (
-                    <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={3}>
+                    <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={10}>
                       <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Topic Mastery</h2>
                       {insightMastery.map((t, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                           <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#1a1610" }}>{t.topic}</span>
                           <div style={{ width: 120, height: 6, background: "rgba(0,0,0,0.04)", borderRadius: 3, overflow: "hidden" }}>
-                            <div style={{
-                              width: `${t.adjustedConfidence}%`, height: "100%", borderRadius: 3,
-                              background: t.adjustedConfidence >= 70 ? "#5a9e76" : t.adjustedConfidence >= 40 ? "#c89020" : "#c8416a",
-                            }} />
+                            <div style={{ width: `${t.adjustedConfidence}%`, height: "100%", borderRadius: 3, background: t.adjustedConfidence >= 70 ? "#5a9e76" : t.adjustedConfidence >= 40 ? "#c89020" : "#c8416a" }} />
                           </div>
-                          <span style={{ width: 36, fontSize: 12, fontWeight: 600, textAlign: "right", color: t.adjustedConfidence >= 70 ? "#5a9e76" : t.adjustedConfidence >= 40 ? "#c89020" : "#c8416a" }}>
-                            {t.adjustedConfidence}%
-                          </span>
-                          <span style={{ width: 70, fontSize: 10, color: "#8a7f6e", textAlign: "right" }}>
-                            {t.last_active_at ? new Date(t.last_active_at).toLocaleDateString([], { month: "short", day: "numeric" }) : "—"}
-                          </span>
-                          {t.isStale && (
-                            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(245,158,11,0.12)", color: "#c89020", fontWeight: 600 }}>
-                              Stale
-                            </span>
-                          )}
+                          <span style={{ width: 36, fontSize: 12, fontWeight: 600, textAlign: "right", color: t.adjustedConfidence >= 70 ? "#5a9e76" : t.adjustedConfidence >= 40 ? "#c89020" : "#c8416a" }}>{t.adjustedConfidence}%</span>
+                          <span style={{ width: 70, fontSize: 10, color: "#8a7f6e", textAlign: "right" }}>{t.last_active_at ? new Date(t.last_active_at).toLocaleDateString([], { month: "short", day: "numeric" }) : "—"}</span>
+                          {t.isStale && <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(245,158,11,0.12)", color: "#c89020", fontWeight: 600 }}>Stale</span>}
                         </div>
                       ))}
                     </motion.div>
                   )}
-
-                  {/* Session Comparison Table */}
-                  <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={4}>
-                    <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Session Comparison</h2>
-                    <div style={{ overflowX: "auto" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                        <thead>
-                          <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-                            {["Date", "Avg Focus", "Duration", "Distractions", "Status"].map((h) => (
-                              <th key={h} style={{ textAlign: "left", padding: "8px 10px", fontWeight: 600, color: "#5c5347", fontSize: 11 }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {insightSessions.slice(0, 5).map((s) => {
-                            const distractionCount = Array.isArray(s.distraction_events) ? s.distraction_events.length : 0;
-                            const durationMin = s.ended_at ? Math.round((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000) : 0;
-                            const focus = typeof s.focus_score === "number" ? Math.round(s.focus_score) : (s.focus_score_avg ? Math.round(s.focus_score_avg) : 0);
-                            return (
-                              <tr key={s.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.03)" }}>
-                                <td style={{ padding: "8px 10px", color: "#1a1610" }}>
-                                  {new Date(s.started_at).toLocaleDateString([], { month: "short", day: "numeric" })}
-                                </td>
-                                <td style={{ padding: "8px 10px" }}>
-                                  <span style={{ fontWeight: 600, color: focus >= 80 ? "#5a9e76" : focus >= 50 ? "#c89020" : "#c8416a" }}>
-                                    {focus}%
-                                  </span>
-                                </td>
-                                <td style={{ padding: "8px 10px", color: "#5c5347" }}>{durationMin > 0 ? `${durationMin}m` : "—"}</td>
-                                <td style={{ padding: "8px 10px", color: "#5c5347" }}>{distractionCount}</td>
-                                <td style={{ padding: "8px 10px" }}>
-                                  <span style={{
-                                    fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600,
-                                    background: s.status === "completed" ? "rgba(90,158,118,0.1)" : "rgba(200,65,106,0.1)",
-                                    color: s.status === "completed" ? "#5a9e76" : "#c8416a",
-                                  }}>
-                                    {s.status}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </motion.div>
                 </>
               )}
             </motion.div>
@@ -971,38 +744,8 @@ export default function ParentDashboardPage() {
                 )}
               </motion.div>
 
-              {/* Learning Configuration */}
-              <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={1}>
-                <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Learning Configuration</h2>
-                <div style={{ marginBottom: 16 }}>
-                  <div className="vtx-parent-label">Math Topics</div>
-                  <p className="vtx-parent-muted-text" style={{ marginBottom: 6 }}>Select topics your child should focus on</p>
-                  <div className="vtx-parent-topic-chips">
-                    {topicOptions.map((topic) => (
-                      <button key={topic} type="button" onClick={() => toggleSettingsTopic(topic)} className={`vtx-parent-chip${settingsLearningTopics.includes(topic) ? " active" : ""}`}>
-                        {topic}
-                      </button>
-                    ))}
-                  </div>
-                  {settingsLearningTopics.length === 0 && <span className="vtx-parent-muted-text" style={{ display: "block", marginTop: 6 }}>None selected</span>}
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <div className="vtx-parent-label">Learning Pace</div>
-                  <div className="vtx-parent-pace-btns">
-                    {(["slow", "medium", "fast"] as const).map((pace) => (
-                      <button key={pace} type="button" onClick={() => setSettingsLearningPace(pace)} className={`vtx-parent-chip${settingsLearningPace === pace ? " active" : ""}`}>
-                        {pace === "slow" ? "Slow & steady" : pace === "medium" ? "Medium" : "Fast"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <motion.button type="button" onClick={saveLearningSettings} className="vtx-parent-btn" disabled={settingsSaving} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
-                  {settingsSaving ? "Saving..." : "Save learning config"}
-                </motion.button>
-              </motion.div>
-
               {/* Notifications */}
-              <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={2}>
+              <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={1}>
                 <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Notifications</h2>
                 <div className="vtx-parent-notification-list">
                   <div className="vtx-parent-notification-row">
@@ -1027,7 +770,7 @@ export default function ParentDashboardPage() {
               </motion.div>
 
               {/* Avatar */}
-              <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={3}>
+              <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={2}>
                 <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Tutor Avatar</h2>
                 <motion.button onClick={() => router.push("/parent")} className="vtx-parent-btn" whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
                   <Eye size={14} /> Manage Avatar
@@ -1037,6 +780,157 @@ export default function ParentDashboardPage() {
           )}
         </AnimatePresence>
       </main>
+
+      <AnimatePresence>
+        {editingCode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(20, 16, 12, 0.38)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 24,
+              zIndex: 50,
+            }}
+            onClick={() => {
+              if (!savingCodeSettings) {
+                setEditingCode(null);
+                setCodeError(null);
+              }
+            }}
+          >
+            <motion.form
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+              onSubmit={saveCodeSettings}
+              onClick={(e) => e.stopPropagation()}
+              className="vtx-parent-card"
+              style={{ width: "min(760px, 100%)", maxHeight: "90vh", overflowY: "auto" }}
+            >
+              <div className="vtx-parent-card-header">
+                <div>
+                  <h2 className="vtx-parent-card-title">Student Settings</h2>
+                  <p className="vtx-parent-muted-text" style={{ marginTop: 6 }}>
+                    Update this access code&apos;s learning profile and tutoring preferences.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCode(null);
+                    setCodeError(null);
+                  }}
+                  className="vtx-parent-btn-outline"
+                  disabled={savingCodeSettings}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              <div className="vtx-parent-form-grid">
+                <div>
+                  <label className="vtx-parent-label">Child&apos;s name</label>
+                  <input
+                    type="text"
+                    value={codeSettingsForm.childName}
+                    onChange={(e) => setCodeSettingsForm((prev) => ({ ...prev, childName: e.target.value }))}
+                    className="vtx-parent-input"
+                  />
+                </div>
+                <div>
+                  <label className="vtx-parent-label">Age</label>
+                  <input
+                    type="number"
+                    min={3}
+                    max={18}
+                    value={codeSettingsForm.childAge}
+                    onChange={(e) => setCodeSettingsForm((prev) => ({ ...prev, childAge: e.target.value }))}
+                    className="vtx-parent-input"
+                  />
+                </div>
+                <div>
+                  <label className="vtx-parent-label">Grade level</label>
+                  <input
+                    type="text"
+                    value={codeSettingsForm.gradeLevel}
+                    onChange={(e) => setCodeSettingsForm((prev) => ({ ...prev, gradeLevel: e.target.value }))}
+                    className="vtx-parent-input"
+                  />
+                </div>
+                <div>
+                  <label className="vtx-parent-label">Learning pace</label>
+                  <div className="vtx-parent-pace-btns">
+                    {(["slow", "medium", "fast"] as const).map((pace) => (
+                      <button
+                        key={pace}
+                        type="button"
+                        onClick={() => setCodeSettingsForm((prev) => ({ ...prev, learningPace: pace }))}
+                        className={`vtx-parent-chip${codeSettingsForm.learningPace === pace ? " active" : ""}`}
+                      >
+                        {pace === "slow" ? "Slow & steady" : pace === "medium" ? "Balanced" : "Fast"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 20 }}>
+                <label className="vtx-parent-label">Math topics</label>
+                <div className="vtx-parent-topic-chips">
+                  {topicOptions.map((topic) => (
+                    <button
+                      key={topic}
+                      type="button"
+                      onClick={() => toggleCodeSettingsTopic(topic)}
+                      className={`vtx-parent-chip${codeSettingsForm.mathTopics.includes(topic) ? " active" : ""}`}
+                    >
+                      {topic}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 20 }}>
+                <label className="vtx-parent-label">Learning goals</label>
+                <textarea
+                  rows={4}
+                  value={codeSettingsForm.learningGoals}
+                  onChange={(e) => setCodeSettingsForm((prev) => ({ ...prev, learningGoals: e.target.value }))}
+                  className="vtx-parent-input"
+                  style={{ resize: "vertical", minHeight: 100 }}
+                  placeholder="What should the tutor focus on for this student?"
+                />
+              </div>
+
+              {codeError && <p className="vtx-parent-error" style={{ marginTop: 16 }}>{codeError}</p>}
+
+              <div className="vtx-parent-btn-row" style={{ marginTop: 20 }}>
+                <button type="submit" className="vtx-parent-btn" disabled={savingCodeSettings}>
+                  {savingCodeSettings ? "Saving..." : "Save Settings"}
+                </button>
+                <button
+                  type="button"
+                  className="vtx-parent-btn-outline"
+                  disabled={savingCodeSettings}
+                  onClick={() => {
+                    setEditingCode(null);
+                    setCodeError(null);
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

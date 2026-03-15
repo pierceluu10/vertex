@@ -152,7 +152,6 @@ function KidSessionContent() {
       setAgentPromptRequest({
         id: Date.now(),
         text: `You have a prepared lesson plan for ${name} based on their homework. Here is the lesson plan:\n\n${lessonScript}\n\nStart by greeting ${name} warmly, introduce yourself as ${tutorName}, and then ask: "I've prepared a lesson based on your homework about ${lesson.title}. Would you like me to walk you through it step by step, or do you have a specific question you'd like help with first?" Then follow their choice. If they want the lesson, teach it section by section in a conversational way, using the examples from the plan. If they have a question, answer it using the lesson content as context.`,
-        text: `You have a prepared lesson plan for ${name} based on their homework. Here is the lesson plan:\n\n${lessonScript}\n\nStart by greeting ${name} warmly, introduce yourself as ${tutorName}, and then ask: "I've prepared a lesson based on your homework about ${lesson.title}. Would you like me to walk you through it step by step, or do you have a specific question you'd like help with first?" Then follow their choice. If they want the lesson, teach it section by section in a conversational way, using the examples from the plan. If they have a question, answer it using the lesson content as context.`,
       });
     } else {
       setAgentPromptRequest({

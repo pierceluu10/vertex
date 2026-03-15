@@ -8,6 +8,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const childId = formData.get("childId") as string;
+    const accessCodeId = formData.get("accessCodeId") as string;
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -21,6 +22,50 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    let resolvedChildId = childId || null;
+
+    if (!resolvedChildId && accessCodeId) {
+      const { data: accessCode } = await supabase
+        .from("access_codes")
+        .select("id, child_name, child_age, grade_level")
+        .eq("id", accessCodeId)
+        .eq("parent_id", user.id)
+        .single();
+
+      if (!accessCode) {
+        return NextResponse.json({ error: "Invalid access code" }, { status: 400 });
+      }
+
+      const { data: existingChild } = await supabase
+        .from("children")
+        .select("id")
+        .eq("parent_id", user.id)
+        .eq("name", accessCode.child_name || "")
+        .maybeSingle();
+
+      if (existingChild?.id) {
+        resolvedChildId = existingChild.id;
+      } else {
+        const { data: createdChild, error: childError } = await supabase
+          .from("children")
+          .insert({
+            parent_id: user.id,
+            name: accessCode.child_name || "Student",
+            age: accessCode.child_age || 10,
+            grade: accessCode.grade_level || null,
+          })
+          .select("id")
+          .single();
+
+        if (childError) {
+          console.error("Child create for upload error:", childError);
+          return NextResponse.json({ error: "Failed to link upload to student" }, { status: 500 });
+        }
+
+        resolvedChildId = createdChild.id;
+      }
     }
 
     const fileName = `${user.id}/${Date.now()}-${file.name}`;
@@ -96,7 +141,7 @@ export async function POST(request: Request) {
       .from("uploaded_documents")
       .insert({
         parent_id: user.id,
-        child_id: childId || null,
+        child_id: resolvedChildId,
         file_name: file.name,
         file_url: publicUrl,
         extracted_text: extractedText,

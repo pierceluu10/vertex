@@ -23,8 +23,8 @@ export function HeroScene() {
         <svg className="vtx-scene-svg" viewBox="0 0 860 460" xmlns="http://www.w3.org/2000/svg" fill="none">
 
           {/* Ghost title */}
-          <text x="430" y="58" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="68" fontWeight="700" fill="rgba(58,48,38,.44)" letterSpacing="26">VERTEX</text>
-          <text x="430" y="88" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="15" fontWeight="600" fill="rgba(112,97,80,.8)" letterSpacing="8">INTELLIGENCE &middot; CURIOSITY &middot; GROWTH</text>
+          <text x="430" y="66" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="68" fontWeight="700" fill="rgba(58,48,38,.44)" letterSpacing="26">VERTEX</text>
+          <text x="430" y="98" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="15" fontWeight="600" fill="rgba(112,97,80,.8)" letterSpacing="8">INTELLIGENCE &middot; CURIOSITY &middot; GROWTH</text>
 
           {/* Parent — stroke outline: broader shoulders, collar, composed silhouette */}
           <g fill="none" stroke="#1a1610" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
