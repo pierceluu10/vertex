@@ -177,7 +177,10 @@ export function useWebcamAttention(
       }
 
       const landmarker = landmarkerRef.current as {
-        detect?: (image: HTMLCanvasElement | HTMLVideoElement | HTMLImageElement) => {
+        detect?: (image: HTMLVideoElement | HTMLImageElement) => {
+          faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>>;
+        };
+        detectForVideo?: (image: HTMLVideoElement, timestamp: number) => {
           faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>>;
         };
       } | null;
@@ -187,9 +190,12 @@ export function useWebcamAttention(
       const now = Date.now();
       if (now - landmarkerReadyAtRef.current < 300) return;
 
+      // Guard: video must be playing and have valid dimensions
+      if (video.videoWidth === 0 || video.videoHeight === 0 || video.paused || video.ended) return;
+
       let result: { faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>> };
       try {
-        result = landmarker.detect(canvas);
+        result = landmarker.detect(video);
       } catch {
         return;
       }

@@ -76,6 +76,12 @@ function KidSessionContent() {
   const [contentConfidence, setContentConfidence] = useState<ContentConfidenceState | null>(null);
   const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
 
+  // Use refs so closures always have the latest value without being deps
+  const childNameRef = useRef(childName);
+  const tutorNameRef = useRef(tutorName);
+  useEffect(() => { childNameRef.current = childName; }, [childName]);
+  useEffect(() => { tutorNameRef.current = tutorName; }, [tutorName]);
+
   const handleIntervention = useCallback(
     (type: string) => {
       const message = getInterventionMessage(type, childName);
@@ -116,7 +122,7 @@ function KidSessionContent() {
 
   const endSessionRef = useRef<(() => Promise<void>) | null>(null);
 
-  // Generate lesson plan from document
+  // Generate lesson plan from document - stable ref ensures no re-render chain
   const generateLessonPlan = useCallback(async (docText: string) => {
     setLessonLoading(true);
     try {
@@ -125,13 +131,14 @@ function KidSessionContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           documentText: docText,
-          childName,
+          childName: childNameRef.current,
           childAge: 10,
         }),
       });
       const data = await res.json();
       if (data.lesson) {
         setLessonPlan(data.lesson);
+        setLessonLoading(false);
         return data.lesson as LessonPlan;
       }
     } catch {
@@ -139,27 +146,29 @@ function KidSessionContent() {
     }
     setLessonLoading(false);
     return null;
-  }, [childName]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);  // stable — reads childNameRef at call time
 
   const queueInitialGreeting = useCallback((sessionId: string, name: string, lesson: LessonPlan | null) => {
     if (greetedSessionIdsRef.current.has(sessionId)) return;
 
     greetedSessionIdsRef.current.add(sessionId);
+    const tName = tutorNameRef.current;
 
     if (lesson) {
-      // Build a lesson script for the avatar
       const lessonScript = buildLessonScript(lesson);
       setAgentPromptRequest({
         id: Date.now(),
-        text: `You have a prepared lesson plan for ${name} based on their homework. Here is the lesson plan:\n\n${lessonScript}\n\nStart by greeting ${name} warmly, introduce yourself as ${tutorName}, and then ask: "I've prepared a lesson based on your homework about ${lesson.title}. Would you like me to walk you through it step by step, or do you have a specific question you'd like help with first?" Then follow their choice. If they want the lesson, teach it section by section in a conversational way, using the examples from the plan. If they have a question, answer it using the lesson content as context.`,
+        text: `You have a prepared lesson plan for ${name} based on their homework. Here is the lesson plan:\n\n${lessonScript}\n\nStart by greeting ${name} warmly, introduce yourself as ${tName}, and then ask: "I've prepared a lesson based on your homework about ${lesson.title}. Would you like me to walk you through it step by step, or do you have a specific question you'd like help with first?" Then follow their choice. If they want the lesson, teach it section by section in a conversational way, using the examples from the plan. If they have a question, answer it using the lesson content as context.`,
       });
     } else {
       setAgentPromptRequest({
         id: Date.now(),
-        text: `Start the session now. Greet ${name} warmly, introduce yourself as ${tutorName}, and ask what math problem they want to work on first.`,
+        text: `Start the session now. Greet ${name} warmly, introduce yourself as ${tName}, and ask what math problem they want to work on first.`,
       });
     }
-  }, [tutorName]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);  // stable — reads tutorNameRef at call time
 
   const initSession = useCallback(
     async (session: KidSession) => {

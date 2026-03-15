@@ -89,6 +89,7 @@ export async function POST(request: Request) {
       .from("tutoring_sessions")
       .select("*")
       .eq("child_id", childId)
+      .eq("kid_session_id", kidSessionId)
       .eq("status", "active")
       .order("started_at", { ascending: false })
       .limit(1);
@@ -108,6 +109,7 @@ export async function POST(request: Request) {
         .from("tutoring_sessions")
         .insert({
           child_id: childId,
+          kid_session_id: kidSessionId,
           document_id: documentId || null,
           status: "active",
         })
