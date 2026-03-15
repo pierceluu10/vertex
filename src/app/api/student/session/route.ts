@@ -150,6 +150,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       sessionId: session.id,
       documentContext: tutorContext.documentContext,
+      lessonPlan: tutorContext.lessonPlan,
       parentName: tutorContext.parentName,
       liveTutorEnabled: simliConfig.ready,
       tutorAvatarName: simliConfig.displayName,

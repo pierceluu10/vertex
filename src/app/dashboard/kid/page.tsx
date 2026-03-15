@@ -548,11 +548,16 @@ export default function KidDashboardPage() {
                           <div className="vtx-kid-doc-icon"><FileText size={18} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                           <div>
                             <div className="vtx-kid-doc-name">{doc.file_name}</div>
-                            <div className="vtx-kid-doc-date">{new Date(doc.uploaded_at).toLocaleDateString()}</div>
+                            <div className="vtx-kid-doc-date">
+                              {new Date(doc.uploaded_at).toLocaleDateString()}
+                              {doc.lesson_plan && (
+                                <span style={{ marginLeft: 8, color: "#4aaa6a", fontWeight: 600, fontSize: 10 }}>● Lesson Ready</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <button type="button" className="vtx-kid-doc-btn" onClick={() => startTutorSession(doc.id)}>
-                          <Play size={12} /> Study
+                          <Play size={12} /> {doc.lesson_plan ? "Start Lesson" : "Study"}
                         </button>
                       </motion.div>
                     ))}
@@ -650,7 +655,10 @@ export default function KidDashboardPage() {
                     {documents.map((doc) => (
                       <button key={doc.id} type="button" className="vtx-kid-cta" onClick={() => startTutorSession(doc.id)} style={{ marginTop: 10 }}>
                         <div className="vtx-kid-doc-icon"><FileText size={18} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
-                        <div className="vtx-kid-cta-text"><div className="vtx-kid-cta-title">{doc.file_name}</div></div>
+                        <div className="vtx-kid-cta-text">
+                          <div className="vtx-kid-cta-title">{doc.file_name}</div>
+                          {doc.lesson_plan && <div className="vtx-kid-cta-desc" style={{ color: "#4aaa6a" }}>Lesson ready — start learning!</div>}
+                        </div>
                         <ChevronRight size={18} style={{ color: "var(--vtx-muted, #8a7f6e)" }} />
                       </button>
                     ))}
