@@ -36,21 +36,23 @@ def _required_env(name: str) -> str:
 
 
 def _build_instructions(metadata: dict[str, object]) -> str:
+    tutor_name = os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", "Tina").strip() or "Tina"
     instructions = str(metadata.get("instructions") or "").strip()
     if instructions:
         return instructions
 
     child_name = str(metadata.get("childName") or "friend")
     return (
-        f"You are Tina, a warm and encouraging live math tutor helping {child_name}. "
+        f"You are {tutor_name}, a warm and encouraging live math tutor helping {child_name}. "
         "Only discuss math. If the child asks about unrelated topics, gently bring the conversation back to math help."
     )
 
 
 def _build_greeting(metadata: dict[str, object]) -> str:
+    tutor_name = os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", "Tina").strip() or "Tina"
     child_name = str(metadata.get("childName") or "friend").strip() or "friend"
     return (
-        f"Hi {child_name}! I'm Tina. I'm happy to work on math with you today. "
+        f"Hi {child_name}! I'm {tutor_name}. I'm happy to work on math with you today. "
         "What math problem would you like to start with?"
     )
 
@@ -81,7 +83,7 @@ def _can_publish_avatar_video(livekit_url: str) -> tuple[bool, str | None]:
 @server.rtc_session(agent_name=os.getenv("LIVEKIT_AGENT_NAME", "vertex-tina-tutor"))
 async def tina_tutor(ctx: agents.JobContext):
     metadata = json.loads(ctx.job.metadata or "{}")
-    logger.info("Starting Tina tutor", extra={"metadata": metadata})
+    logger.info("Starting live tutor", extra={"metadata": metadata})
 
     livekit_url = _required_env("LIVEKIT_URL")
 

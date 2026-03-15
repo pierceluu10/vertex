@@ -178,8 +178,9 @@ export function buildRealtimeTutorInstructions(context: {
   const goalsInstruction = learningGoals?.trim()
     ? `The parent wants the child to work toward these goals: ${learningGoals.trim()}. Use them to steer examples, motivation, and practice choices.`
     : "No extra learning goals were provided, so focus on the child's current math question.";
+  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
 
-  return `You are Tina, a warm real-time math tutor helping ${childName}, who is ${childAge} years old${grade ? ` and in ${grade}` : ""}.
+  return `You are ${tutorName}, a warm real-time math tutor helping ${childName}, who is ${childAge} years old${grade ? ` and in ${grade}` : ""}.
 
 GOAL:
 - Help the child learn math with patience, encouragement, and very clear steps.

@@ -74,6 +74,7 @@ function KidSessionContent() {
   const childName = kidSession?.child_name?.trim() || "there";
 
   const [contentConfidence, setContentConfidence] = useState<ContentConfidenceState | null>(null);
+  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
 
   const handleIntervention = useCallback(
     (type: string) => {
@@ -150,15 +151,16 @@ function KidSessionContent() {
       const lessonScript = buildLessonScript(lesson);
       setAgentPromptRequest({
         id: Date.now(),
-        text: `You have a prepared lesson plan for ${name} based on their homework. Here is the lesson plan:\n\n${lessonScript}\n\nStart by greeting ${name} warmly, introduce yourself as Tina, and then ask: "I've prepared a lesson based on your homework about ${lesson.title}. Would you like me to walk you through it step by step, or do you have a specific question you'd like help with first?" Then follow their choice. If they want the lesson, teach it section by section in a conversational way, using the examples from the plan. If they have a question, answer it using the lesson content as context.`,
+        text: `You have a prepared lesson plan for ${name} based on their homework. Here is the lesson plan:\n\n${lessonScript}\n\nStart by greeting ${name} warmly, introduce yourself as ${tutorName}, and then ask: "I've prepared a lesson based on your homework about ${lesson.title}. Would you like me to walk you through it step by step, or do you have a specific question you'd like help with first?" Then follow their choice. If they want the lesson, teach it section by section in a conversational way, using the examples from the plan. If they have a question, answer it using the lesson content as context.`,
+        text: `You have a prepared lesson plan for ${name} based on their homework. Here is the lesson plan:\n\n${lessonScript}\n\nStart by greeting ${name} warmly, introduce yourself as ${tutorName}, and then ask: "I've prepared a lesson based on your homework about ${lesson.title}. Would you like me to walk you through it step by step, or do you have a specific question you'd like help with first?" Then follow their choice. If they want the lesson, teach it section by section in a conversational way, using the examples from the plan. If they have a question, answer it using the lesson content as context.`,
       });
     } else {
       setAgentPromptRequest({
         id: Date.now(),
-        text: `Start the session now. Greet ${name} warmly, introduce yourself as Tina, and ask what math problem they want to work on first.`,
+        text: `Start the session now. Greet ${name} warmly, introduce yourself as ${tutorName}, and ask what math problem they want to work on first.`,
       });
     }
-  }, []);
+  }, [tutorName]);
 
   const initSession = useCallback(
     async (session: KidSession) => {
@@ -635,9 +637,9 @@ function KidSessionContent() {
                   >
                     T
                   </div>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>Tina is offline</div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>{tutorName} is offline</div>
                   <div style={{ maxWidth: 380, fontSize: 13, lineHeight: 1.6, color: "rgba(255,244,230,0.76)" }}>
-                    Add the Simli and LiveKit environment variables to bring Tina online as a live call tutor.
+                    Add the Simli and LiveKit environment variables to bring {tutorName} online as a live call tutor.
                   </div>
                 </div>
               )}
@@ -724,7 +726,7 @@ function KidSessionContent() {
                 <div style={{ marginTop: 4, fontSize: 12, color: "#8a7f6e" }}>
                   {lessonPlan
                     ? "Lesson transcript and typed messages. Ask questions anytime!"
-                    : "Tina's live speech shows up here, and graphs appear when you ask to see one."}
+                    : `${tutorName}'s live speech shows up here, and graphs appear when you ask to see one.`}
                 </div>
               </div>
               <button
@@ -846,8 +848,8 @@ function KidSessionContent() {
                   }}
                 >
                   {lessonPlan
-                    ? `Tina is teaching you about "${lessonPlan.title}". The conversation will appear here. You can also type questions below!`
-                    : "Start talking to Tina. This panel will mirror the live conversation and show visuals when you ask her to graph or draw something."}
+                    ? `${tutorName} is teaching you about "${lessonPlan.title}". The conversation will appear here. You can also type questions below!`
+                    : `Start talking to ${tutorName}. This panel will mirror the live conversation and show visuals when you ask to graph or draw something.`}
                 </div>
               )}
             </div>

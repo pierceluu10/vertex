@@ -22,6 +22,7 @@ interface DisplayMessage {
 }
 
 export default function SessionPage() {
+  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
   const params = useParams();
   const router = useRouter();
   const sessionId = params.id as string;
@@ -468,7 +469,7 @@ export default function SessionPage() {
               textAlign: "center", lineHeight: 1.5,
             }}>
               <span>Live tutor isn&apos;t configured.</span>
-              <span style={{ marginTop: 8 }}>Add the Simli and LiveKit keys to bring Tina online in this session.</span>
+              <span style={{ marginTop: 8 }}>Add the Simli and LiveKit keys to bring {tutorName} online in this session.</span>
             </div>
           )}
 
@@ -481,7 +482,7 @@ export default function SessionPage() {
                 color: "#fff", background: "rgba(0,0,0,0.5)", padding: "3px 8px",
                 borderRadius: 3,
               }}>
-                {parentName ? `${parentName} x Tina` : "Tina Tutor"}
+                {parentName ? `${parentName} x ${tutorName}` : `${tutorName} Tutor`}
               </div>
             </div>
 

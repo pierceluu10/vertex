@@ -97,6 +97,7 @@ export function LiveKitAvatar({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
 
   useEffect(() => {
     micEnabledRef.current = micEnabled;
@@ -195,9 +196,9 @@ export function LiveKitAvatar({
         setErrorMsg(
           avatarVideoSupportedRef.current
             ? fallback ||
-                "Tina's voice is connected, but Simli has not published a video track to this LiveKit room."
+                `${tutorName}'s voice is connected, but Simli has not published a video track to this LiveKit room.`
             : avatarVideoReasonRef.current ||
-                "Tina's live face needs a public wss:// LiveKit room so Simli can join and publish video."
+                `${tutorName}'s live face needs a public wss:// LiveKit room so Simli can join and publish video.`
         );
         return;
       }
@@ -206,8 +207,8 @@ export function LiveKitAvatar({
         setStatus("connecting");
         setErrorMsg(
           remotePresence.avatar
-            ? "Tina joined the room and is getting her live face ready."
-            : "Tina is joining the room now."
+            ? `${tutorName} joined the room and is getting the live face ready.`
+            : `${tutorName} is joining the room now.`
         );
         return;
       }
@@ -316,7 +317,7 @@ export function LiveKitAvatar({
       }
     } catch (error) {
       console.warn("LiveKit mic toggle failed:", error);
-      setErrorMsg("Microphone access was blocked. Allow mic access to talk with Tina.");
+      setErrorMsg(`Microphone access was blocked. Allow mic access to talk with ${tutorName}.`);
     }
   }, []);
 
@@ -494,7 +495,7 @@ export function LiveKitAvatar({
       remotePresenceRef.current = { agent: false, avatar: false };
       setCameraActive(false);
       setStatus("error");
-      setErrorMsg("Tina disconnected from the call. Refresh to reconnect.");
+      setErrorMsg(`${tutorName} disconnected from the call. Refresh to reconnect.`);
     });
 
     const connect = async () => {
@@ -512,7 +513,7 @@ export function LiveKitAvatar({
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.token || !data.url) {
-          throw new Error(data.error || "Failed to start Tina.");
+          throw new Error(data.error || `Failed to start ${tutorName}.`);
         }
 
         if (cancelled || !mountedRef.current) {
@@ -553,16 +554,16 @@ export function LiveKitAvatar({
           updateRemotePresence(room);
           if (remotePresenceRef.current.agent || remotePresenceRef.current.avatar) {
             setStatus("connecting");
-            setErrorMsg("Tina is in the room and warming up her live feed.");
+            setErrorMsg(`${tutorName} is in the room and warming up the live feed.`);
             return;
           }
 
           setStatus("error");
           setErrorMsg(
             avatarVideoSupportedRef.current
-              ? "Tina could not join this room yet. Refresh once, and if it keeps happening we need to inspect the Simli worker session."
+              ? `${tutorName} could not join this room yet. Refresh once, and if it keeps happening we need to inspect the Simli worker session.`
               : avatarVideoReasonRef.current ||
-                  "Tina's live face needs a public wss:// LiveKit room to show video."
+                  `${tutorName}'s live face needs a public wss:// LiveKit room to show video.`
           );
         }, 12000);
 
@@ -579,7 +580,7 @@ export function LiveKitAvatar({
         if (!mountedRef.current) return;
         setStatus("error");
         setErrorMsg(
-          error instanceof Error ? error.message : "Could not connect to Tina right now."
+          error instanceof Error ? error.message : `Could not connect to ${tutorName} right now.`
         );
       }
     };
@@ -657,10 +658,10 @@ export function LiveKitAvatar({
     status === "ready"
       ? null
       : status === "audio-only"
-      ? "Tina is on voice"
-      : status === "connecting"
-      ? "Connecting Tina..."
-      : "Tina is offline";
+      ? `${tutorName} is on voice`
+    : status === "connecting"
+      ? `Connecting ${tutorName}...`
+      : `${tutorName} is offline`;
 
   const overlayBody =
     status === "ready"
@@ -668,7 +669,7 @@ export function LiveKitAvatar({
       : status === "audio-only"
       ? errorMsg
       : status === "connecting"
-      ? errorMsg || "Joining the LiveKit room and waiting for Tina's video feed."
+      ? errorMsg || `Joining the LiveKit room and waiting for ${tutorName}'s video feed.`
       : errorMsg || "The live tutor could not start right now.";
 
   return (
@@ -784,7 +785,7 @@ export function LiveKitAvatar({
                 : "none",
           }}
         />
-        {status === "ready" ? "Live with Tina" : status === "audio-only" ? "Voice only" : "Connecting"}
+        {status === "ready" ? `Live with ${tutorName}` : status === "audio-only" ? "Voice only" : "Connecting"}
       </div>
 
       <div
@@ -834,7 +835,7 @@ export function LiveKitAvatar({
             </div>
             <div style={{ fontSize: 11, fontWeight: 600 }}>Your camera is off</div>
             <div style={{ fontSize: 10, lineHeight: 1.45, color: "rgba(248,236,220,0.75)" }}>
-              {cameraError || "Turn the camera on if you want Tina to see you like a call."}
+              {cameraError || `Turn the camera on if you want ${tutorName} to see you like a call.`}
             </div>
           </div>
         )}

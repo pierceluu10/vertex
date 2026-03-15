@@ -38,7 +38,8 @@ export default function ParentProfilePage() {
   const [selectedChildId, setSelectedChildId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [tutorReady, setTutorReady] = useState(false);
-  const [tutorName, setTutorName] = useState("Tina");
+  const defaultTutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
+  const [tutorName, setTutorName] = useState(defaultTutorName);
 
   useEffect(() => {
     void (async () => {
@@ -90,10 +91,10 @@ export default function ParentProfilePage() {
       const tutorRes = await fetch(`/api/student/tutor?parentId=${user.id}`);
       const tutorData = await tutorRes.json().catch(() => ({}));
       setTutorReady(Boolean(tutorData.tutor?.liveTutorEnabled));
-      setTutorName(tutorData.tutor?.avatarName || "Tina");
+      setTutorName(tutorData.tutor?.avatarName || defaultTutorName);
     } catch {
       setTutorReady(false);
-      setTutorName("Tina");
+      setTutorName(defaultTutorName);
     }
   }, [supabase]);
 
