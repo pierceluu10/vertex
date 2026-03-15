@@ -26,12 +26,14 @@ function KidSessionContent() {
   const parentId = searchParams.get("parentId");
   const documentId = searchParams.get("documentId");
 
-  const [kidSession, setKidSession] = useState<KidSession | null>(null);
+  const [kidSession] = useState<KidSession | null>(() => readStoredKidSession());
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [tutoringSessionId, setTutoringSessionId] = useState<string | null>(null);
   const [documentContext, setDocumentContext] = useState<string | null>(null);
+  const [parentName, setParentName] = useState<string>("");
+  const [parentAvatarId, setParentAvatarId] = useState<string | undefined>();
   const [adaptiveState, setAdaptiveState] = useState<AdaptiveState>(createInitialAdaptiveState());
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speakText, setSpeakText] = useState<string | null>(null);
@@ -39,7 +41,7 @@ function KidSessionContent() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleIntervention = useCallback((type: string) => {
-    const name = kidSession?.child_name || "friend";
+    const name = kidSession?.child_name?.trim() || "there";
     const message = getInterventionMessage(type, name);
     setMessages((prev) => [...prev, {
       id: `intervention-${Date.now()}`, role: "assistant", content: message, type: "reminder",
@@ -50,15 +52,7 @@ function KidSessionContent() {
 
   const attention = useAttention(tutoringSessionId || "none", handleIntervention, false);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("vertex_kid_session");
-    if (!stored || !kidSessionId) { router.push("/dashboard/kid"); return; }
-    const session = JSON.parse(stored) as KidSession;
-    setKidSession(session);
-    initSession(session);
-  }, []);
-
-  async function initSession(session: KidSession) {
+  const initSession = useCallback(async (session: KidSession) => {
     try {
       const res = await fetch("/api/student/session", {
         method: "POST",
@@ -68,12 +62,20 @@ function KidSessionContent() {
       const data = await res.json();
       if (data.sessionId) setTutoringSessionId(data.sessionId);
       if (data.documentContext) setDocumentContext(data.documentContext);
+      setParentName(data.parentName || "");
+      setParentAvatarId(data.parentAvatarId ?? undefined);
 
-      const greeting = `Hi ${session.child_name || "friend"}! I'm your math tutor. What would you like to work on today?`;
+      const greeting = `Hi ${session.child_name?.trim() || "there"}! I'm your math tutor. What would you like to work on today?`;
       setMessages([{ id: "greeting", role: "assistant", content: greeting, type: "chat" }]);
       setSpeakText(greeting);
     } catch { /* ignore */ }
-  }
+  }, [documentId, parentId]);
+
+  useEffect(() => {
+    if (!kidSessionId || !kidSession) { router.push("/dashboard/kid"); return; }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void initSession(kidSession);
+  }, [initSession, kidSession, kidSessionId, router]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -287,13 +289,33 @@ function KidSessionContent() {
           display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 12px", gap: 12,
           flexShrink: 0,
         }}>
-          <HeyGenAvatar
-            className=""
-            onAvatarReady={() => {}}
-            onAvatarSpeaking={setIsSpeaking}
-            speakQueue={speakText}
-            onSpeakComplete={() => setSpeakText(null)}
-          />
+          <div style={{ width: "100%", height: 240, borderRadius: 16, overflow: "hidden" }}>
+            {parentAvatarId ? (
+              <HeyGenAvatar
+                className="h-full w-full"
+                avatarName={parentAvatarId}
+                onAvatarReady={() => {}}
+                onAvatarSpeaking={setIsSpeaking}
+                speakQueue={speakText}
+                onSpeakComplete={() => setSpeakText(null)}
+              />
+            ) : (
+              <div style={{
+                width: "100%", height: "100%", display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center", padding: 16,
+                background: "rgba(244,239,229,0.9)", color: "#8a7f6e", fontSize: 11,
+                textAlign: "center", lineHeight: 1.5,
+              }}>
+                <span>Tutor avatar isn&apos;t set up.</span>
+                <span style={{ marginTop: 4 }}>Ask your parent to create a video avatar in Parent Profile so sessions use their likeness.</span>
+              </div>
+            )}
+          </div>
+          <div style={{
+            fontSize: 12, fontWeight: 500, color: "#1e1a12", textAlign: "center",
+          }}>
+            {parentName ? `${parentName.split(" ")[0]}'s tutor` : "Parent tutor"}
+          </div>
           {isSpeaking && (
             <div style={{ fontSize: 10, color: "#5c7c6a", letterSpacing: "0.15em", textTransform: "uppercase" }}>
               Speaking...
@@ -313,4 +335,15 @@ export default function KidSessionPage() {
       <KidSessionContent />
     </Suspense>
   );
+}
+
+function readStoredKidSession(): KidSession | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const stored = window.localStorage.getItem("vertex_kid_session");
+    return stored ? JSON.parse(stored) as KidSession : null;
+  } catch {
+    return null;
+  }
 }

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-// Simple in-memory rate limit tracker for the token endpoint
+// Simple in-memory rate limit tracker for the token endpoint (avoids React Strict Mode double-mount + rapid retries)
 let lastTokenRequest = 0;
-const MIN_TOKEN_INTERVAL_MS = 3000; // Minimum 3s between token requests
+const MIN_TOKEN_INTERVAL_MS = 2000; // Minimum 2s between token requests
 
 export async function POST() {
   const apiKey = process.env.HEYGEN_API_KEY;

@@ -27,6 +27,8 @@ export async function POST(request: Request) {
     }
 
     let documentContext = null;
+    let parentName: string | null = null;
+    let parentAvatarId: string | null = null;
     if (documentId) {
       const { data: doc } = await supabase
         .from("uploaded_documents")
@@ -35,6 +37,19 @@ export async function POST(request: Request) {
         .single();
       if (doc?.extracted_text) {
         documentContext = doc.extracted_text.slice(0, 4000);
+      }
+    }
+
+    if (parentId) {
+      const { data: parent } = await supabase
+        .from("parents")
+        .select("name, heygen_avatar_id")
+        .eq("id", parentId)
+        .maybeSingle();
+
+      if (parent) {
+        parentName = parent.name;
+        parentAvatarId = parent.heygen_avatar_id;
       }
     }
 
@@ -56,6 +71,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       sessionId: session.id,
       documentContext,
+      parentName,
+      parentAvatarId,
     });
   } catch (error) {
     console.error("Student session error:", error);

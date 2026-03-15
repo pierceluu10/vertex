@@ -62,7 +62,6 @@ export default function ParentProfilePage() {
   const consentUploadRef = useRef<HTMLInputElement>(null);
 
   const [consentRecordingState, setConsentRecordingState] = useState<"idle" | "previewing" | "recording" | "recorded" | "uploading">("idle");
-  const [useDefaultAvatar, setUseDefaultAvatar] = useState(false);
   const [consentBlob, setConsentBlob] = useState<Blob | null>(null);
   const [consentRecordingTime, setConsentRecordingTime] = useState(0);
   const consentPreviewRef = useRef<HTMLVideoElement>(null);
@@ -554,16 +553,6 @@ export default function ParentProfilePage() {
   }
 
   useEffect(() => {
-    if (useDefaultAvatar && (streamRef.current || consentStreamRef.current)) {
-      stopCamera();
-      stopConsentCamera();
-    }
-    if (useDefaultAvatar) {
-      stopPhotoCamera();
-    }
-  }, [useDefaultAvatar]);
-
-  useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
@@ -692,49 +681,6 @@ export default function ParentProfilePage() {
             </div>
           </div>
 
-          {!parent?.heygen_avatar_id && !parent?.heygen_talking_photo_id && !useDefaultAvatar && (
-            <div style={{
-              padding: "12px 16px", marginBottom: 16, borderRadius: 4,
-              background: "rgba(90,158,118,0.08)", border: "1px solid rgba(90,158,118,0.2)",
-            }}>
-              <p style={{ fontSize: 12, color: "#1e1a12", lineHeight: 1.5 }}>
-                Upload a photo to create a tutor that looks like you, or use our default tutor.
-              </p>
-              <button
-                type="button"
-                onClick={() => setUseDefaultAvatar(true)}
-                style={{
-                  marginTop: 8, fontSize: 11, color: "#5a9e76", background: "none",
-                  border: "none", cursor: "pointer", textDecoration: "underline",
-                  padding: 0,
-                }}
-              >
-                Use default avatar →
-              </button>
-            </div>
-          )}
-
-          {(parent?.heygen_avatar_id || useDefaultAvatar) && recordingState === "idle" && !parent?.heygen_avatar_id && (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8, padding: "12px 16px",
-              background: "rgba(90,158,118,0.08)", borderRadius: 4, marginBottom: 16,
-              border: "1px solid rgba(90,158,118,0.15)",
-            }}>
-              <CheckCircle size={16} style={{ color: "#5a9e76" }} />
-              <span style={{ fontSize: 13, color: "#5a9e76" }}>Using default tutor avatar. Sessions are ready.</span>
-              <button
-                type="button"
-                onClick={() => setUseDefaultAvatar(false)}
-                style={{
-                  marginLeft: "auto", fontSize: 10, color: "#8a7f6e", background: "none",
-                  border: "none", cursor: "pointer", textDecoration: "underline",
-                }}
-              >
-                Try custom avatar
-              </button>
-            </div>
-          )}
-
           {parent?.heygen_avatar_id && recordingState === "idle" && (
             <div style={{
               display: "flex", alignItems: "center", gap: 8, padding: "12px 16px",
@@ -753,7 +699,7 @@ export default function ParentProfilePage() {
               border: "1px solid rgba(92,124,106,0.18)",
             }}>
               <CheckCircle size={16} style={{ color: "#5a9e76" }} />
-              <span style={{ fontSize: 13, color: "#5a9e76" }}>Photo avatar created. It may take a few minutes to process. Sessions will use your likeness.</span>
+              <span style={{ fontSize: 13, color: "#5a9e76" }}>Photo avatar created. Live tutoring sessions need your video avatar (record training + consent above)—photo avatars are not used in live sessions.</span>
             </div>
           )}
 
@@ -767,7 +713,7 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {(parent?.avatar_url || recordingState === "done") && !parent?.heygen_avatar_id && !useDefaultAvatar && (consentRecordingState === "previewing" || consentRecordingState === "recording") && (
+          {(parent?.avatar_url || recordingState === "done") && !parent?.heygen_avatar_id && (consentRecordingState === "previewing" || consentRecordingState === "recording") && (
             <div style={{ marginBottom: 16 }}>
               <div style={{
                 position: "relative", borderRadius: 6, overflow: "hidden",
@@ -835,7 +781,7 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {(parent?.avatar_url || recordingState === "done") && !parent?.heygen_avatar_id && !useDefaultAvatar && consentRecordingState === "recorded" && (
+          {(parent?.avatar_url || recordingState === "done") && !parent?.heygen_avatar_id && consentRecordingState === "recorded" && (
             <div style={{ marginBottom: 16 }}>
               <div style={{
                 borderRadius: 6, overflow: "hidden", background: "#000",
@@ -870,7 +816,7 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {(parent?.avatar_url || recordingState === "done") && !parent?.heygen_avatar_id && !useDefaultAvatar && consentRecordingState === "uploading" && (
+          {(parent?.avatar_url || recordingState === "done") && !parent?.heygen_avatar_id && consentRecordingState === "uploading" && (
             <div style={{ textAlign: "center", padding: "24px 0", marginBottom: 16 }}>
               <Loader2 size={28} style={{ color: "#c8416a", animation: "spin 1s linear infinite", margin: "0 auto 12px", display: "block" }} />
               <p style={{ fontSize: 13, color: "#8a7f6e" }}>Creating your avatar...</p>
@@ -888,7 +834,7 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {recordingState === "idle" && !useDefaultAvatar && !parent?.heygen_talking_photo_id && cameraMode === "off" && (
+          {recordingState === "idle" && !parent?.heygen_talking_photo_id && cameraMode === "off" && (
             <div style={{ textAlign: "center", padding: "32px 0" }}>
               <p style={{ fontSize: 13, color: "#8a7f6e", marginBottom: 8, maxWidth: 420, margin: "0 auto 8px" }}>
                 Create a tutor that looks like you: upload or take a photo.
@@ -930,7 +876,7 @@ export default function ParentProfilePage() {
           )}
 
           {/* Camera preview */}
-          {recordingState === "idle" && !useDefaultAvatar && cameraMode === "preview" && (
+          {recordingState === "idle" && cameraMode === "preview" && (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
               <div style={{
                 position: "relative", borderRadius: 6, overflow: "hidden",
@@ -974,7 +920,7 @@ export default function ParentProfilePage() {
           )}
 
           {/* Captured photo review */}
-          {recordingState === "idle" && !useDefaultAvatar && cameraMode === "captured" && capturedPhoto && (
+          {recordingState === "idle" && cameraMode === "captured" && capturedPhoto && (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
               <div style={{
                 borderRadius: 6, overflow: "hidden", marginBottom: 16,
@@ -1030,7 +976,7 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {(recordingState === "previewing" || recordingState === "recording") && !useDefaultAvatar && (
+          {(recordingState === "previewing" || recordingState === "recording") && (
             <div>
               <div style={{
                 position: "relative", borderRadius: 6, overflow: "hidden",
@@ -1095,7 +1041,7 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {recordingState === "recorded" && !useDefaultAvatar && (
+          {recordingState === "recorded" && (
             <div>
               <div style={{
                 borderRadius: 6, overflow: "hidden", background: "#000",
@@ -1130,7 +1076,7 @@ export default function ParentProfilePage() {
             </div>
           )}
 
-          {recordingState === "uploading" && !useDefaultAvatar && (
+          {recordingState === "uploading" && (
             <div style={{ textAlign: "center", padding: "32px 0" }}>
               <Loader2 size={28} style={{ color: "#c8416a", animation: "spin 1s linear infinite", margin: "0 auto 12px", display: "block" }} />
               <p style={{ fontSize: 13, color: "#8a7f6e" }}>Uploading and processing your video...</p>

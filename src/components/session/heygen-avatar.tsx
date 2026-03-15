@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 
 interface HeyGenAvatarProps {
   avatarName?: string;
+  enableVoiceChat?: boolean;
   onAvatarReady?: () => void;
   onAvatarSpeaking?: (speaking: boolean) => void;
   onUserMessage?: (transcript: string) => void;
@@ -21,7 +22,8 @@ const MAX_RETRIES = 3;
 const BASE_RETRY_DELAY = 5000; // 5 seconds base for exponential backoff
 
 export function HeyGenAvatar({
-  avatarName = "default",
+  avatarName,
+  enableVoiceChat = true,
   onAvatarReady,
   onAvatarSpeaking,
   onUserMessage,
@@ -42,9 +44,16 @@ export function HeyGenAvatar({
 
   const initAvatar = useCallback(async () => {
     if (initializingRef.current || avatarRef.current || !mountedRef.current) return;
+    if (!avatarName) {
+      setErrorMsg("No avatar configured. Create a video avatar in Parent Profile.");
+      setStatus("error");
+      return;
+    }
     initializingRef.current = true;
     setStatus("loading");
     setErrorMsg(null);
+
+    const effectiveAvatarName = avatarName;
 
     try {
       const tokenRes = await fetch("/api/heygen/token", { method: "POST" });
@@ -53,7 +62,8 @@ export function HeyGenAvatar({
       if (!mountedRef.current) return;
 
       if (!tokenData.token) {
-        throw new Error(tokenData.error || "Failed to get HeyGen token");
+        const errMessage = tokenData.error || "Failed to get HeyGen token";
+        throw new Error(errMessage);
       }
 
       const mod = await import("@heygen/streaming-avatar");
@@ -109,11 +119,9 @@ export function HeyGenAvatar({
         }
       });
 
-      // Only use avatarName if it's a known streaming avatar ID.
-      // Photo avatar (talking photo) IDs are NOT compatible with the streaming API.
-      // Pass "default" to use HeyGen's default streaming avatar.
+      // Use parent's streaming avatar ID. Photo avatar IDs are NOT compatible with the streaming API.
       await avatar.createStartAvatar({
-        avatarName,
+        avatarName: effectiveAvatarName,
         quality: AvatarQuality.Medium,
         language: "en",
         voice: {
@@ -125,24 +133,38 @@ export function HeyGenAvatar({
           "You are a warm, encouraging parent tutor helping a child with math. Be patient, kind, and supportive.",
       });
 
-      try {
-        await avatar.startVoiceChat({});
-      } catch {
-        // Voice chat may not be available on all plans
+      if (enableVoiceChat) {
+        try {
+          await avatar.startVoiceChat({});
+        } catch {
+          // Voice chat may not be available on all plans
+        }
       }
     } catch (err) {
-      console.error("HeyGen init error:", err);
       if (!mountedRef.current) return;
 
-      const msg = err instanceof Error ? err.message : "Failed to start avatar";
-      const is429 = msg.includes("429");
+      const errObj = err as Error & { status?: number; code?: number };
+      const msg = errObj?.message ? String(errObj.message) : "Failed to start avatar";
+      const isRateLimit = msg.includes("429") || msg.includes("Too many requests");
+      const is404 =
+        errObj?.status === 404 ||
+        errObj?.code === 404 ||
+        msg.includes("404") ||
+        msg.includes("Not Found");
 
-      if (is429 && retriesRef.current < MAX_RETRIES) {
+      // Log 404 as warn so Next.js dev overlay doesn't show; log other errors
+      if (is404) {
+        console.warn("HeyGen avatar not found (404). Create a new video avatar in Parent Profile.", err);
+      } else {
+        console.error("HeyGen init error:", err);
+      }
+
+      if (isRateLimit && retriesRef.current < MAX_RETRIES) {
         // Exponential backoff: 5s, 10s, 20s
         const delay = BASE_RETRY_DELAY * Math.pow(2, retriesRef.current);
         retriesRef.current++;
         console.log(`HeyGen rate limited. Retry ${retriesRef.current}/${MAX_RETRIES} in ${delay / 1000}s`);
-        setErrorMsg(`Rate limited. Retrying in ${Math.round(delay / 1000)}s... (${retriesRef.current}/${MAX_RETRIES})`);
+        setErrorMsg(`Too many requests. Retrying in ${Math.round(delay / 1000)}s... (${retriesRef.current}/${MAX_RETRIES})`);
         setStatus("loading");
         initializingRef.current = false;
         // Clean up partial state before retry
@@ -156,16 +178,18 @@ export function HeyGenAvatar({
       }
 
       setErrorMsg(
-        is429
+        isRateLimit
           ? `Rate limit reached after ${MAX_RETRIES} retries. Wait a minute, then click Retry.`
           : msg.includes("401")
           ? "Authentication failed. Check your HeyGen API key."
+          : is404
+          ? "Avatar not found. Create a new video avatar in Parent Profile (training + consent videos)."
           : msg
       );
       setStatus("error");
       initializingRef.current = false;
     }
-  }, [avatarName, onAvatarReady, onAvatarSpeaking, onUserMessage, onUserSpeaking, onAvatarMessage, onSpeakComplete]);
+  }, [avatarName, enableVoiceChat, onAvatarReady, onAvatarSpeaking, onUserMessage, onUserSpeaking, onAvatarMessage, onSpeakComplete]);
 
   // Lazy init: only start when component mounts, clean up on unmount
   useEffect(() => {

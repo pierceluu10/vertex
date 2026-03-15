@@ -105,11 +105,11 @@ export default function SessionPage() {
       if (user) {
         const { data: parent } = await supabase
           .from("parents")
-          .select("full_name, heygen_avatar_id, heygen_talking_photo_id")
+          .select("name, heygen_avatar_id, heygen_talking_photo_id")
           .eq("id", user.id)
           .single();
         if (parent) {
-          setParentName(parent.full_name);
+          setParentName(parent.name);
           // Only use heygen_avatar_id (streaming avatar) for live sessions.
           // heygen_talking_photo_id is NOT compatible with the streaming API —
           // it only works for pre-rendered video generation (Studio API).
@@ -487,16 +487,28 @@ export default function SessionPage() {
         }}>
           {/* Parent avatar (main feed) */}
           <div style={{ position: "relative", flex: 1 }}>
-          <HeyGenAvatar
-            className=""
-            avatarName={parentAvatarId ?? "default"}
-            onAvatarReady={() => {}}
-            onAvatarSpeaking={setIsSpeaking}
-            onUserMessage={handleUserVoiceMessage}
-            onUserSpeaking={handleUserSpeaking}
-            speakQueue={speakText}
-            onSpeakComplete={() => setSpeakText(null)}
-          />
+          {parentAvatarId ? (
+            <HeyGenAvatar
+              className=""
+              avatarName={parentAvatarId}
+              onAvatarReady={() => {}}
+              onAvatarSpeaking={setIsSpeaking}
+              onUserMessage={handleUserVoiceMessage}
+              onUserSpeaking={handleUserSpeaking}
+              speakQueue={speakText}
+              onSpeakComplete={() => setSpeakText(null)}
+            />
+          ) : (
+            <div style={{
+              width: "100%", height: "100%", display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", padding: 24,
+              background: "rgba(248,243,232,0.9)", color: "#8a7f6e", fontSize: 12,
+              textAlign: "center", lineHeight: 1.5,
+            }}>
+              <span>Tutor avatar isn&apos;t set up.</span>
+              <span style={{ marginTop: 8 }}>Create a video avatar in Parent Profile (training + consent videos) so this session can use your likeness.</span>
+            </div>
+          )}
 
             <div style={{
               position: "absolute", bottom: 8, left: 8, right: 8,

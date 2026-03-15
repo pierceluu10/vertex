@@ -1,42 +1,71 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState, Component, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Home, BookOpen, Sparkles, MessageCircle, Upload, Flame, Star, FileText, Play, ChevronRight } from "lucide-react";
 import type { KidSession, UploadedDocument, Quiz } from "@/types";
+import { HeyGenAvatar } from "@/components/session/heygen-avatar";
 import "@/styles/vertex.css";
 
+/** Catches SDK/404 errors from HeyGen so the dashboard doesn't crash; shows placeholder instead. */
+class AvatarErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 type Tab = "home" | "homework" | "quiz" | "tutor";
+type TutorPreview = {
+  name: string;
+  heygenAvatarId: string | null;
+};
 
 export default function KidDashboardPage() {
   const router = useRouter();
-  const [kidSession, setKidSession] = useState<KidSession | null>(null);
+  const [kidSession, setKidSession] = useState<KidSession | null>(() => readStoredKidSession());
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [tutor, setTutor] = useState<TutorPreview | null>(null);
   const [uploading, setUploading] = useState(false);
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizData, setQuizData] = useState<{ questions: Quiz["questions"]; current: number; answers: { answer: string; correct: boolean }[]; done: boolean } | null>(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("vertex_kid_session");
-    if (!stored) {
-      router.push("/student");
-      return;
-    }
-    const session = JSON.parse(stored) as KidSession;
-    setKidSession(session);
-
-    // Load homework documents for this kid
-    loadDocuments(session.parent_id);
-  }, [router]);
-
-  async function loadDocuments(parentId: string) {
+  const loadDocuments = useCallback(async (parentId: string) => {
     try {
       const res = await fetch(`/api/student/homework?parentId=${parentId}`);
       const data = await res.json();
       if (data.documents) setDocuments(data.documents);
     } catch { /* ignore */ }
-  }
+  }, []);
+
+  const loadTutor = useCallback(async (parentId: string) => {
+    try {
+      const res = await fetch(`/api/student/tutor?parentId=${parentId}`);
+      const data = await res.json();
+      if (data.tutor) setTutor(data.tutor);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (!kidSession) {
+      router.push("/student");
+      return;
+    }
+
+    // Load homework documents for this kid
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadDocuments(kidSession.parent_id);
+    void loadTutor(kidSession.parent_id);
+  }, [kidSession, loadDocuments, loadTutor, router]);
 
   async function handleHomeworkUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files?.[0] || !kidSession) return;
@@ -126,8 +155,10 @@ export default function KidDashboardPage() {
   }
 
   const greeting = getGreeting();
+  const childName = kidSession.child_name?.trim() || "there";
   const streak = kidSession.streak_count || 0;
   const xp = kidSession.xp_points || 0;
+  const showTutorPreview = activeTab === "home" || activeTab === "tutor";
 
   const bottomNav: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "home", label: "Home", icon: <Home size={20} /> },
@@ -167,13 +198,20 @@ export default function KidDashboardPage() {
 
       {/* Main content */}
       <main style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px", maxWidth: 600, margin: "0 auto", width: "100%", paddingBottom: 80 }}>
+        {showTutorPreview && (
+          <TutorPreviewCard
+            childName={childName}
+            tutorName={tutor?.name || null}
+            avatarName={tutor?.heygenAvatarId || null}
+          />
+        )}
 
         {/* HOME TAB */}
         {activeTab === "home" && (
           <>
             <div style={{ textAlign: "center", padding: "32px 0 40px" }}>
               <h1 style={{ fontSize: 28, fontWeight: 400, marginBottom: 8 }}>
-                {greeting}, {kidSession.child_name || "friend"}! 👋
+                {greeting}, {childName}! 👋
               </h1>
               <p style={{ fontSize: 14, color: "#8a7f6e" }}>
                 Ready to learn something awesome today?
@@ -292,7 +330,9 @@ export default function KidDashboardPage() {
           <>
             {!quizData ? (
               <div style={{ textAlign: "center", padding: "48px 0" }}>
-                <Sparkles size={48} style={{ color: "#c8416a", marginBottom: 16 }} />
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+                  <Sparkles size={48} style={{ color: "#c8416a", display: "block" }} />
+                </div>
                 <h2 style={{ fontSize: 24, fontWeight: 400, marginBottom: 8 }}>Ready for a quiz?</h2>
                 <p style={{ fontSize: 14, color: "#8a7f6e", marginBottom: 24 }}>
                   Test what you know and earn XP!
@@ -376,7 +416,6 @@ export default function KidDashboardPage() {
         {/* ASK TUTOR TAB */}
         {activeTab === "tutor" && (
           <div style={{ textAlign: "center", padding: "48px 0" }}>
-            <MessageCircle size={48} style={{ color: "#c8416a", marginBottom: 16 }} />
             <h2 style={{ fontSize: 24, fontWeight: 400, marginBottom: 8 }}>Ask Your Tutor</h2>
             <p style={{ fontSize: 14, color: "#8a7f6e", marginBottom: 24 }}>
               Start a chat session with your AI tutor
@@ -462,9 +501,106 @@ function QuizOpenInput({ onSubmit }: { onSubmit: (answer: string) => void }) {
   );
 }
 
+function TutorPreviewCard({
+  childName,
+  tutorName,
+  avatarName,
+}: {
+  childName: string;
+  tutorName: string | null;
+  avatarName: string | null;
+}) {
+  const tutorFirstName = tutorName?.trim().split(" ")[0] || "Your tutor";
+
+  return (
+    <div style={{
+      marginBottom: 24,
+      padding: 20,
+      background: "rgba(255,255,255,0.72)",
+      border: "1px solid rgba(158,107,117,0.14)",
+      borderRadius: 18,
+      textAlign: "center",
+      boxShadow: "0 20px 48px rgba(158,107,117,0.08)",
+    }}>
+      <div style={{
+        width: "100%",
+        maxWidth: 240,
+        height: 280,
+        margin: "0 auto 16px",
+        borderRadius: 16,
+        overflow: "hidden",
+        background: "#fff",
+        border: "1px solid rgba(158,107,117,0.12)",
+      }}>
+        {avatarName ? (
+          <AvatarErrorBoundary
+            fallback={
+              <div style={{
+                width: "100%", height: "100%", display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center", padding: 20,
+                background: "rgba(254,247,238,0.8)", color: "#8a7f6e", fontSize: 12,
+                textAlign: "center", lineHeight: 1.5,
+              }}>
+                <span>Avatar unavailable. Ask your parent to create a new video avatar in Parent Profile.</span>
+              </div>
+            }
+          >
+            <HeyGenAvatar
+              className="h-full w-full"
+              avatarName={avatarName}
+              enableVoiceChat={false}
+              onAvatarReady={() => {}}
+            />
+          </AvatarErrorBoundary>
+        ) : (
+          <div style={{
+            width: "100%", height: "100%", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", padding: 20,
+            background: "rgba(254,247,238,0.8)", color: "#8a7f6e", fontSize: 12,
+            textAlign: "center", lineHeight: 1.5,
+          }}>
+            <span>Tutor avatar will appear here once your parent creates a video avatar in Parent Profile.</span>
+          </div>
+        )}
+      </div>
+      <div style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "8px 12px",
+        borderRadius: 999,
+        background: "rgba(200,65,106,0.08)",
+        color: "#c8416a",
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        marginBottom: 10,
+      }}>
+        <MessageCircle size={14} />
+        Live Tutor
+      </div>
+      <p style={{ fontSize: 15, lineHeight: 1.6, color: "#3d3126", margin: 0 }}>
+        {tutorFirstName} is ready to help you, {childName}.
+      </p>
+    </div>
+  );
+}
+
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";
+}
+
+function readStoredKidSession(): KidSession | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const stored = window.localStorage.getItem("vertex_kid_session");
+    return stored ? JSON.parse(stored) as KidSession : null;
+  } catch {
+    return null;
+  }
 }
