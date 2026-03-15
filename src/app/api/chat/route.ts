@@ -18,13 +18,15 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
-    // Store user message
-    await supabase.from("messages").insert({
-      session_id: sessionId,
-      role: "user",
-      content: message,
-      message_type: messageType || "chat",
-    });
+    // Store user message (skip if no session, e.g. lesson page chat)
+    if (sessionId) {
+      await supabase.from("messages").insert({
+        session_id: sessionId,
+        role: "user",
+        content: message,
+        message_type: messageType || "chat",
+      });
+    }
 
     const systemPrompt = buildTutorSystemPrompt({
       childName,
@@ -54,13 +56,15 @@ export async function POST(request: Request) {
     const responseContent =
       completion.choices[0]?.message?.content || "I'm not sure how to help with that. Can you try asking differently?";
 
-    // Store assistant message
-    await supabase.from("messages").insert({
-      session_id: sessionId,
-      role: "assistant",
-      content: responseContent,
-      message_type: messageType || "chat",
-    });
+    // Store assistant message (skip if no session)
+    if (sessionId) {
+      await supabase.from("messages").insert({
+        session_id: sessionId,
+        role: "assistant",
+        content: responseContent,
+        message_type: messageType || "chat",
+      });
+    }
 
     // Check if response contains quiz answer validation
     const isQuizResponse = responseContent.includes("[QUIZ]");

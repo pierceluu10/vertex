@@ -180,8 +180,14 @@ export default function KidDashboardPage() {
       kidSessionId: kidSession.id,
       parentId: kidSession.parent_id,
     });
-    if (documentId) params.set("documentId", documentId);
-    router.push(`/session/kid?${params.toString()}`);
+    if (documentId) {
+      // Go to structured lesson page for homework documents
+      params.set("documentId", documentId);
+      router.push(`/lesson?${params.toString()}`);
+    } else {
+      // Go to free-form chat session
+      router.push(`/session/kid?${params.toString()}`);
+    }
   }
 
   if (!kidSession) {
