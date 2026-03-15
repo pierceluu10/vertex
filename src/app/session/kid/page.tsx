@@ -565,7 +565,6 @@ function KidSessionContent() {
           )}
           <MediaToggleButton
             active={micEnabled}
-            disabled={!liveTutorEnabled}
             activeLabel="Mic On"
             inactiveLabel="Mic Off"
             activeIcon={<Mic size={14} />}
@@ -574,7 +573,6 @@ function KidSessionContent() {
           />
           <MediaToggleButton
             active={cameraEnabled}
-            disabled={!liveTutorEnabled}
             activeLabel="Camera On"
             inactiveLabel="Camera Off"
             activeIcon={<Video size={14} />}

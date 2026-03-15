@@ -98,7 +98,9 @@ export default function DevAttentionMonitorPage() {
 
   const handleMeshSignals = useCallback((s: FaceMeshSignals) => {
     // #region agent log
-    fetch('http://127.0.0.1:7886/ingest/2f30cf97-2589-4660-89b3-3083075b669c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8f585b'},body:JSON.stringify({sessionId:'8f585b',hypothesisId:'H4',location:'attention-monitor:handleMeshSignals',message:'mesh signals received',data:{gaze:s.gazeScore,headPose:s.headPoseScore,blink:s.blinkHealthScore},timestamp:Date.now()})}).catch(()=>{});
+    const payload = { sessionId: '8f585b', hypothesisId: 'H4', location: 'attention-monitor:handleMeshSignals', message: 'mesh signals received', data: { gaze: s.gazeScore, headPose: s.headPoseScore, blink: s.blinkHealthScore }, timestamp: Date.now() };
+    fetch('http://127.0.0.1:7886/ingest/2f30cf97-2589-4660-89b3-3083075b669c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8f585b'},body:JSON.stringify(payload)}).catch(()=>{});
+    if (typeof window !== 'undefined') console.debug('[debug H4]', payload);
     // #endregion
     meshSignalsRef.current = s;
     setCalibration((prev) => {
@@ -158,14 +160,19 @@ export default function DevAttentionMonitorPage() {
 
       scoreTickCountRef.current += 1;
       // #region agent log
-      fetch('http://127.0.0.1:7886/ingest/2f30cf97-2589-4660-89b3-3083075b669c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8f585b'},body:JSON.stringify({sessionId:'8f585b',hypothesisId:'H1',location:'attention-monitor:scoreTick',message:'5s score tick',data:{tick:scoreTickCountRef.current,raw,smoothed,mult,calCompleted:cal.completed},timestamp:Date.now()})}).catch(()=>{});
-      fetch('http://127.0.0.1:7886/ingest/2f30cf97-2589-4660-89b3-3083075b669c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8f585b'},body:JSON.stringify({sessionId:'8f585b',hypothesisId:'H2',location:'attention-monitor:scoreTick',message:'calibration ref in tick',data:{mult,calCompleted:cal.completed,sampleCount:cal.samples.length},timestamp:Date.now()})}).catch(()=>{});
+      const h1 = { sessionId: '8f585b', hypothesisId: 'H1', location: 'attention-monitor:scoreTick', message: '5s score tick', data: { tick: scoreTickCountRef.current, raw, smoothed, mult, calCompleted: cal.completed }, timestamp: Date.now() };
+      const h2 = { sessionId: '8f585b', hypothesisId: 'H2', location: 'attention-monitor:scoreTick', message: 'calibration ref in tick', data: { mult, calCompleted: cal.completed, sampleCount: cal.samples.length }, timestamp: Date.now() };
+      fetch('http://127.0.0.1:7886/ingest/2f30cf97-2589-4660-89b3-3083075b669c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8f585b'},body:JSON.stringify(h1)}).catch(()=>{});
+      fetch('http://127.0.0.1:7886/ingest/2f30cf97-2589-4660-89b3-3083075b669c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8f585b'},body:JSON.stringify(h2)}).catch(()=>{});
+      if (typeof window !== 'undefined') { console.debug('[debug H1]', h1); console.debug('[debug H2]', h2); }
       // #endregion
 
       setRawScore(raw);
       setSmoothedScore(smoothed);
       // #region agent log
-      fetch('http://127.0.0.1:7886/ingest/2f30cf97-2589-4660-89b3-3083075b669c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8f585b'},body:JSON.stringify({sessionId:'8f585b',hypothesisId:'H5',location:'attention-monitor:timeline',message:'timeline append',data:{appendedScore:smoothed},timestamp:Date.now()})}).catch(()=>{});
+      const h5 = { sessionId: '8f585b', hypothesisId: 'H5', location: 'attention-monitor:timeline', message: 'timeline append', data: { appendedScore: smoothed }, timestamp: Date.now() };
+      fetch('http://127.0.0.1:7886/ingest/2f30cf97-2589-4660-89b3-3083075b669c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8f585b'},body:JSON.stringify(h5)}).catch(()=>{});
+      if (typeof window !== 'undefined') console.debug('[debug H5]', h5);
       // #endregion
       setTimeline((prev) => [...prev.slice(-60), { timestamp: now, score: smoothed }]);
     }, SCORE_TICK_MS);
@@ -178,7 +185,9 @@ export default function DevAttentionMonitorPage() {
       const decision = computePolicyDecision(smoothedScore, 100);
       policyTickCountRef.current += 1;
       // #region agent log
-      fetch('http://127.0.0.1:7886/ingest/2f30cf97-2589-4660-89b3-3083075b669c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8f585b'},body:JSON.stringify({sessionId:'8f585b',hypothesisId:'H3',location:'attention-monitor:policyTick',message:'30s policy tick',data:{tick:policyTickCountRef.current,smoothedScore,mode:decision.mode},timestamp:Date.now()})}).catch(()=>{});
+      const h3 = { sessionId: '8f585b', hypothesisId: 'H3', location: 'attention-monitor:policyTick', message: '30s policy tick', data: { tick: policyTickCountRef.current, smoothedScore, mode: decision.mode }, timestamp: Date.now() };
+      fetch('http://127.0.0.1:7886/ingest/2f30cf97-2589-4660-89b3-3083075b669c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8f585b'},body:JSON.stringify(h3)}).catch(()=>{});
+      if (typeof window !== 'undefined') console.debug('[debug H3]', h3);
       // #endregion
       setPolicyLog((prev) => [...prev.slice(-9), decision]);
     }, POLICY_TICK_MS);
