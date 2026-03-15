@@ -48,13 +48,21 @@ export default function SignUpPage() {
   function handleStep1(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!name.trim()) {
+      setError("Please enter your full name.");
+      return;
+    }
     setStep(2);
   }
 
   async function handleStep2Submit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+    if (!childName.trim()) {
+      setError("Please enter your child's full name.");
+      return;
+    }
+    setLoading(true);
 
     const supabase = createClient();
 
@@ -83,8 +91,8 @@ export default function SignUpPage() {
     const { error: profileError } = await supabase.from("parents").insert({
       id: data.user.id,
       email,
-      full_name: name,
-      child_name: childName || null,
+      name: name.trim(),
+      child_name: childName.trim() || null,
       grade_level: gradeLevel || null,
       math_topics: mathTopics,
       learning_pace: learningPace,
@@ -128,8 +136,8 @@ export default function SignUpPage() {
             <div className="vtx-auth-form">
               <form onSubmit={handleStep1}>
                 <div className="vtx-field">
-                  <label htmlFor="name">Your Name</label>
-                  <input id="name" type="text" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <label htmlFor="name">Your full name <span style={{ color: "#c8416a" }}>*</span></label>
+                  <input id="name" type="text" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} required minLength={1} />
                 </div>
                 <div className="vtx-field">
                   <label htmlFor="email">Email</label>
@@ -153,8 +161,8 @@ export default function SignUpPage() {
             <div className="vtx-auth-form">
               <form onSubmit={handleStep2Submit}>
                 <div className="vtx-field">
-                  <label htmlFor="childName">Child&apos;s Name</label>
-                  <input id="childName" type="text" placeholder="Your child's name" value={childName} onChange={(e) => setChildName(e.target.value)} />
+                  <label htmlFor="childName">Child&apos;s full name <span style={{ color: "#c8416a" }}>*</span></label>
+                  <input id="childName" type="text" placeholder="Your child's name" value={childName} onChange={(e) => setChildName(e.target.value)} required minLength={1} />
                 </div>
                 <div className="vtx-field">
                   <label htmlFor="grade">Grade Level</label>

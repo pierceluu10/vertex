@@ -29,6 +29,31 @@ export default function ParentDashboardPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [showCodeForm, setShowCodeForm] = useState(false);
+  const [codeForm, setCodeForm] = useState({
+    childName: "",
+    childAge: "",
+    gradeLevel: "",
+    mathTopics: [] as string[],
+    learningPace: "medium" as "slow" | "medium" | "fast",
+  });
+  const [settingsAccountEditing, setSettingsAccountEditing] = useState(false);
+  const [settingsAccountForm, setSettingsAccountForm] = useState({ name: "", childName: "", gradeLevel: "" });
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsLearningTopics, setSettingsLearningTopics] = useState<string[]>([]);
+  const [settingsLearningPace, setSettingsLearningPace] = useState<"slow" | "medium" | "fast">("medium");
+
+  const topicOptions = [
+    "Addition", "Subtraction", "Multiplication", "Division",
+    "Fractions", "Decimals", "Geometry", "Algebra",
+    "Word Problems", "Measurement", "Time", "Money",
+  ];
+  function toggleCodeFormTopic(topic: string) {
+    setCodeForm((prev) => ({
+      ...prev,
+      mathTopics: prev.mathTopics.includes(topic) ? prev.mathTopics.filter((t) => t !== topic) : [...prev.mathTopics, topic],
+    }));
+  }
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -67,17 +92,109 @@ export default function ParentDashboardPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  async function generateNewCode() {
-    setGeneratingCode(true);
+  useEffect(() => {
+    if (activeTab === "settings" && parent) {
+      setSettingsLearningTopics(parent.math_topics || []);
+      setSettingsLearningPace(parent.learning_pace || "medium");
+    }
+  }, [activeTab, parent]);
+
+  async function updateParentProfile(payload: Record<string, unknown>) {
+    setSettingsSaving(true);
+    try {
+      const res = await fetch("/api/parent", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data) {
+        setParent(data);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
+  function startEditAccount() {
+    if (parent) {
+      setSettingsAccountForm({
+        name: parent.name || "",
+        childName: parent.child_name || "",
+        gradeLevel: parent.grade_level || "",
+      });
+      setSettingsAccountEditing(true);
+    }
+  }
+
+  async function saveAccountSettings(e: React.FormEvent) {
+    e.preventDefault();
+    const ok = await updateParentProfile({
+      name: settingsAccountForm.name.trim(),
+      child_name: settingsAccountForm.childName.trim() || null,
+      grade_level: settingsAccountForm.gradeLevel.trim() || null,
+    });
+    if (ok) setSettingsAccountEditing(false);
+  }
+
+  function toggleSettingsTopic(topic: string) {
+    setSettingsLearningTopics((prev) =>
+      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
+    );
+  }
+
+  async function saveLearningSettings() {
+    await updateParentProfile({
+      math_topics: settingsLearningTopics,
+      learning_pace: settingsLearningPace,
+    });
+  }
+
+  async function toggleNotificationRealtime() {
+    await updateParentProfile({ notification_realtime: !parent?.notification_realtime });
+  }
+
+  async function toggleNotificationDaily() {
+    await updateParentProfile({ notification_daily: !parent?.notification_daily });
+  }
+
+  async function submitCodeForm(e: React.FormEvent) {
+    e.preventDefault();
     setCodeError(null);
+    const age = parseInt(codeForm.childAge, 10);
+    if (!codeForm.childName.trim()) {
+      setCodeError("Child's name is required.");
+      return;
+    }
+    if (!codeForm.childAge || isNaN(age) || age < 3 || age > 18) {
+      setCodeError("Child's age is required and must be between 3 and 18.");
+      return;
+    }
+    if (!codeForm.gradeLevel.trim()) {
+      setCodeError("Grade level is required.");
+      return;
+    }
+    setGeneratingCode(true);
     try {
       const res = await fetch("/api/access-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ childName: parent?.child_name }),
+        body: JSON.stringify({
+          childName: codeForm.childName.trim(),
+          childAge: age,
+          gradeLevel: codeForm.gradeLevel.trim(),
+          mathTopics: codeForm.mathTopics,
+          learningPace: codeForm.learningPace,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
+        setShowCodeForm(false);
+        setCodeForm({ childName: "", childAge: "", gradeLevel: "", mathTopics: [], learningPace: "medium" });
         await loadData();
       } else {
         setCodeError(data.error || "Failed to create access code");
@@ -219,20 +336,74 @@ export default function ParentDashboardPage() {
                   <Users size={18} style={{ color: "#c8416a" }} />
                   <h2 style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>Access Codes</h2>
                 </div>
-                <button onClick={generateNewCode} disabled={generatingCode} style={s.btn}>
-                  <Plus size={14} /> {generatingCode ? "Generating..." : "New Code"}
-                </button>
+                {!showCodeForm && (
+                  <button onClick={() => { setShowCodeForm(true); setCodeError(null); }} style={s.btn}>
+                    <Plus size={14} /> New Code
+                  </button>
+                )}
               </div>
 
-              {codeError && (
+              {showCodeForm && (
+                <form onSubmit={submitCodeForm} style={{ marginBottom: 20, padding: "16px 0", borderTop: "1px solid rgba(55,45,25,0.08)" }}>
+                  <p style={{ fontSize: 12, color: "#8a7f6e", marginBottom: 12 }}>Each code is for one child. Enter their details below.</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <label style={s.label}>Child&apos;s name <span style={{ color: "#c8416a" }}>*</span></label>
+                      <input type="text" placeholder="Full name" value={codeForm.childName} onChange={(e) => setCodeForm((p) => ({ ...p, childName: e.target.value }))} required style={{ width: "100%", padding: "10px 12px", border: "1.5px solid rgba(55,45,25,0.12)", borderRadius: 3, fontSize: 13, fontFamily: "'Calibri', 'Trebuchet MS', sans-serif" }} />
+                    </div>
+                    <div>
+                      <label style={s.label}>Age (3–18) <span style={{ color: "#c8416a" }}>*</span></label>
+                      <input type="number" min={3} max={18} placeholder="e.g. 8" value={codeForm.childAge} onChange={(e) => setCodeForm((p) => ({ ...p, childAge: e.target.value }))} required style={{ width: "100%", padding: "10px 12px", border: "1.5px solid rgba(55,45,25,0.12)", borderRadius: 3, fontSize: 13, fontFamily: "'Calibri', 'Trebuchet MS', sans-serif" }} />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={s.label}>Grade level <span style={{ color: "#c8416a" }}>*</span></label>
+                    <input type="text" placeholder="e.g. 3rd grade" value={codeForm.gradeLevel} onChange={(e) => setCodeForm((p) => ({ ...p, gradeLevel: e.target.value }))} required style={{ width: "100%", padding: "10px 12px", border: "1.5px solid rgba(55,45,25,0.12)", borderRadius: 3, fontSize: 13, fontFamily: "'Calibri', 'Trebuchet MS', sans-serif" }} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={s.label}>Math topics they struggle with</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                      {topicOptions.map((topic) => (
+                        <button key={topic} type="button" onClick={() => toggleCodeFormTopic(topic)} style={{
+                          padding: "6px 10px", fontSize: 11, borderRadius: 3, border: `1.5px solid ${codeForm.mathTopics.includes(topic) ? "#c8416a" : "rgba(55,45,25,0.12)"}`,
+                          background: codeForm.mathTopics.includes(topic) ? "rgba(200,65,106,0.08)" : "transparent", color: codeForm.mathTopics.includes(topic) ? "#c8416a" : "#1e1a12",
+                          cursor: "pointer", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+                        }}>{topic}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={s.label}>Learning pace</label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {(["slow", "medium", "fast"] as const).map((pace) => (
+                        <button key={pace} type="button" onClick={() => setCodeForm((p) => ({ ...p, learningPace: pace }))} style={{
+                          padding: "8px 14px", fontSize: 12, borderRadius: 3, border: `1.5px solid ${codeForm.learningPace === pace ? "#c8416a" : "rgba(55,45,25,0.12)"}`,
+                          background: codeForm.learningPace === pace ? "rgba(200,65,106,0.08)" : "transparent", color: codeForm.learningPace === pace ? "#c8416a" : "#1e1a12",
+                          cursor: "pointer", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+                          textTransform: "capitalize",
+                        }}>{pace === "slow" ? "Slow & steady" : pace === "medium" ? "Balanced" : "Quick"}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {codeError && <p style={{ fontSize: 13, color: "#944040", marginBottom: 8 }}>{codeError}</p>}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button type="submit" disabled={generatingCode} style={s.btn}>
+                      {generatingCode ? "Creating..." : "Create access code"}
+                    </button>
+                    <button type="button" onClick={() => { setShowCodeForm(false); setCodeError(null); }} style={s.btnOutline}>Cancel</button>
+                  </div>
+                </form>
+              )}
+
+              {codeError && !showCodeForm && (
                 <p style={{ fontSize: 13, color: "#944040", marginBottom: 12 }}>{codeError}</p>
               )}
 
-              {accessCodes.filter((c) => c.is_active).length === 0 ? (
+              {accessCodes.filter((c) => c.is_active).length === 0 && !showCodeForm ? (
                 <p style={{ fontSize: 13, color: "#8a7f6e" }}>
-                  No active codes. Generate one for your child to start learning!
+                  No active codes. Create one for your child to start learning!
                 </p>
-              ) : (
+              ) : !showCodeForm ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {accessCodes.filter((c) => c.is_active).map((ac) => (
                     <div key={ac.id} style={{
@@ -244,24 +415,24 @@ export default function ParentDashboardPage() {
                         <span style={{ fontSize: 24, fontWeight: 300, letterSpacing: "0.3em", fontFamily: "monospace" }}>
                           {ac.code}
                         </span>
-                        {ac.child_name && (
-                          <span style={{ fontSize: 12, color: "#8a7f6e", marginLeft: 12 }}>
-                            for {ac.child_name}
-                          </span>
-                        )}
+                        <span style={{ fontSize: 12, color: "#8a7f6e", marginLeft: 12 }}>
+                          {ac.child_name || "Unnamed"}
+                          {ac.child_age != null && `, age ${ac.child_age}`}
+                          {ac.grade_level && ` · ${ac.grade_level}`}
+                        </span>
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => copyCode(ac.code)} style={s.btnOutline}>
+                        <button type="button" onClick={() => copyCode(ac.code)} style={s.btnOutline}>
                           <Copy size={12} /> {copiedCode === ac.code ? "Copied!" : "Copy"}
                         </button>
-                        <button onClick={() => deactivateCode(ac.id)} style={{ ...s.btnOutline, color: "#944040" }}>
+                        <button type="button" onClick={() => deactivateCode(ac.id)} style={{ ...s.btnOutline, color: "#944040" }}>
                           <X size={12} />
                         </button>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Recent Sessions */}
@@ -545,47 +716,134 @@ export default function ParentDashboardPage() {
             <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 32 }}>Settings</h1>
 
             <div style={s.card}>
-              <h2 style={s.h2}>Account</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div>
-                  <div style={s.label}>Name</div>
-                  <div style={{ fontSize: 14, marginTop: 4 }}>{parent?.name}</div>
-                </div>
-                <div>
-                  <div style={s.label}>Email</div>
-                  <div style={{ fontSize: 14, marginTop: 4 }}>{parent?.email}</div>
-                </div>
-                <div>
-                  <div style={s.label}>Child&apos;s Name</div>
-                  <div style={{ fontSize: 14, marginTop: 4 }}>{parent?.child_name || "—"}</div>
-                </div>
-                <div>
-                  <div style={s.label}>Grade Level</div>
-                  <div style={{ fontSize: 14, marginTop: 4 }}>{parent?.grade_level || "—"}</div>
-                </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                <h2 style={{ ...s.h2, marginBottom: 0 }}>Account</h2>
+                {!settingsAccountEditing && (
+                  <button type="button" onClick={startEditAccount} style={s.btnOutline} disabled={settingsSaving}>
+                    Edit
+                  </button>
+                )}
               </div>
+              {settingsAccountEditing ? (
+                <form onSubmit={saveAccountSettings}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                    <div>
+                      <label style={s.label}>Name</label>
+                      <input
+                        type="text"
+                        value={settingsAccountForm.name}
+                        onChange={(e) => setSettingsAccountForm((p) => ({ ...p, name: e.target.value }))}
+                        style={{ width: "100%", padding: "10px 12px", border: "1.5px solid rgba(55,45,25,0.12)", borderRadius: 3, fontSize: 14, marginTop: 4, fontFamily: "'Calibri', 'Trebuchet MS', sans-serif" }}
+                      />
+                    </div>
+                    <div>
+                      <div style={s.label}>Email</div>
+                      <div style={{ fontSize: 14, marginTop: 4, color: "#8a7f6e" }}>{parent?.email}</div>
+                      <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 2 }}>Managed by your sign-in account</div>
+                    </div>
+                    <div>
+                      <label style={s.label}>Child&apos;s Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Alex"
+                        value={settingsAccountForm.childName}
+                        onChange={(e) => setSettingsAccountForm((p) => ({ ...p, childName: e.target.value }))}
+                        style={{ width: "100%", padding: "10px 12px", border: "1.5px solid rgba(55,45,25,0.12)", borderRadius: 3, fontSize: 14, marginTop: 4, fontFamily: "'Calibri', 'Trebuchet MS', sans-serif" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={s.label}>Grade Level</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 3rd grade"
+                        value={settingsAccountForm.gradeLevel}
+                        onChange={(e) => setSettingsAccountForm((p) => ({ ...p, gradeLevel: e.target.value }))}
+                        style={{ width: "100%", padding: "10px 12px", border: "1.5px solid rgba(55,45,25,0.12)", borderRadius: 3, fontSize: 14, marginTop: 4, fontFamily: "'Calibri', 'Trebuchet MS', sans-serif" }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button type="submit" style={s.btn} disabled={settingsSaving}>
+                      {settingsSaving ? "Saving..." : "Save"}
+                    </button>
+                    <button type="button" onClick={() => setSettingsAccountEditing(false)} style={s.btnOutline}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div>
+                    <div style={s.label}>Name</div>
+                    <div style={{ fontSize: 14, marginTop: 4 }}>{parent?.name || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={s.label}>Email</div>
+                    <div style={{ fontSize: 14, marginTop: 4 }}>{parent?.email || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={s.label}>Child&apos;s Name</div>
+                    <div style={{ fontSize: 14, marginTop: 4 }}>{parent?.child_name || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={s.label}>Grade Level</div>
+                    <div style={{ fontSize: 14, marginTop: 4 }}>{parent?.grade_level || "—"}</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={s.card}>
               <h2 style={s.h2}>Learning Configuration</h2>
               <div style={{ marginBottom: 16 }}>
                 <div style={s.label}>Math Topics</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-                  {(parent?.math_topics || []).length > 0
-                    ? parent!.math_topics.map((t) => (
-                        <span key={t} style={{
-                          padding: "4px 10px", fontSize: 12, borderRadius: 3,
-                          background: "rgba(158,107,117,0.06)", border: "1px solid rgba(158,107,117,0.14)",
-                          color: "#c8416a",
-                        }}>{t}</span>
-                      ))
-                    : <span style={{ fontSize: 13, color: "#8a7f6e" }}>None selected</span>}
+                <p style={{ fontSize: 12, color: "#8a7f6e", marginBottom: 6 }}>Select topics your child should focus on</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                  {topicOptions.map((topic) => (
+                    <button
+                      key={topic}
+                      type="button"
+                      onClick={() => toggleSettingsTopic(topic)}
+                      style={{
+                        padding: "6px 12px", fontSize: 12, borderRadius: 3, border: `1.5px solid ${settingsLearningTopics.includes(topic) ? "#c8416a" : "rgba(55,45,25,0.12)"}`,
+                        background: settingsLearningTopics.includes(topic) ? "rgba(200,65,106,0.08)" : "transparent",
+                        color: settingsLearningTopics.includes(topic) ? "#c8416a" : "#1e1a12",
+                        cursor: "pointer", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+                      }}
+                    >
+                      {topic}
+                    </button>
+                  ))}
+                </div>
+                {settingsLearningTopics.length === 0 && (
+                  <span style={{ fontSize: 13, color: "#8a7f6e", display: "block", marginTop: 6 }}>None selected</span>
+                )}
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <div style={s.label}>Learning Pace</div>
+                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                  {(["slow", "medium", "fast"] as const).map((pace) => (
+                    <button
+                      key={pace}
+                      type="button"
+                      onClick={() => setSettingsLearningPace(pace)}
+                      style={{
+                        padding: "8px 14px", fontSize: 12, borderRadius: 3,
+                        border: `1.5px solid ${settingsLearningPace === pace ? "#c8416a" : "rgba(55,45,25,0.12)"}`,
+                        background: settingsLearningPace === pace ? "rgba(200,65,106,0.08)" : "transparent",
+                        color: settingsLearningPace === pace ? "#c8416a" : "#1e1a12",
+                        cursor: "pointer", fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {pace === "slow" ? "Slow & steady" : pace === "medium" ? "Medium" : "Fast"}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div>
-                <div style={s.label}>Learning Pace</div>
-                <div style={{ fontSize: 14, marginTop: 4, textTransform: "capitalize" }}>{parent?.learning_pace || "medium"}</div>
-              </div>
+              <button type="button" onClick={saveLearningSettings} style={s.btn} disabled={settingsSaving}>
+                {settingsSaving ? "Saving..." : "Save learning config"}
+              </button>
             </div>
 
             <div style={s.card}>
@@ -596,34 +854,46 @@ export default function ParentDashboardPage() {
                     <div style={{ fontSize: 14 }}>Real-time Focus Alerts</div>
                     <div style={{ fontSize: 12, color: "#8a7f6e" }}>Email when distraction level hits high</div>
                   </div>
-                  <div style={{
-                    width: 36, height: 20, borderRadius: 10, cursor: "pointer",
-                    background: parent?.notification_realtime ? "#5a9e76" : "rgba(55,45,25,0.15)",
-                    position: "relative", transition: "background 0.2s",
-                  }}>
-                    <div style={{
+                  <button
+                    type="button"
+                    aria-label={parent?.notification_realtime ? "Turn off real-time focus alerts" : "Turn on real-time focus alerts"}
+                    onClick={toggleNotificationRealtime}
+                    disabled={settingsSaving}
+                    style={{
+                      width: 36, height: 20, borderRadius: 10, cursor: settingsSaving ? "wait" : "pointer",
+                      background: parent?.notification_realtime ? "#5a9e76" : "rgba(55,45,25,0.15)",
+                      position: "relative", transition: "background 0.2s", border: "none", padding: 0, flexShrink: 0,
+                    }}
+                  >
+                    <span style={{
                       width: 16, height: 16, borderRadius: "50%", background: "#fff",
                       position: "absolute", top: 2,
-                      left: parent?.notification_realtime ? 18 : 2, transition: "left 0.2s",
+                      left: parent?.notification_realtime ? 18 : 2, transition: "left 0.2s", display: "block",
                     }} />
-                  </div>
+                  </button>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
                     <div style={{ fontSize: 14 }}>Daily Summary</div>
                     <div style={{ fontSize: 12, color: "#8a7f6e" }}>Daily email summary of all activity</div>
                   </div>
-                  <div style={{
-                    width: 36, height: 20, borderRadius: 10, cursor: "pointer",
-                    background: parent?.notification_daily ? "#5a9e76" : "rgba(55,45,25,0.15)",
-                    position: "relative", transition: "background 0.2s",
-                  }}>
-                    <div style={{
+                  <button
+                    type="button"
+                    aria-label={parent?.notification_daily ? "Turn off daily summary" : "Turn on daily summary"}
+                    onClick={toggleNotificationDaily}
+                    disabled={settingsSaving}
+                    style={{
+                      width: 36, height: 20, borderRadius: 10, cursor: settingsSaving ? "wait" : "pointer",
+                      background: parent?.notification_daily ? "#5a9e76" : "rgba(55,45,25,0.15)",
+                      position: "relative", transition: "background 0.2s", border: "none", padding: 0, flexShrink: 0,
+                    }}
+                  >
+                    <span style={{
                       width: 16, height: 16, borderRadius: "50%", background: "#fff",
                       position: "absolute", top: 2,
-                      left: parent?.notification_daily ? 18 : 2, transition: "left 0.2s",
+                      left: parent?.notification_daily ? 18 : 2, transition: "left 0.2s", display: "block",
                     }} />
-                  </div>
+                  </button>
                 </div>
               </div>
             </div>

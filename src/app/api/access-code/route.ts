@@ -37,7 +37,21 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const childName = body.childName ?? null;
+    const childName = body.childName?.trim() || null;
+    const childAge = body.childAge != null ? Number(body.childAge) : null;
+    const gradeLevel = body.gradeLevel?.trim() || null;
+    const mathTopics = Array.isArray(body.mathTopics) ? body.mathTopics : (body.mathTopics ? [body.mathTopics] : []);
+    const learningPace = body.learningPace === "slow" || body.learningPace === "medium" || body.learningPace === "fast" ? body.learningPace : "medium";
+
+    if (!childName) {
+      return NextResponse.json({ error: "Child's name is required." }, { status: 400 });
+    }
+    if (childAge == null || childAge < 3 || childAge > 18) {
+      return NextResponse.json({ error: "Child's age is required and must be between 3 and 18." }, { status: 400 });
+    }
+    if (!gradeLevel) {
+      return NextResponse.json({ error: "Grade level is required." }, { status: 400 });
+    }
 
     let code = generateCode();
     let attempts = 0;
@@ -61,6 +75,10 @@ export async function POST(request: Request) {
         parent_id: user.id,
         code,
         child_name: childName,
+        child_age: childAge,
+        grade_level: gradeLevel,
+        math_topics: mathTopics,
+        learning_pace: learningPace,
         is_active: true,
       })
       .select()

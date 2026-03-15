@@ -72,11 +72,7 @@ export default function StudentEntryPage() {
       localStorage.setItem("vertex_kid_session", JSON.stringify(data.kidSession));
       localStorage.setItem("vertex_kid_session_id", data.kidSession.id);
 
-      if (!data.kidSession.avatar_choice) {
-        router.push("/kid/onboarding");
-      } else {
-        router.push("/dashboard/kid");
-      }
+      router.push("/dashboard/kid");
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);

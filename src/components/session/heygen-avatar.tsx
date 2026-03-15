@@ -119,7 +119,7 @@ export function HeyGenAvatar({
         }
       });
 
-      // Use parent's streaming avatar ID. Photo avatar IDs are NOT compatible with the streaming API.
+      // Use a streaming avatar ID here. Talking photo IDs are not compatible with the streaming API.
       await avatar.createStartAvatar({
         avatarName: effectiveAvatarName,
         quality: AvatarQuality.Medium,

@@ -20,6 +20,10 @@ export interface AccessCode {
   parent_id: string;
   code: string;
   child_name: string | null;
+  child_age?: number | null;
+  grade_level?: string | null;
+  math_topics?: string[] | null;
+  learning_pace?: "slow" | "medium" | "fast" | null;
   is_active: boolean;
   created_at: string;
 }
