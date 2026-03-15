@@ -177,7 +177,7 @@ export function useWebcamAttention(
       }
 
       const landmarker = landmarkerRef.current as {
-        detect?: (image: HTMLCanvasElement | ImageData) => {
+        detect?: (image: HTMLCanvasElement | HTMLVideoElement | HTMLImageElement) => {
           faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>>;
         };
       } | null;
@@ -189,8 +189,7 @@ export function useWebcamAttention(
 
       let result: { faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>> };
       try {
-        const imageData = ctx.getImageData(0, 0, 320, 240);
-        result = landmarker.detect(imageData);
+        result = landmarker.detect(canvas);
       } catch {
         return;
       }
