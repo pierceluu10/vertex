@@ -12,14 +12,15 @@ import {
   Clock,
   Target,
   BookOpen,
+  GraduationCap,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
 import type { KidSession } from "@/types";
-import { MdSchool, MdBolt } from "react-icons/md";
 import "@/styles/vertex.css";
 
-const IconMap: Record<string, React.ElementType> = { MdSchool, MdBolt };
+const IconMap: Record<string, React.ElementType> = { MdSchool: GraduationCap, MdBolt: Zap };
 
 /* ─── Activity entry ─── */
 interface ActivityEntry {
@@ -193,7 +194,7 @@ export default function KidProfilePage() {
                 custom={9}
               >
                 <h2 className="vtx-kid-gp-section-heading">
-                  <MdBolt className="vtx-kid-gp-section-icon" /> Recent Activity
+                  <Zap className="vtx-kid-gp-section-icon" /> Recent Activity
                 </h2>
                 {activity.length === 0 ? (
                   <div className="vtx-kid-gp-empty">
@@ -211,7 +212,7 @@ export default function KidProfilePage() {
                       >
                         <span className="vtx-kid-gp-activity-icon">
                           {(() => {
-                            const ActivityIcon = IconMap[entry.icon] || MdBolt;
+                            const ActivityIcon = IconMap[entry.icon] || Zap;
                             return <ActivityIcon style={{ color: "var(--vtx-pink, #c8416a)" }} />;
                           })()}
                         </span>

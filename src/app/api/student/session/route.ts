@@ -13,13 +13,18 @@ export async function POST(request: Request) {
 
     const supabase = await createServiceClient();
     let childId: string | null = null;
+    let kidSessionName: string | null = null;
+    let accessCodeUsed: string | null = null;
 
     if (parentId) {
       const { data: kidSession } = await supabase
         .from("kids_sessions")
-        .select("child_name")
+        .select("child_name, code_used")
         .eq("id", kidSessionId)
         .maybeSingle();
+
+      kidSessionName = kidSession?.child_name?.trim() || null;
+      accessCodeUsed = kidSession?.code_used || null;
 
       const { data: children } = await supabase
         .from("children")
@@ -28,13 +33,46 @@ export async function POST(request: Request) {
         .order("created_at", { ascending: true });
 
       if (children?.length) {
-        const childName = kidSession?.child_name?.trim().toLowerCase();
+        const childName = kidSessionName?.toLowerCase();
         const matchedChild =
           (childName
             ? children.find((child) => child.name?.trim().toLowerCase() === childName)
             : null) || children[0];
 
         childId = matchedChild.id;
+      }
+
+      if (!childId && kidSessionName) {
+        let fallbackAge = 10;
+        let fallbackGrade: string | null = null;
+
+        if (accessCodeUsed) {
+          const { data: accessCode } = await supabase
+            .from("access_codes")
+            .select("child_age, grade_level")
+            .eq("code", accessCodeUsed)
+            .maybeSingle();
+
+          fallbackAge = accessCode?.child_age ?? fallbackAge;
+          fallbackGrade = accessCode?.grade_level ?? null;
+        }
+
+        const { data: createdChild, error: createChildError } = await supabase
+          .from("children")
+          .insert({
+            parent_id: parentId,
+            name: kidSessionName,
+            age: fallbackAge,
+            grade: fallbackGrade,
+          })
+          .select("id")
+          .single();
+
+        if (createChildError) {
+          console.error("Child auto-create error:", createChildError);
+        } else {
+          childId = createdChild.id;
+        }
       }
     }
 

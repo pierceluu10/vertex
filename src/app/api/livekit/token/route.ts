@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { RoomAgentDispatch, RoomConfiguration } from "@livekit/protocol";
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, AgentDispatchClient, RoomServiceClient } from "livekit-server-sdk";
 import {
   getLiveAvatarSupport,
   getLiveKitConfig,
@@ -42,6 +41,67 @@ export async function POST(request: Request) {
     const childName = tutorContext.childName?.trim() || "friend";
     const childAge = tutorContext.childAge || 10;
     const roomName = `vertex-${sessionId}`;
+    const livekitHost = livekitConfig.url.replace(/^wss:/, "https:").replace(/^ws:/, "http:");
+    const dispatchMetadata = JSON.stringify({
+      sessionId,
+      kidSessionId: kidSessionId || null,
+      parentId,
+      childName,
+      childAge,
+      parentName: tutorContext.parentName,
+      gradeLevel: tutorContext.gradeLevel,
+      learningPace: tutorContext.learningPace,
+      mathTopics: tutorContext.mathTopics,
+      learningGoals: tutorContext.learningGoals,
+      instructions: buildRealtimeTutorInstructions({
+        childName,
+        childAge,
+        grade: tutorContext.gradeLevel || undefined,
+        learningPace: tutorContext.learningPace || undefined,
+        mathTopics: tutorContext.mathTopics,
+        learningGoals: tutorContext.learningGoals || undefined,
+        documentContext: tutorContext.documentContext || undefined,
+      }),
+    });
+
+    const roomClient = new RoomServiceClient(
+      livekitHost,
+      livekitConfig.apiKey,
+      livekitConfig.apiSecret
+    );
+    const dispatchClient = new AgentDispatchClient(
+      livekitHost,
+      livekitConfig.apiKey,
+      livekitConfig.apiSecret
+    );
+
+    try {
+      await roomClient.createRoom({ name: roomName, emptyTimeout: 10 * 60, departureTimeout: 2 * 60 });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.toLowerCase().includes("already exists")) {
+        console.warn("LiveKit createRoom warning:", error);
+      }
+    }
+
+    try {
+      const existingDispatches = await dispatchClient.listDispatch(roomName);
+      const hasActiveDispatch = existingDispatches.some(
+        (dispatch) => dispatch.agentName === livekitConfig.agentName
+      );
+
+      if (!hasActiveDispatch) {
+        await dispatchClient.createDispatch(roomName, livekitConfig.agentName, {
+          metadata: dispatchMetadata,
+        });
+      }
+    } catch (error) {
+      console.error("LiveKit agent dispatch error:", error);
+      return NextResponse.json(
+        { error: "Failed to dispatch Tina into the room" },
+        { status: 500 }
+      );
+    }
 
     const token = new AccessToken(livekitConfig.apiKey, livekitConfig.apiSecret, {
       identity: `kid-${kidSessionId || sessionId}-${crypto.randomUUID().slice(0, 8)}`,
@@ -61,35 +121,6 @@ export async function POST(request: Request) {
       canPublish: true,
       canSubscribe: true,
       canPublishData: true,
-    });
-
-    token.roomConfig = new RoomConfiguration({
-      agents: [
-        new RoomAgentDispatch({
-          agentName: livekitConfig.agentName,
-          metadata: JSON.stringify({
-            sessionId,
-            kidSessionId: kidSessionId || null,
-            parentId,
-            childName,
-            childAge,
-            parentName: tutorContext.parentName,
-            gradeLevel: tutorContext.gradeLevel,
-            learningPace: tutorContext.learningPace,
-            mathTopics: tutorContext.mathTopics,
-            learningGoals: tutorContext.learningGoals,
-            instructions: buildRealtimeTutorInstructions({
-              childName,
-              childAge,
-              grade: tutorContext.gradeLevel || undefined,
-              learningPace: tutorContext.learningPace || undefined,
-              mathTopics: tutorContext.mathTopics,
-              learningGoals: tutorContext.learningGoals || undefined,
-              documentContext: tutorContext.documentContext || undefined,
-            }),
-          }),
-        }),
-      ],
     });
 
     return NextResponse.json({

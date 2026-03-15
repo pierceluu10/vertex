@@ -24,8 +24,13 @@ import {
   Lock,
   Clock,
   Trophy,
+  ArrowRight,
+  Sun,
+  CloudSun,
+  MoonStar,
+  Flame,
+  Zap,
 } from "lucide-react";
-import { MdWbSunny, MdWbCloudy, MdNightsStay, MdLocalFireDepartment, MdBolt, MdMenuBook, MdCloudUpload, MdQuiz, MdChat } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { ParentAvatar } from "@/components/session/parent-avatar";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
@@ -68,8 +73,6 @@ export default function KidDashboardPage() {
     done: boolean;
   } | null>(null);
   const [sessions, setSessions] = useState<TutoringSession[]>([]);
-  const [streak] = useState(0);
-  const [xp] = useState(0);
   const [todos, setTodos] = useState<{ id: string; label: string; done: boolean }[]>(() => []);
   const [todoInput, setTodoInput] = useState("");
   const [tutorName, setTutorName] = useState<string>("");
@@ -244,6 +247,8 @@ export default function KidDashboardPage() {
 
   const { greeting, icon, motivational } = getGreetingData();
   const childName = kidSession.child_name?.trim() || "there";
+  const streak = kidSession.streak_count || 0;
+  const xp = kidSession.xp_points || 0;
 
   /* Computed stats */
   const sessionsThisWeek = sessions.filter((s) => {
@@ -383,7 +388,7 @@ export default function KidDashboardPage() {
                   {/* Secondary Actions */}
                   <motion.div style={{ display: "flex", gap: 12, marginTop: 24 }} variants={stagger} initial="hidden" animate="show" custom={5}>
                     <button type="button" onClick={() => setHomeView("homework")} className="vtx-kid-quick-action">
-                      <MdCloudUpload size={18} />
+                      <Upload size={18} />
                       <span>Upload Homework</span>
                       {documents.length > 0 && <span className="vtx-kid-quick-action-badge">{documents.length}</span>}
                     </button>
@@ -525,7 +530,7 @@ export default function KidDashboardPage() {
                   <div className="vtx-kid-upload-icon"><Upload size={24} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                   <div className="vtx-kid-upload-title">{uploading ? "Uploading…" : "Drop your homework PDF here"}</div>
                   <div className="vtx-kid-upload-hint">or tap to choose a file</div>
-                  <input type="file" style={{ display: "none" }} onChange={handleHomeworkUpload} disabled={uploading} />
+                  <input type="file" accept=".pdf" style={{ display: "none" }} onChange={handleHomeworkUpload} disabled={uploading} />
                 </label>
 
                 {documents.length === 0 ? (
@@ -676,8 +681,24 @@ export default function KidDashboardPage() {
                     <span className="vtx-kid-profile-value">{childName}</span>
                   </div>
 
-
-
+                  {/* Streak & XP stats on profile */}
+                  <div className="vtx-kid-profile-stats">
+                    <div className="vtx-kid-profile-stat">
+                      <Flame className="vtx-kid-profile-stat-icon" style={{ color: "#ef4444" }} />
+                      <span className="vtx-kid-profile-stat-value">{streak}</span>
+                      <span className="vtx-kid-profile-stat-label">Streak</span>
+                    </div>
+                    <div className="vtx-kid-profile-stat">
+                      <Zap className="vtx-kid-profile-stat-icon" style={{ color: "#f59e0b" }} />
+                      <span className="vtx-kid-profile-stat-value">{xp}</span>
+                      <span className="vtx-kid-profile-stat-label">XP</span>
+                    </div>
+                    <div className="vtx-kid-profile-stat">
+                      <BookOpen className="vtx-kid-profile-stat-icon" style={{ color: "#3b82f6" }} />
+                      <span className="vtx-kid-profile-stat-value">{sessions.length}</span>
+                      <span className="vtx-kid-profile-stat-label">Sessions</span>
+                    </div>
+                  </div>
 
                   <button
                     type="button"
@@ -791,9 +812,9 @@ function getGreetingData(): { greeting: string; icon: React.ReactNode; motivatio
   ];
   const motivational = motivationals[Math.floor(Date.now() / 86400000) % motivationals.length];
 
-  if (hour < 12) return { greeting: "Good morning", icon: <MdWbSunny style={{ color: "#eab308" }} />, motivational };
-  if (hour < 17) return { greeting: "Good afternoon", icon: <MdWbCloudy style={{ color: "#60a5fa" }} />, motivational };
-  return { greeting: "Good evening", icon: <MdNightsStay style={{ color: "#818cf8" }} />, motivational };
+  if (hour < 12) return { greeting: "Good morning", icon: <Sun style={{ color: "#eab308" }} />, motivational };
+  if (hour < 17) return { greeting: "Good afternoon", icon: <CloudSun style={{ color: "#60a5fa" }} />, motivational };
+  return { greeting: "Good evening", icon: <MoonStar style={{ color: "#818cf8" }} />, motivational };
 }
 
 function readStoredKidSession(): KidSession | null {
