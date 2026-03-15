@@ -41,6 +41,7 @@ export async function POST(request: Request) {
     const childAge = body.childAge != null ? Number(body.childAge) : null;
     const gradeLevel = body.gradeLevel?.trim() || null;
     const mathTopics = Array.isArray(body.mathTopics) ? body.mathTopics : (body.mathTopics ? [body.mathTopics] : []);
+    const learningGoals = typeof body.learningGoals === "string" ? body.learningGoals.trim() || null : null;
     const learningPace = body.learningPace === "slow" || body.learningPace === "medium" || body.learningPace === "fast" ? body.learningPace : "medium";
 
     if (!childName) {
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
         child_age: childAge,
         grade_level: gradeLevel,
         math_topics: mathTopics,
+        learning_goals: learningGoals,
         learning_pace: learningPace,
         is_active: true,
       })

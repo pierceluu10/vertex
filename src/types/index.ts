@@ -23,6 +23,7 @@ export interface AccessCode {
   child_age?: number | null;
   grade_level?: string | null;
   math_topics?: string[] | null;
+  learning_goals?: string | null;
   learning_pace?: "slow" | "medium" | "fast" | null;
   is_active: boolean;
   created_at: string;

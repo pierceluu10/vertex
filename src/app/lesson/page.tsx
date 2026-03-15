@@ -276,9 +276,9 @@ function LessonContent() {
   if (!lesson) return null;
 
   return (
-    <div style={{
+    <div className="vtx-kid-ui" style={{
       minHeight: "100vh", background: "#fef7ee",
-      fontFamily: "'Calibri', 'Trebuchet MS', sans-serif", color: "#1e1a12",
+      color: "#1e1a12",
     }}>
       {/* Header */}
       <header style={{

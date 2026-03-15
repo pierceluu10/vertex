@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ParentAvatar } from "@/components/session/parent-avatar";
 import type { KidSession, UploadedDocument, Quiz, TutoringSession } from "@/types";
 import "@/styles/vertex.css";
 
@@ -62,6 +63,15 @@ export default function KidDashboardPage() {
   const [sessions, setSessions] = useState<TutoringSession[]>([]);
   const [todos, setTodos] = useState<{ id: string; label: string; done: boolean }[]>(() => []);
   const [todoInput, setTodoInput] = useState("");
+  const [tutorName, setTutorName] = useState<string>("");
+
+  const loadTutor = useCallback(async (parentId: string) => {
+    try {
+      const res = await fetch(`/api/student/tutor?parentId=${encodeURIComponent(parentId)}`);
+      const data = await res.json();
+      if (data.tutor?.name) setTutorName(data.tutor.name);
+    } catch { /* ignore */ }
+  }, []);
 
   const loadDocuments = useCallback(async (parentId: string) => {
     try {
@@ -86,11 +96,12 @@ export default function KidDashboardPage() {
     }
     void loadDocuments(kidSession.parent_id);
     void loadSessions(kidSession.id);
+    void loadTutor(kidSession.parent_id);
     try {
       const raw = localStorage.getItem(`${TODO_STORAGE_KEY}_${kidSession.id}`);
       if (raw) setTodos(JSON.parse(raw));
     } catch { /* ignore */ }
-  }, [kidSession, loadDocuments, loadSessions, router]);
+  }, [kidSession, loadDocuments, loadSessions, loadTutor, router]);
 
   function saveTodos(next: { id: string; label: string; done: boolean }[]) {
     setTodos(next);
@@ -208,13 +219,13 @@ export default function KidDashboardPage() {
   ];
 
   return (
-    <div className="vtx-kid-page flex h-screen flex-col overflow-hidden">
+    <div className="vtx-kid-page vtx-kid-ui flex h-screen flex-col overflow-hidden">
       <header className="vtx-kid-header">
         <div className="vtx-kid-logo">Vertex</div>
       </header>
 
       <ScrollArea className="kid-dashboard-scroll flex-1 [&_[data-slot=scroll-area-scrollbar]]:hidden">
-        <div className="vtx-kid-scroll-padding">
+        <div className={cn("vtx-kid-scroll-padding", activeTab === "home" && homeView === "main" && "vtx-kid-fit-viewport")}>
           <div className="vtx-kid-content">
           <AnimatePresence mode="wait">
             {activeTab === "home" && homeView === "main" && (
@@ -227,7 +238,7 @@ export default function KidDashboardPage() {
                     {greeting}, <em>{childName}</em>.
                   </motion.h1>
                   <motion.p className="vtx-kid-subtitle" variants={stagger} initial="hidden" animate="show" custom={2}>
-                    Choose an activity below.
+                    Choose an activity below, {childName}.
                   </motion.p>
 
                   <motion.button type="button" className="vtx-kid-cta" onClick={() => startTutorSession()} variants={stagger} initial="hidden" animate="show" custom={3}>
@@ -261,8 +272,21 @@ export default function KidDashboardPage() {
                   </motion.button>
                   </div>
 
-                  <motion.div className="vtx-kid-tip" variants={stagger} initial="hidden" animate="show" custom={8}>
-                    <p>A little practice each day goes a long way.</p>
+                </div>
+
+                <div className="vtx-kid-home-center">
+                  <motion.div className="vtx-kid-agent-panel" variants={stagger} initial="hidden" animate="show" custom={5}>
+                    <span className="vtx-kid-agent-label">Your tutor</span>
+                    <div className="vtx-kid-agent-avatar-wrap">
+                      <ParentAvatar
+                        parentName={tutorName || "Your tutor"}
+                        focusLevel="high"
+                        isSpeaking={false}
+                      />
+                    </div>
+                    <p className="vtx-kid-agent-desc">
+                      Ready to help you with math, {childName}. Start a session above to chat.
+                    </p>
                   </motion.div>
                 </div>
 
@@ -419,7 +443,7 @@ export default function KidDashboardPage() {
                 ) : quizData.done ? (
                   <div className="vtx-kid-quiz-card">
                     <span className="vtx-kid-section-num">Complete</span>
-                    <h2 className="vtx-kid-quiz-title">Quiz complete!</h2>
+                    <h2 className="vtx-kid-quiz-title">Quiz complete, {childName}!</h2>
                     <div className="vtx-kid-quiz-result">
                       {quizData.answers.filter((a) => a.correct).length}/{quizData.questions.length}
                     </div>
@@ -473,8 +497,8 @@ export default function KidDashboardPage() {
             {activeTab === "study" && (
               <motion.div key="study" {...tabTransition}>
                 <span className="vtx-kid-section-num">Study</span>
-                <h2 className="vtx-kid-section-title">Start <em>Studying</em></h2>
-                <p className="vtx-kid-subtitle">Your tutor can help with math problems, explain concepts, give hints, and practice with you.</p>
+                <h2 className="vtx-kid-section-title">Start <em>Studying</em>, {childName}</h2>
+                <p className="vtx-kid-subtitle">Your tutor can help you with math problems, explain concepts, give hints, and practice with you.</p>
 
                 <button type="button" className="vtx-kid-cta" onClick={() => startTutorSession()}>
                   <div className="vtx-kid-cta-icon"><MessageCircle size={20} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>

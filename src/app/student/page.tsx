@@ -80,7 +80,7 @@ export default function StudentEntryPage() {
   }
 
   return (
-    <div className="vtx-auth-page">
+    <div className="vtx-auth-page vtx-kid-ui">
       <div className="vtx-auth-card" style={{ textAlign: "center" }}>
         <Link href="/" className="vtx-auth-logo">Vertex</Link>
         <h1>Enter Your Code</h1>
@@ -106,7 +106,7 @@ export default function StudentEntryPage() {
                 autoFocus={i === 0}
                 style={{
                   width: 52, height: 64, textAlign: "center",
-                  fontSize: 28, fontWeight: 300, fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+                  fontSize: 28, fontWeight: 300,
                   border: "1.5px solid rgba(55,45,25,0.12)", borderRadius: 4,
                   background: "#f4efe5", color: "#1a1610", outline: "none",
                   transition: "border-color 0.2s",

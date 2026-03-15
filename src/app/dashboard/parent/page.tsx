@@ -47,7 +47,7 @@ export default function ParentDashboardPage() {
   const [codeError, setCodeError] = useState<string | null>(null);
   const [showCodeForm, setShowCodeForm] = useState(false);
   const [codeForm, setCodeForm] = useState({
-    childName: "", childAge: "", gradeLevel: "",
+    childName: "", childAge: "", gradeLevel: "", learningGoals: "",
     mathTopics: [] as string[], learningPace: "medium" as "slow" | "medium" | "fast",
   });
   const [settingsAccountEditing, setSettingsAccountEditing] = useState(false);
@@ -179,13 +179,13 @@ export default function ParentDashboardPage() {
         body: JSON.stringify({
           childName: codeForm.childName.trim(), childAge: age,
           gradeLevel: codeForm.gradeLevel.trim(),
-          mathTopics: codeForm.mathTopics, learningPace: codeForm.learningPace,
+          mathTopics: codeForm.mathTopics, learningGoals: codeForm.learningGoals.trim() || undefined, learningPace: codeForm.learningPace,
         }),
       });
       const data = await res.json();
       if (res.ok) {
         setShowCodeForm(false);
-        setCodeForm({ childName: "", childAge: "", gradeLevel: "", mathTopics: [], learningPace: "medium" });
+        setCodeForm({ childName: "", childAge: "", gradeLevel: "", learningGoals: "", mathTopics: [], learningPace: "medium" });
         await loadData();
       } else {
         setCodeError(data.error || "Failed to create access code");
@@ -320,11 +320,11 @@ export default function ParentDashboardPage() {
                 <AnimatePresence>
                   {showCodeForm && (
                     <motion.form onSubmit={submitCodeForm} className="vtx-parent-code-form" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }}>
-                      <p className="vtx-parent-muted-text">Each code is for one child. Enter their details below.</p>
+                      <p className="vtx-parent-muted-text">Each access code is unique to one child. Fill out name, age, grade, struggles, and goals so the tutor can personalize for them.</p>
                       <div className="vtx-parent-form-grid">
                         <div>
                           <label className="vtx-parent-label">Child&apos;s name <span className="vtx-parent-required">*</span></label>
-                          <input type="text" placeholder="Full name" value={codeForm.childName} onChange={(e) => setCodeForm((p) => ({ ...p, childName: e.target.value }))} required className="vtx-parent-input" />
+                          <input type="text" placeholder="e.g. Alex" value={codeForm.childName} onChange={(e) => setCodeForm((p) => ({ ...p, childName: e.target.value }))} required className="vtx-parent-input" />
                         </div>
                         <div>
                           <label className="vtx-parent-label">Age (3–18) <span className="vtx-parent-required">*</span></label>
@@ -344,6 +344,10 @@ export default function ParentDashboardPage() {
                             </button>
                           ))}
                         </div>
+                      </div>
+                      <div>
+                        <label className="vtx-parent-label">Goals for this child</label>
+                        <textarea placeholder="e.g. Get confident with fractions, finish homework without tears, prepare for the end-of-year test" value={codeForm.learningGoals} onChange={(e) => setCodeForm((p) => ({ ...p, learningGoals: e.target.value }))} className="vtx-parent-input" rows={3} style={{ resize: "vertical", minHeight: 72 }} />
                       </div>
                       <div>
                         <label className="vtx-parent-label">Learning pace</label>

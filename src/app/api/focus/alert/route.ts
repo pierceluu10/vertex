@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: "Vertex <onboarding@resend.dev>",
       to: parentEmail,
-      subject: `⚠️ ${childName}'s focus has dropped`,
+      subject: `${childName}'s focus has dropped`,
       html: `
         <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
           <h2 style="color: #c8416a; margin-bottom: 16px;">Focus Alert</h2>
