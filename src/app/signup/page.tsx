@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { VertexLogo } from "@/components/vertex/vertex-logo";
 import "@/styles/vertex.css";
 import { createClient } from "@/lib/supabase/client";
 
@@ -120,8 +122,13 @@ export default function SignUpPage() {
 
   return (
     <div className="vtx-auth-page">
-      <div className="vtx-auth-card">
-        <Link href="/" className="vtx-auth-logo">Vertex</Link>
+      <motion.div
+        className="vtx-auth-card"
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
+      >
+        <VertexLogo href="/" height={28} className="vtx-auth-logo" />
 
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <span style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--vtx-muted, #8a7f6e)" }}>
@@ -129,9 +136,12 @@ export default function SignUpPage() {
           </span>
         </div>
 
+        <AnimatePresence mode="wait">
         {step === 1 && (
-          <>
-            <h1>Create your account</h1>
+          <motion.div key="step1" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.3 }}>
+            <h1 style={{ fontSize: 32, fontWeight: 300, textAlign: "center", color: "var(--vtx-ink, #1a1610)", marginBottom: 8 }}>
+              Create your <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>account</em>
+            </h1>
             <p className="vtx-auth-sub">Your name, email, and password</p>
             <div className="vtx-auth-form">
               <form onSubmit={handleStep1}>
@@ -151,12 +161,14 @@ export default function SignUpPage() {
                 <button type="submit" className="vtx-auth-btn">Continue</button>
               </form>
             </div>
-          </>
+          </motion.div>
         )}
 
         {step === 2 && (
-          <>
-            <h1>About your child</h1>
+          <motion.div key="step2" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.3 }}>
+            <h1 style={{ fontSize: 32, fontWeight: 300, textAlign: "center", color: "var(--vtx-ink, #1a1610)", marginBottom: 8 }}>
+              About your <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>child</em>
+            </h1>
             <p className="vtx-auth-sub">We&apos;ll use this to personalize their experience</p>
             <div className="vtx-auth-form">
               <form onSubmit={handleStep2Submit}>
@@ -235,13 +247,14 @@ export default function SignUpPage() {
                 </div>
               </form>
             </div>
-          </>
+          </motion.div>
         )}
+        </AnimatePresence>
 
         <p className="vtx-auth-link">
           Already have an account? <Link href="/login">Sign in</Link>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

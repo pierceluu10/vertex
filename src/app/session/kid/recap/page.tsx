@@ -2,7 +2,8 @@
 
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Star, Flame, Target, MessageCircle, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
+import { Target, MessageCircle, ArrowRight } from "lucide-react";
 import "@/styles/vertex.css";
 
 function RecapContent() {
@@ -12,8 +13,6 @@ function RecapContent() {
   const score = parseInt(searchParams.get("score") || "0", 10);
   const messageCount = parseInt(searchParams.get("messages") || "0", 10);
 
-  const xpEarned = Math.max(10, Math.floor(messageCount * 2) + (score >= 80 ? 20 : score >= 50 ? 10 : 5));
-
   return (
     <div style={{
       minHeight: "100vh", background: "linear-gradient(180deg, #fef7ee 0%, #fdf2e6 100%)",
@@ -21,15 +20,29 @@ function RecapContent() {
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       padding: "40px 24px", textAlign: "center",
     }}>
-      <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
-      <h1 style={{ fontSize: 32, fontWeight: 400, marginBottom: 8, color: "#1a1610" }}>
-        Great Session!
-      </h1>
-      <p style={{ fontSize: 14, color: "#8a7f6e", marginBottom: 40 }}>
-        Here&apos;s what you accomplished
-      </p>
+      <motion.h1
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45 }}
+        style={{ fontSize: 28, fontWeight: 300, marginBottom: 8, color: "#1a1610", lineHeight: 1.2 }}
+      >
+        Session complete
+      </motion.h1>
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.35, delay: 0.15 }}
+        style={{ fontSize: 13, color: "#8a7f6e", lineHeight: 1.7, marginBottom: 40 }}
+      >
+        Summary
+      </motion.p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, maxWidth: 400, width: "100%", marginBottom: 40 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, maxWidth: 400, width: "100%", marginBottom: 40 }}
+      >
         <div style={{
           padding: "24px 16px", background: "#fff", borderRadius: 12,
           border: "1px solid rgba(0,0,0,0.06)",
@@ -51,32 +64,15 @@ function RecapContent() {
           </div>
           <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>Messages</div>
         </div>
+      </motion.div>
 
-        <div style={{
-          padding: "24px 16px", background: "linear-gradient(135deg, #fef2f5, #fce4ec)",
-          borderRadius: 12, border: "1px solid rgba(158,107,117,0.12)",
-        }}>
-          <Star size={24} style={{ color: "#9e6b75", marginBottom: 8 }} />
-          <div style={{ fontSize: 28, fontWeight: 300, color: "#9e6b75" }}>
-            +{xpEarned}
-          </div>
-          <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>XP Earned</div>
-        </div>
-
-        <div style={{
-          padding: "24px 16px", background: "linear-gradient(135deg, #fff5e6, #ffe8cc)",
-          borderRadius: 12, border: "1px solid rgba(166,124,74,0.18)",
-        }}>
-          <Flame size={24} style={{ color: "#c89020", marginBottom: 8 }} />
-          <div style={{ fontSize: 28, fontWeight: 300, color: "#c89020" }}>
-            🔥
-          </div>
-          <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>Streak Alive</div>
-        </div>
-      </div>
-
-      <button
+      <motion.button
         onClick={() => router.push("/dashboard/kid")}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.35 }}
+        whileHover={{ y: -2 }}
+        whileTap={{ scale: 0.97 }}
         style={{
           display: "inline-flex", alignItems: "center", gap: 8,
           padding: "16px 32px", background: "#9e6b75", color: "#fff",
@@ -84,7 +80,7 @@ function RecapContent() {
         }}
       >
         Back to Home <ArrowRight size={16} />
-      </button>
+      </motion.button>
     </div>
   );
 }

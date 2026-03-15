@@ -16,6 +16,8 @@ import { ATTENTION_CONFIG } from "@/lib/attention-config";
 import { useWebcamAttention } from "./use-webcam-attention";
 import type { AttentionState } from "@/types";
 
+const SESSION_SCORE_SAMPLE_INTERVAL_MS = 10_000;
+
 export function useAttention(
   sessionId: string,
   onIntervention: (type: string) => void,
@@ -26,6 +28,7 @@ export function useAttention(
   );
   const stateRef = useRef(attention);
   const lastInterventionAtRef = useRef<number>(0);
+  const scoreSamplesRef = useRef<number[]>([]);
 
   useEffect(() => {
     stateRef.current = attention;
@@ -150,6 +153,12 @@ export function useAttention(
       }
     }, ATTENTION_CONFIG.INTERVENTION_CHECK_INTERVAL_MS);
 
+    // Sample focus score periodically so we can report a session average (avoids
+    // "End" click bumping score back to 100 after tab focus/activity recovery)
+    const sampleInterval = setInterval(() => {
+      scoreSamplesRef.current.push(stateRef.current.score);
+    }, SESSION_SCORE_SAMPLE_INTERVAL_MS);
+
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("blur", onWindowBlur);
@@ -160,8 +169,17 @@ export function useAttention(
       document.removeEventListener("touchstart", onUserActivity);
       clearInterval(inactivityInterval);
       clearInterval(interventionInterval);
+      clearInterval(sampleInterval);
     };
   }, [logFocusEvent, onIntervention]);
 
-  return { ...attention, webcam };
+  function getSessionAverageScore(): number {
+    const samples = scoreSamplesRef.current;
+    const current = stateRef.current.score;
+    if (samples.length === 0) return current;
+    const sum = samples.reduce((a, b) => a + b, 0) + current;
+    return Math.round(sum / (samples.length + 1));
+  }
+
+  return { ...attention, webcam, getSessionAverageScore };
 }

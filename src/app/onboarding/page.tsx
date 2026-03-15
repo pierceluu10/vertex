@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { VertexLogo } from "@/components/vertex/vertex-logo";
 import "@/styles/vertex.css";
 
 type Step = "child" | "preferences" | "topics" | "complete";
@@ -65,11 +67,24 @@ export default function OnboardingPage() {
     setLoading(false);
   }
 
+  const stepMotion = { initial: { opacity: 0, x: -14 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 14 }, transition: { duration: 0.28 } };
+
   return (
     <div className="vtx-auth-page">
-      <div className="vtx-auth-card">
-        <div className="vtx-auth-logo">Vertex</div>
-        <h1>{step === "complete" ? "You\u2019re all set!" : "Set up your child\u2019s profile"}</h1>
+      <motion.div
+        className="vtx-auth-card"
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
+      >
+        <VertexLogo href="/" height={28} className="vtx-auth-logo" />
+        <h1 style={{ fontSize: 32, fontWeight: 300, textAlign: "center", color: "var(--vtx-ink, #1a1610)", marginBottom: 8 }}>
+          {step === "complete" ? (
+            <>You&apos;re <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>all set!</em></>
+          ) : (
+            <>Set up your child&apos;s <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>profile</em></>
+          )}
+        </h1>
 
         {step !== "complete" && (
           <div style={{ display: "flex", justifyContent: "center", gap: 8, margin: "16px 0 32px" }}>
@@ -87,8 +102,9 @@ export default function OnboardingPage() {
         )}
 
         <div className="vtx-auth-form">
+          <AnimatePresence mode="wait">
           {step === "child" && (
-            <div>
+            <motion.div key="child" {...stepMotion}>
               <div className="vtx-field">
                 <label htmlFor="childName">Child&apos;s Name</label>
                 <input id="childName" type="text" placeholder="What's your child's name?" value={childName} onChange={(e) => setChildName(e.target.value)} required />
@@ -104,11 +120,11 @@ export default function OnboardingPage() {
               <button type="button" onClick={() => setStep("preferences")} disabled={!childName || !childAge} className="vtx-auth-btn">
                 Continue &rarr;
               </button>
-            </div>
+            </motion.div>
           )}
 
           {step === "preferences" && (
-            <div>
+            <motion.div key="preferences" {...stepMotion}>
               <div className="vtx-field">
                 <label>Learning Pace</label>
                 <p style={{ fontSize: 13, color: "#8a7f6e", marginBottom: 16 }}>
@@ -154,11 +170,11 @@ export default function OnboardingPage() {
                   Continue &rarr;
                 </button>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {step === "topics" && (
-            <div>
+            <motion.div key="topics" {...stepMotion}>
               <div className="vtx-field">
                 <label>Math Topics They Struggle With</label>
                 <p style={{ fontSize: 13, color: "#8a7f6e", marginBottom: 16 }}>
@@ -200,11 +216,11 @@ export default function OnboardingPage() {
                   {loading ? "Setting up..." : "Complete Setup"}
                 </button>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {step === "complete" && (
-            <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <motion.div key="complete" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{
                 width: 56, height: 56, borderRadius: "50%", background: "rgba(92,124,106,.12)",
                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -221,10 +237,11 @@ export default function OnboardingPage() {
               <button type="button" onClick={() => router.push("/dashboard/parent")} className="vtx-auth-btn">
                 Go to Dashboard &rarr;
               </button>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

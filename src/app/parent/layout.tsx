@@ -1,9 +1,10 @@
-export const dynamic = "force-dynamic";
+import { CustomCursor } from "@/components/vertex/custom-cursor";
 
-export default function ParentLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return children;
+export default function ParentProfileLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="vertex-page" style={{ minHeight: "100vh" }}>
+      <CustomCursor />
+      {children}
+    </div>
+  );
 }

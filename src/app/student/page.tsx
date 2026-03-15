@@ -3,6 +3,8 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { VertexLogo } from "@/components/vertex/vertex-logo";
 import "@/styles/vertex.css";
 
 export default function StudentEntryPage() {
@@ -80,21 +82,28 @@ export default function StudentEntryPage() {
   }
 
   return (
-    <div className="vtx-auth-page">
-      <div className="vtx-auth-card" style={{ textAlign: "center" }}>
-        <Link href="/" className="vtx-auth-logo">Vertex</Link>
+    <div className="vtx-auth-page vtx-kid-ui">
+      <motion.div
+        className="vtx-auth-card"
+        style={{ textAlign: "center" }}
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
+      >
+        <VertexLogo href="/" height={28} className="vtx-auth-logo" />
         <h1>Enter Your Code</h1>
         <p className="vtx-auth-sub">Ask your parent for your 6-digit access code</p>
 
         <div className="vtx-auth-form">
-          <div
-            style={{
-              display: "flex", gap: 8, justifyContent: "center", marginBottom: 24,
-            }}
+          <motion.div
+            style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 24 }}
             onPaste={handlePaste}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.35, delay: 0.15 }}
           >
             {code.map((digit, i) => (
-              <input
+              <motion.input
                 key={i}
                 ref={(el) => { inputRefs.current[i] = el; }}
                 type="text"
@@ -104,18 +113,21 @@ export default function StudentEntryPage() {
                 onChange={(e) => handleDigit(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 autoFocus={i === 0}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.2 + i * 0.04 }}
                 style={{
                   width: 52, height: 64, textAlign: "center",
-                  fontSize: 28, fontWeight: 300, fontFamily: "'Calibri', 'Trebuchet MS', sans-serif",
+                  fontSize: 28, fontWeight: 300,
                   border: "1.5px solid rgba(55,45,25,0.12)", borderRadius: 4,
                   background: "#f4efe5", color: "#1a1610", outline: "none",
                   transition: "border-color 0.2s",
                 }}
-                onFocus={(e) => { e.target.style.borderColor = "#c8416a"; }}
-                onBlur={(e) => { e.target.style.borderColor = "rgba(55,45,25,0.12)"; }}
+                onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#c8416a"; }}
+                onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(55,45,25,0.12)"; }}
               />
             ))}
-          </div>
+          </motion.div>
 
           {error && <div className="vtx-auth-error">{error}</div>}
 
@@ -132,7 +144,7 @@ export default function StudentEntryPage() {
           Are you a parent?{" "}
           <Link href="/login">Sign in here</Link>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

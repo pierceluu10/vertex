@@ -120,10 +120,12 @@
 }
 
 /* Hide scrollbar on kid dashboard while keeping scroll behavior */
-.kid-dashboard-scroll {
+.kid-dashboard-scroll,
+.kid-dashboard-scroll [data-slot="scroll-area-viewport"] {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.kid-dashboard-scroll::-webkit-scrollbar {
+.kid-dashboard-scroll::-webkit-scrollbar,
+.kid-dashboard-scroll [data-slot="scroll-area-viewport"]::-webkit-scrollbar {
   display: none;
 }

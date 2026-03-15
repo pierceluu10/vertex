@@ -1,13 +1,25 @@
 "use client";
 
+import { motion } from "framer-motion";
+
 export function HeroScene() {
   return (
     <section className="vtx-hero">
-      <div className="vtx-hero-tagline">
+      <motion.div
+        className="vtx-hero-tagline"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.1 }}
+      >
         <span>AI-Powered Learning for the Next Generation</span>
-      </div>
+      </motion.div>
 
-      <div className="vtx-scene-wrapper">
+      <motion.div
+        className="vtx-scene-wrapper"
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.7, delay: 0.25, ease: "easeOut" }}
+      >
         <svg className="vtx-scene-svg" viewBox="0 0 860 460" xmlns="http://www.w3.org/2000/svg" fill="none">
           <defs>
             <filter id="brainGlow" x="-60%" y="-60%" width="220%" height="220%">
@@ -70,73 +82,60 @@ export function HeroScene() {
             <path d="M588 308 Q616 294,650 292 Q684 294,712 308 L720 360 Q650 373,580 360 Z"/>
           </g>
 
-          {/* Brain */}
-          <ellipse cx="430" cy="196" rx="96" ry="88" fill="url(#brainAura)"/>
-          <ellipse cx="430" cy="196" rx="64" ry="60" fill="url(#brainAura)"/>
-
-          <g style={{ animation: "vtxBrainPulse 3.5s ease-in-out infinite" }}>
-            <path d="M412 158 C396 149,374 151,366 165 C358 179,360 198,369 210 C360 221,358 244,371 256 C381 267,400 268,412 260 C416 265,424 268,430 266 L430 158 Z" fill="#c8416a" opacity="0.94" filter="url(#brainGlow)"/>
-            <path d="M448 158 C464 149,486 151,494 165 C502 179,500 198,491 210 C500 221,502 244,489 256 C479 267,460 268,448 260 C444 265,436 268,430 266 L430 158 Z" fill="#b83060" opacity="0.91" filter="url(#brainGlow)"/>
-            <path d="M416 158 Q430 146,444 158" fill="#d4607e" opacity="0.95" filter="url(#brainGlow)"/>
-            <line x1="430" y1="148" x2="430" y2="266" stroke="#9c2850" strokeWidth="1.5" strokeDasharray="4,3" opacity="0.55"/>
-            <path d="M376 181 Q392 170,403 181 Q392 193,376 181" fill="none" stroke="#9c2850" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
-            <path d="M371 210 Q388 198,399 210 Q388 222,371 210" fill="none" stroke="#9c2850" strokeWidth="2" strokeLinecap="round" opacity="0.5"/>
-            <path d="M374 237 Q389 228,400 237" fill="none" stroke="#9c2850" strokeWidth="1.5" strokeLinecap="round" opacity="0.42"/>
-            <path d="M484 181 Q468 170,457 181 Q468 193,484 181" fill="none" stroke="#9c2850" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
-            <path d="M489 210 Q472 198,461 210 Q472 222,489 210" fill="none" stroke="#9c2850" strokeWidth="2" strokeLinecap="round" opacity="0.5"/>
-            <path d="M486 237 Q471 228,460 237" fill="none" stroke="#9c2850" strokeWidth="1.5" strokeLinecap="round" opacity="0.42"/>
-            <path d="M382 258 Q393 270,411 269" fill="none" stroke="#9c2850" strokeWidth="1.5" strokeLinecap="round" opacity="0.38"/>
-            <path d="M478 258 Q467 270,449 269" fill="none" stroke="#9c2850" strokeWidth="1.5" strokeLinecap="round" opacity="0.38"/>
-          </g>
-
-          {/* Neural connection lines */}
-          <path d="M262 210 Q314 208 366 207" stroke="url(#connL)" strokeWidth="1.5" filter="url(#lineGlow)">
+          {/* Connection lines (drawn under logo): parent → logo → student — paths meet the triangle */}
+          <path d="M262 210 Q318 208 378 207" stroke="url(#connL)" strokeWidth="1.5" filter="url(#lineGlow)">
             <animate attributeName="opacity" values=".3;.85;.3" dur="2.6s" repeatCount="indefinite"/>
           </path>
           <circle r="3.5" fill="#c8416a">
-            <animateMotion dur="2s" repeatCount="indefinite" path="M262 210 Q314 208 366 207"/>
+            <animateMotion dur="2s" repeatCount="indefinite" path="M262 210 Q318 208 378 207"/>
             <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/>
           </circle>
           <circle r="2" fill="#c8416a">
-            <animateMotion dur="2s" begin=".65s" repeatCount="indefinite" path="M262 210 Q314 208 366 207"/>
+            <animateMotion dur="2s" begin=".65s" repeatCount="indefinite" path="M262 210 Q318 208 378 207"/>
             <animate attributeName="opacity" values="0;.7;0" dur="2s" begin=".65s" repeatCount="indefinite"/>
           </circle>
-
-          <path d="M494 207 Q546 208 598 210" stroke="url(#connR)" strokeWidth="1.5" filter="url(#lineGlow)">
+          <path d="M482 207 Q546 208 598 210" stroke="url(#connR)" strokeWidth="1.5" filter="url(#lineGlow)">
             <animate attributeName="opacity" values=".3;.85;.3" dur="2.6s" begin=".35s" repeatCount="indefinite"/>
           </path>
           <circle r="3.5" fill="#c8416a">
-            <animateMotion dur="2s" begin=".4s" repeatCount="indefinite" path="M494 207 Q546 208 598 210"/>
+            <animateMotion dur="2s" begin=".4s" repeatCount="indefinite" path="M482 207 Q546 208 598 210"/>
             <animate attributeName="opacity" values="0;1;0" dur="2s" begin=".4s" repeatCount="indefinite"/>
           </circle>
           <circle r="2" fill="#c8416a">
-            <animateMotion dur="2s" begin="1.1s" repeatCount="indefinite" path="M494 207 Q546 208 598 210"/>
+            <animateMotion dur="2s" begin="1.1s" repeatCount="indefinite" path="M482 207 Q546 208 598 210"/>
             <animate attributeName="opacity" values="0;.7;0" dur="2s" begin="1.1s" repeatCount="indefinite"/>
           </circle>
 
-          {/* Floating sparks */}
-          <circle cx="420" cy="140" r="2.5" fill="#c8416a" opacity=".5" style={{ animation: "vtxDrift 3.2s ease-in-out infinite" }}/>
-          <circle cx="440" cy="136" r="1.8" fill="#c8416a" opacity=".4" style={{ animation: "vtxDrift 2.8s ease-in-out infinite .5s" }}/>
-          <circle cx="408" cy="272" r="2" fill="#c8416a" opacity=".35" style={{ animation: "vtxDrift 4s ease-in-out infinite 1s" }}/>
-          <circle cx="452" cy="269" r="1.6" fill="#c8416a" opacity=".3" style={{ animation: "vtxDrift 3.6s ease-in-out infinite 1.4s" }}/>
-          <circle cx="360" cy="200" r="1.5" fill="#c8416a" opacity=".28" style={{ animation: "vtxDrift 3s ease-in-out infinite .2s" }}/>
-          <circle cx="500" cy="202" r="1.5" fill="#c8416a" opacity=".28" style={{ animation: "vtxDrift 3.4s ease-in-out infinite .9s" }}/>
+          {/* Logo + "Vertex" label — transparent PNG, no blend */}
+          <image
+            href="/vertex-logo.png"
+            x="330"
+            y="116"
+            width="200"
+            height="140"
+            preserveAspectRatio="xMidYMid meet"
+          />
+          <text x="430" y="268" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="10" fill="#c8416a" letterSpacing="5" opacity="0.9">Vertex</text>
 
           {/* Labels */}
           <text x="210" y="398" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9" fill="#afa598" letterSpacing="3.5">PARENT</text>
           <text x="650" y="398" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="9" fill="#afa598" letterSpacing="3.5">STUDENT</text>
-          <text x="430" y="292" textAnchor="middle" fontFamily="Calibri,Trebuchet MS,sans-serif" fontSize="10" fill="#c8416a" letterSpacing="5" opacity=".65">VERTEX</text>
 
           <line x1="60" y1="370" x2="800" y2="370" stroke="rgba(26,22,14,.06)" strokeWidth="1"/>
         </svg>
-      </div>
+      </motion.div>
 
-      <div className="vtx-hero-bottom">
+      <motion.div
+        className="vtx-hero-bottom"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.7 }}
+      >
         <div className="vtx-scroll-hint">
           <span>Explore</span>
           <div className="vtx-scroll-line"></div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

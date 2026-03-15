@@ -28,10 +28,14 @@ create table if not exists access_codes (
   child_age integer check (child_age is null or (child_age >= 3 and child_age <= 18)),
   grade_level text,
   math_topics text[] default '{}',
+  learning_goals text,
   learning_pace text default 'medium' check (learning_pace is null or learning_pace in ('slow', 'medium', 'fast')),
   is_active boolean default true,
   created_at timestamptz default now()
 );
+
+-- Add learning_goals if table already existed without it
+alter table access_codes add column if not exists learning_goals text;
 
 -- Kids sessions (created when a kid enters a valid code)
 create table if not exists kids_sessions (

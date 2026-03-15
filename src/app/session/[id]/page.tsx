@@ -241,12 +241,13 @@ export default function SessionPage() {
   }
 
   async function endSession() {
+    const sessionAverageScore = attention.getSessionAverageScore();
     await supabase
       .from("tutoring_sessions")
       .update({
         status: "completed",
         ended_at: new Date().toISOString(),
-        focus_score_avg: attention.score,
+        focus_score_avg: sessionAverageScore,
       })
       .eq("id", sessionId);
 

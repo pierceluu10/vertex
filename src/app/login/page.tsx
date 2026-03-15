@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { VertexLogo } from "@/components/vertex/vertex-logo";
 import "@/styles/vertex.css";
 import { createClient } from "@/lib/supabase/client";
 
@@ -33,12 +35,24 @@ export default function LoginPage() {
 
   return (
     <div className="vtx-auth-page">
-      <div className="vtx-auth-card">
-        <Link href="/" className="vtx-auth-logo">Vertex</Link>
-        <h1>Welcome back</h1>
+      <motion.div
+        className="vtx-auth-card"
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
+      >
+        <VertexLogo href="/" height={28} className="vtx-auth-logo" />
+        <h1 style={{ fontSize: 32, fontWeight: 300, textAlign: "center", color: "var(--vtx-ink, #1a1610)", marginBottom: 8 }}>
+          Welcome <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>back</em>
+        </h1>
         <p className="vtx-auth-sub">Sign in to your parent account</p>
 
-        <div className="vtx-auth-form">
+        <motion.div
+          className="vtx-auth-form"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.35, delay: 0.2 }}
+        >
           <form onSubmit={handleSubmit}>
             <div className="vtx-field">
               <label htmlFor="email">Email</label>
@@ -56,7 +70,7 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
-        </div>
+        </motion.div>
 
         <p className="vtx-auth-link">
           Don&apos;t have an account? <Link href="/signup">Sign up</Link>
@@ -80,7 +94,7 @@ export default function LoginPage() {
             I&apos;m a Student
           </Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

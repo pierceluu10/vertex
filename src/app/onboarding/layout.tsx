@@ -1,3 +1,5 @@
+import { CustomCursor } from "@/components/vertex/custom-cursor";
+
 export const dynamic = "force-dynamic";
 
 export default function OnboardingLayout({
@@ -5,5 +7,10 @@ export default function OnboardingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <div className="vertex-page" style={{ minHeight: "100vh" }}>
+      <CustomCursor />
+      {children}
+    </div>
+  );
 }
