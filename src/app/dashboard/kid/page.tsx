@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,6 +20,8 @@ import {
   Trash2,
   User,
   ArrowLeft,
+  ArrowRight,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,6 +30,8 @@ import type { KidSession, UploadedDocument, Quiz, TutoringSession } from "@/type
 import "@/styles/vertex.css";
 
 const TODO_STORAGE_KEY = "vertex_kid_todos";
+const STREAK_STORAGE_KEY = "vertex_kid_streak";
+const XP_STORAGE_KEY = "vertex_kid_xp";
 
 type Tab = "home" | "study" | "profile";
 type HomeView = "main" | "homework" | "quiz";
@@ -46,9 +50,64 @@ const tabTransition = {
   exit: { opacity: 0, y: -8, transition: { duration: 0.18 } },
 };
 
+/* ─── Daily challenge prompts ─── */
+const DAILY_CHALLENGES = [
+  "Try solving 3 multiplication problems without a calculator today!",
+  "Can you find 5 different ways to make the number 24 using +, -, ×, ÷?",
+  "What's the biggest number you can make with the digits 3, 7, and 5?",
+  "Try to estimate how many steps it takes to walk around your house!",
+  "Draw a shape with exactly 5 sides. What's it called?",
+  "Count by 7s as high as you can go!",
+  "What fraction of your day do you spend sleeping?",
+  "Find 3 objects at home that are shaped like cylinders.",
+  "If you had 100 coins, how many ways could you split them into equal groups?",
+  "Measure something using only your hand span. How many spans is it?",
+  "What's half of half of 100?",
+  "Try to add up all the numbers from 1 to 10 in your head!",
+  "How many rectangles can you spot in your room right now?",
+  "If you save $2 a day, how much will you have after a month?",
+  "What's the next number in this pattern: 2, 6, 12, 20, __?",
+  "Draw a symmetrical butterfly using only triangles!",
+  "Estimate how tall you are in centimeters. Then measure to check!",
+  "How many minutes are in a full day?",
+  "Create your own word problem for a friend to solve.",
+  "Find 3 things that weigh about the same as 1 kilogram.",
+  "What shape has the most sides that you know? Draw it!",
+  "Skip count by 9s — do you notice a pattern in the digits?",
+  "If a pizza has 8 slices and you eat 3, what fraction is left?",
+  "Time yourself: how long can you hold your breath? Round to the nearest 5 seconds.",
+  "What's 15% of 200? Try to figure it out without paper!",
+  "Build something using exactly 10 blocks or LEGO pieces.",
+  "How many different 3-digit numbers can you make with 1, 2, and 3?",
+  "Estimate how many grains of rice fit in a cup.",
+  "What's the perimeter of your desk or table?",
+  "Draw a graph of your mood throughout the day!",
+];
+
+/* ─── Confetti colors ─── */
+const CONFETTI_COLORS = ["#c8416a", "#e8a87c", "#8b5cf6", "#3b82f6", "#10b981", "#f59e0b"];
+
+function generateConfettiPieces(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    top: `${40 + Math.random() * 30}%`,
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    driftX: `${(Math.random() - 0.5) * 200}px`,
+    driftY: `${-80 - Math.random() * 160}px`,
+    driftR: `${(Math.random() - 0.5) * 720}deg`,
+    delay: `${Math.random() * 0.3}s`,
+    width: `${6 + Math.random() * 8}px`,
+    height: `${6 + Math.random() * 8}px`,
+    borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+  }));
+}
+
 export default function KidDashboardPage() {
   const router = useRouter();
-  const [kidSession, setKidSession] = useState<KidSession | null>(() => readStoredKidSession());
+  // Initialize as null to avoid hydration mismatch — localStorage is read in useEffect below
+  const [kidSession, setKidSession] = useState<KidSession | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [homeView, setHomeView] = useState<HomeView>("main");
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
@@ -64,6 +123,57 @@ export default function KidDashboardPage() {
   const [todos, setTodos] = useState<{ id: string; label: string; done: boolean }[]>(() => []);
   const [todoInput, setTodoInput] = useState("");
   const [tutorName, setTutorName] = useState<string>("");
+  const [streak, setStreak] = useState(0);
+  const [xp, setXp] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  const confettiPieces = useMemo(() => generateConfettiPieces(40), []);
+
+  /* ─── Load streak & XP from localStorage ─── */
+  function loadGamification(sessionId: string) {
+    try {
+      const streakData = localStorage.getItem(`${STREAK_STORAGE_KEY}_${sessionId}`);
+      if (streakData) {
+        const parsed = JSON.parse(streakData);
+        const today = new Date().toDateString();
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        if (parsed.lastDate === today) {
+          setStreak(parsed.count);
+        } else if (parsed.lastDate === yesterday) {
+          setStreak(parsed.count);
+        } else {
+          setStreak(0);
+          localStorage.setItem(`${STREAK_STORAGE_KEY}_${sessionId}`, JSON.stringify({ count: 0, lastDate: today }));
+        }
+      }
+      const xpData = localStorage.getItem(`${XP_STORAGE_KEY}_${sessionId}`);
+      if (xpData) setXp(parseInt(xpData, 10) || 0);
+    } catch { /* ignore */ }
+  }
+
+  function incrementStreak(sessionId: string) {
+    try {
+      const today = new Date().toDateString();
+      const streakData = localStorage.getItem(`${STREAK_STORAGE_KEY}_${sessionId}`);
+      let count = 1;
+      if (streakData) {
+        const parsed = JSON.parse(streakData);
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        if (parsed.lastDate === today) return; // Already counted today
+        if (parsed.lastDate === yesterday) count = parsed.count + 1;
+      }
+      localStorage.setItem(`${STREAK_STORAGE_KEY}_${sessionId}`, JSON.stringify({ count, lastDate: today }));
+      setStreak(count);
+    } catch { /* ignore */ }
+  }
+
+  function addXp(sessionId: string, amount: number) {
+    setXp(prev => {
+      const next = prev + amount;
+      try { localStorage.setItem(`${XP_STORAGE_KEY}_${sessionId}`, String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }
 
   const loadTutor = useCallback(async (parentId: string) => {
     try {
@@ -89,7 +199,16 @@ export default function KidDashboardPage() {
     } catch { /* ignore */ }
   }, []);
 
+  // Read session from localStorage after mount (avoids SSR hydration mismatch)
   useEffect(() => {
+    const session = readStoredKidSession();
+    setKidSession(session);
+    setMounted(true);
+  }, []);
+
+  // Load data once we have the session, or redirect if no session after mount
+  useEffect(() => {
+    if (!mounted) return;
     if (!kidSession) {
       router.push("/student");
       return;
@@ -97,11 +216,12 @@ export default function KidDashboardPage() {
     void loadDocuments(kidSession.parent_id);
     void loadSessions(kidSession.id);
     void loadTutor(kidSession.parent_id);
+    loadGamification(kidSession.id);
     try {
       const raw = localStorage.getItem(`${TODO_STORAGE_KEY}_${kidSession.id}`);
       if (raw) setTodos(JSON.parse(raw));
     } catch { /* ignore */ }
-  }, [kidSession, loadDocuments, loadSessions, loadTutor, router]);
+  }, [mounted, kidSession, loadDocuments, loadSessions, loadTutor, router]);
 
   function saveTodos(next: { id: string; label: string; done: boolean }[]) {
     setTodos(next);
@@ -172,14 +292,24 @@ export default function KidDashboardPage() {
   }
 
   function answerQuiz(answer: string) {
-    if (!quizData) return;
+    if (!quizData || !kidSession) return;
     const q = quizData.questions[quizData.current];
     const isCorrect =
       answer.toLowerCase().trim() === q.correct_answer.toLowerCase().trim();
     const newAnswers = [...quizData.answers, { answer, correct: isCorrect }];
+
+    // Award XP for correct answers
+    if (isCorrect) addXp(kidSession.id, 10);
+
     const nextIdx = quizData.current + 1;
     if (nextIdx >= quizData.questions.length) {
       setQuizData({ ...quizData, answers: newAnswers, done: true });
+      // Trigger confetti
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 1800);
+      // Increment streak on quiz completion
+      incrementStreak(kidSession.id);
+      addXp(kidSession.id, 25);
     } else {
       setQuizData({ ...quizData, current: nextIdx, answers: newAnswers });
     }
@@ -187,16 +317,17 @@ export default function KidDashboardPage() {
 
   function startTutorSession(documentId?: string) {
     if (!kidSession) return;
+    // Increment streak when starting a session
+    incrementStreak(kidSession.id);
+    addXp(kidSession.id, 25);
     const params = new URLSearchParams({
       kidSessionId: kidSession.id,
       parentId: kidSession.parent_id,
     });
     if (documentId) {
-      // Go to structured lesson page for homework documents
       params.set("documentId", documentId);
       router.push(`/lesson?${params.toString()}`);
     } else {
-      // Go to free-form chat session
       router.push(`/session/kid?${params.toString()}`);
     }
   }
@@ -209,8 +340,23 @@ export default function KidDashboardPage() {
     );
   }
 
-  const greeting = getGreeting();
+  const { greeting, emoji, motivational } = getGreetingData();
   const childName = kidSession.child_name?.trim() || "there";
+  const dailyChallenge = DAILY_CHALLENGES[Math.floor(Date.now() / 86400000) % DAILY_CHALLENGES.length];
+
+  /* Computed stats */
+  const sessionsThisWeek = sessions.filter((s) => {
+    const d = new Date(s.started_at);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return d >= weekAgo;
+  }).length;
+
+  const avgFocus = (() => {
+    const completed = sessions.filter((s) => s.status === "completed" && s.focus_score_avg != null);
+    if (completed.length === 0) return null;
+    return Math.round(completed.reduce((a, s) => a + (s.focus_score_avg ?? 0), 0) / completed.length);
+  })();
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "study", label: "Study", icon: <MessageCircle size={18} /> },
@@ -224,6 +370,37 @@ export default function KidDashboardPage() {
         <div className="vtx-kid-logo">Vertex</div>
       </header>
 
+      {/* Confetti overlay */}
+      <AnimatePresence>
+        {showConfetti && (
+          <motion.div
+            className="vtx-kid-confetti-container"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {confettiPieces.map((p) => (
+              <div
+                key={p.id}
+                className="vtx-kid-confetti-piece"
+                style={{
+                  left: p.left,
+                  top: p.top,
+                  backgroundColor: p.color,
+                  width: p.width,
+                  height: p.height,
+                  borderRadius: p.borderRadius,
+                  animationDelay: p.delay,
+                  // @ts-expect-error CSS custom properties
+                  "--drift-x": p.driftX,
+                  "--drift-y": p.driftY,
+                  "--drift-r": p.driftR,
+                }}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <ScrollArea className="kid-dashboard-scroll flex-1 [&_[data-slot=scroll-area-scrollbar]]:hidden">
         <div className={cn("vtx-kid-scroll-padding", activeTab === "home" && homeView === "main" && "vtx-kid-fit-viewport")}>
           <div className="vtx-kid-content">
@@ -235,11 +412,26 @@ export default function KidDashboardPage() {
                     Dashboard
                   </motion.span>
                   <motion.h1 className="vtx-kid-section-title" variants={stagger} initial="hidden" animate="show" custom={1}>
+                    <span className="vtx-kid-greeting-emoji">{emoji}</span>
                     {greeting}, <em>{childName}</em>.
                   </motion.h1>
-                  <motion.p className="vtx-kid-subtitle" variants={stagger} initial="hidden" animate="show" custom={2}>
-                    Choose an activity below, {childName}.
+                  <motion.p className="vtx-kid-motivational" variants={stagger} initial="hidden" animate="show" custom={2}>
+                    {motivational}
                   </motion.p>
+
+                  {/* Streak & XP Badges */}
+                  <motion.div className="vtx-kid-badges-row" variants={stagger} initial="hidden" animate="show" custom={2.5}>
+                    <div className="vtx-kid-badge">
+                      <span className="vtx-kid-badge-icon vtx-kid-flame-pulse">🔥</span>
+                      <span className="vtx-kid-badge-value">{streak}</span>
+                      <span className="vtx-kid-badge-label">day streak</span>
+                    </div>
+                    <div className="vtx-kid-badge">
+                      <span className="vtx-kid-badge-icon"><Zap size={16} style={{ color: "#f59e0b" }} /></span>
+                      <span className="vtx-kid-badge-value">{xp}</span>
+                      <span className="vtx-kid-badge-label">XP</span>
+                    </div>
+                  </motion.div>
 
                   <motion.button type="button" className="vtx-kid-cta" onClick={() => startTutorSession()} variants={stagger} initial="hidden" animate="show" custom={3}>
                     <div className="vtx-kid-cta-icon"><MessageCircle size={20} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
@@ -250,25 +442,44 @@ export default function KidDashboardPage() {
                     <ChevronRight size={18} style={{ color: "var(--vtx-muted, #8a7f6e)" }} />
                   </motion.button>
 
-                  <motion.div className="vtx-kid-actions-label" variants={stagger} initial="hidden" animate="show" custom={4}>
+                  {/* Daily Challenge Card */}
+                  <motion.div className="vtx-kid-daily-challenge" variants={stagger} initial="hidden" animate="show" custom={4}>
+                    <div className="vtx-kid-challenge-icon">
+                      <Sparkles size={22} style={{ color: "var(--vtx-pink, #c8416a)" }} />
+                    </div>
+                    <div>
+                      <div className="vtx-kid-challenge-label">Daily Challenge</div>
+                      <div className="vtx-kid-challenge-text">{dailyChallenge}</div>
+                    </div>
+                  </motion.div>
+
+                  <motion.div className="vtx-kid-actions-label" variants={stagger} initial="hidden" animate="show" custom={5}>
                     What would you like to do?
                   </motion.div>
 
                   <div className="vtx-kid-action-grid">
-                  <motion.button type="button" className="vtx-kid-action-card" onClick={() => setHomeView("homework")} variants={stagger} initial="hidden" animate="show" custom={5}>
+                  <motion.button type="button" className="vtx-kid-action-card" onClick={() => setHomeView("homework")} variants={stagger} initial="hidden" animate="show" custom={6}>
+                    <span className="vtx-kid-action-arrow"><ArrowRight size={16} /></span>
                     <div className="vtx-kid-action-icon"><Upload size={22} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                     <div className="vtx-kid-action-title">Upload homework</div>
                     <div className="vtx-kid-action-desc">Add a PDF to study from</div>
+                    {documents.length > 0 && (
+                      <div className="vtx-kid-action-badge">{documents.length} file{documents.length !== 1 ? "s" : ""}</div>
+                    )}
                   </motion.button>
-                  <motion.button type="button" className={cn("vtx-kid-action-card", quizLoading && "opacity-60")} onClick={startQuiz} disabled={quizLoading} variants={stagger} initial="hidden" animate="show" custom={6}>
+                  <motion.button type="button" className={cn("vtx-kid-action-card", quizLoading && "opacity-60")} onClick={startQuiz} disabled={quizLoading} variants={stagger} initial="hidden" animate="show" custom={7}>
+                    <span className="vtx-kid-action-arrow"><ArrowRight size={16} /></span>
                     <div className="vtx-kid-action-icon"><Sparkles size={22} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                     <div className="vtx-kid-action-title">{quizLoading ? "Loading…" : "Take a quiz"}</div>
                     <div className="vtx-kid-action-desc">Practice with math questions</div>
+                    <div className="vtx-kid-action-badge vtx-kid-action-badge-new">+10 XP</div>
                   </motion.button>
-                  <motion.button type="button" className="vtx-kid-action-card" onClick={() => setActiveTab("study")} variants={stagger} initial="hidden" animate="show" custom={7}>
+                  <motion.button type="button" className="vtx-kid-action-card" onClick={() => setActiveTab("study")} variants={stagger} initial="hidden" animate="show" custom={8}>
+                    <span className="vtx-kid-action-arrow"><ArrowRight size={16} /></span>
                     <div className="vtx-kid-action-icon"><MessageCircle size={22} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                     <div className="vtx-kid-action-title">Start studying</div>
                     <div className="vtx-kid-action-desc">Get help with math</div>
+                    <div className="vtx-kid-action-badge vtx-kid-action-badge-new">+25 XP</div>
                   </motion.button>
                   </div>
 
@@ -327,35 +538,48 @@ export default function KidDashboardPage() {
 
                   <div className="vtx-kid-sidebar-block">
                     <div className="vtx-kid-sidebar-heading">
-                      <BarChart3 size={16} style={{ color: "var(--vtx-pink, #c8416a)" }} />
+                      <BarChart3 size={16} style={{ color: "#8b5cf6" }} />
                       <span>How you&apos;re doing</span>
                     </div>
+
+                    {/* Focus progress ring */}
+                    {avgFocus !== null && (
+                      <div className="vtx-kid-progress-ring" style={{ marginBottom: 20 }}>
+                        <ProgressRing value={avgFocus} />
+                        <div className="vtx-kid-progress-ring-label">
+                          <span className="vtx-kid-progress-ring-value">{avgFocus}%</span>
+                          <span className="vtx-kid-progress-ring-text">Avg focus</span>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="vtx-kid-stats-mini">
                       <div className="vtx-kid-stat-mini">
-                        <span className="vtx-kid-stat-mini-value">{sessions.filter((s) => { const d = new Date(s.started_at); const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); return d >= weekAgo; }).length}</span>
+                        <span className="vtx-kid-stat-mini-value">{sessionsThisWeek}</span>
                         <span className="vtx-kid-stat-mini-label">Sessions this week</span>
+                        <div className="vtx-kid-stat-bar">
+                          <div className="vtx-kid-stat-bar-fill" style={{ width: `${Math.min(sessionsThisWeek * 14, 100)}%` }} />
+                        </div>
                       </div>
-                      <div className="vtx-kid-stat-mini">
-                        <span className="vtx-kid-stat-mini-value">
-                          {(() => {
-                            const completed = sessions.filter((s) => s.status === "completed" && s.focus_score_avg != null);
-                            if (completed.length === 0) return "—";
-                            const avg = Math.round(completed.reduce((a, s) => a + (s.focus_score_avg ?? 0), 0) / completed.length);
-                            return `${avg}%`;
-                          })()}
-                        </span>
-                        <span className="vtx-kid-stat-mini-label">Avg focus</span>
-                      </div>
+                      {avgFocus === null && (
+                        <div className="vtx-kid-stat-mini">
+                          <span className="vtx-kid-stat-mini-value">—</span>
+                          <span className="vtx-kid-stat-mini-label">Avg focus</span>
+                        </div>
+                      )}
                       <div className="vtx-kid-stat-mini">
                         <span className="vtx-kid-stat-mini-value">{documents.length}</span>
                         <span className="vtx-kid-stat-mini-label">Homework files</span>
+                        <div className="vtx-kid-stat-bar">
+                          <div className="vtx-kid-stat-bar-fill" style={{ width: `${Math.min(documents.length * 20, 100)}%` }} />
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="vtx-kid-sidebar-block">
                     <div className="vtx-kid-sidebar-heading">
-                      <MessageSquare size={16} style={{ color: "var(--vtx-pink, #c8416a)" }} />
+                      <MessageSquare size={16} style={{ color: "#3b82f6" }} />
                       <span>Past study sessions</span>
                     </div>
                     <ul className="vtx-kid-past-list">
@@ -443,12 +667,16 @@ export default function KidDashboardPage() {
                 ) : quizData.done ? (
                   <div className="vtx-kid-quiz-card">
                     <span className="vtx-kid-section-num">Complete</span>
-                    <h2 className="vtx-kid-quiz-title">Quiz complete, {childName}!</h2>
+                    <h2 className="vtx-kid-quiz-title">Quiz complete, {childName}! 🎉</h2>
                     <div className="vtx-kid-quiz-result">
                       {quizData.answers.filter((a) => a.correct).length}/{quizData.questions.length}
                     </div>
                     <p className="vtx-kid-quiz-desc">
-                      {quizData.answers.filter((a) => a.correct).length}/{quizData.questions.length} correct.
+                      {quizData.answers.filter((a) => a.correct).length}/{quizData.questions.length} correct — you earned{" "}
+                      <strong style={{ color: "var(--vtx-pink)" }}>
+                        {quizData.answers.filter((a) => a.correct).length * 10 + 25} XP
+                      </strong>
+                      !
                     </p>
                     <button type="button" className="vtx-kid-quiz-btn" onClick={() => { setQuizData(null); startQuiz(); }}>
                       Try another quiz
@@ -512,7 +740,7 @@ export default function KidDashboardPage() {
                 {documents.length > 0 ? (
                   <div style={{ marginTop: 40 }}>
                     <div className="vtx-kid-doc-list-label">Or study with a homework file</div>
-                    {documents.map((doc, i) => (
+                    {documents.map((doc) => (
                       <button key={doc.id} type="button" className="vtx-kid-cta" onClick={() => startTutorSession(doc.id)} style={{ marginTop: 10 }}>
                         <div className="vtx-kid-doc-icon"><FileText size={18} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                         <div className="vtx-kid-cta-text"><div className="vtx-kid-cta-title">{doc.file_name}</div></div>
@@ -534,10 +762,37 @@ export default function KidDashboardPage() {
                 <h2 className="vtx-kid-section-title">Your <em>profile</em></h2>
                 <p className="vtx-kid-subtitle">Signed in as {childName}.</p>
                 <div className="vtx-kid-profile-block">
+                  {/* Profile avatar */}
+                  <div className="vtx-kid-profile-avatar">
+                    <span className="vtx-kid-profile-avatar-text">
+                      {childName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                    </span>
+                  </div>
+
                   <div className="vtx-kid-profile-row">
                     <span className="vtx-kid-profile-label">Name</span>
                     <span className="vtx-kid-profile-value">{childName}</span>
                   </div>
+
+                  {/* Streak & XP stats on profile */}
+                  <div className="vtx-kid-profile-stats">
+                    <div className="vtx-kid-profile-stat">
+                      <span className="vtx-kid-profile-stat-icon">🔥</span>
+                      <span className="vtx-kid-profile-stat-value">{streak}</span>
+                      <span className="vtx-kid-profile-stat-label">Streak</span>
+                    </div>
+                    <div className="vtx-kid-profile-stat">
+                      <span className="vtx-kid-profile-stat-icon">⚡</span>
+                      <span className="vtx-kid-profile-stat-value">{xp}</span>
+                      <span className="vtx-kid-profile-stat-label">XP</span>
+                    </div>
+                    <div className="vtx-kid-profile-stat">
+                      <span className="vtx-kid-profile-stat-icon">📚</span>
+                      <span className="vtx-kid-profile-stat-value">{sessions.length}</span>
+                      <span className="vtx-kid-profile-stat-label">Sessions</span>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     className="vtx-kid-quiz-btn"
@@ -559,6 +814,7 @@ export default function KidDashboardPage() {
         </div>
       </ScrollArea>
 
+      {/* Bottom nav with active pill */}
       <nav className="vtx-kid-nav">
         {navItems.map((item) => (
           <button
@@ -570,12 +826,40 @@ export default function KidDashboardPage() {
               setActiveTab(item.id);
             }}
           >
+            {activeTab === item.id && (
+              <motion.div
+                className="vtx-kid-nav-pill"
+                layoutId="nav-pill"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
             {item.icon}
             <span>{item.label}</span>
           </button>
         ))}
       </nav>
     </div>
+  );
+}
+
+/* ─── Progress Ring SVG ─── */
+function ProgressRing({ value }: { value: number }) {
+  const radius = 26;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (value / 100) * circumference;
+
+  return (
+    <svg className="vtx-kid-progress-ring-svg" viewBox="0 0 64 64">
+      <circle className="vtx-kid-progress-ring-bg" cx="32" cy="32" r={radius} />
+      <circle
+        className="vtx-kid-progress-ring-fill"
+        cx="32"
+        cy="32"
+        r={radius}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+      />
+    </svg>
   );
 }
 
@@ -606,11 +890,20 @@ function QuizOpenInput({ onSubmit }: { onSubmit: (answer: string) => void }) {
   );
 }
 
-function getGreeting(): string {
+function getGreetingData(): { greeting: string; emoji: string; motivational: string } {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+  const motivationals = [
+    "Ready to learn something new today?",
+    "Keep up the amazing work!",
+    "You're doing great — let's keep going!",
+    "Every problem you solve makes you stronger!",
+    "Today is a great day to grow your brain!",
+  ];
+  const motivational = motivationals[Math.floor(Date.now() / 86400000) % motivationals.length];
+
+  if (hour < 12) return { greeting: "Good morning", emoji: "☀️", motivational };
+  if (hour < 17) return { greeting: "Good afternoon", emoji: "🌤️", motivational };
+  return { greeting: "Good evening", emoji: "🌙", motivational };
 }
 
 function readStoredKidSession(): KidSession | null {
