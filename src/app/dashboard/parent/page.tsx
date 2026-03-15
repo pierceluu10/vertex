@@ -12,6 +12,7 @@ import type {
   Parent, AccessCode, TutoringSession, UploadedDocument,
   FocusEvent,
 } from "@/types";
+import { Card } from "@/components/ui/card";
 import "@/styles/vertex.css";
 
 type Tab = "overview" | "progress" | "homework" | "analytics" | "settings";
@@ -544,36 +545,6 @@ export default function ParentDashboardPage() {
                     ))}
                   </div>
 
-                  {/* Bar chart: sessions per day */}
-                  <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={5}>
-                    <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Sessions per day (last 7 days)</h2>
-                    <div className="vtx-parent-bar-chart">
-                      {(() => {
-                        const days: { label: string; count: number }[] = [];
-                        for (let i = 6; i >= 0; i--) {
-                          const d = new Date(); d.setDate(d.getDate() - i);
-                          const dayStr = d.toISOString().split("T")[0];
-                          const count = sessions.filter((s) => new Date(s.started_at).toISOString().split("T")[0] === dayStr).length;
-                          days.push({ label: d.toLocaleDateString("en-US", { weekday: "short" }), count });
-                        }
-                        const max = Math.max(1, ...days.map((x) => x.count));
-                        return days.map((day, i) => (
-                          <div key={i} className="vtx-parent-bar-col">
-                            <motion.div
-                              className="vtx-parent-bar"
-                              initial={{ height: 0 }}
-                              animate={{ height: day.count ? `${Math.round((day.count / max) * 100)}%` : "4px" }}
-                              transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }}
-                              style={{ minHeight: day.count ? 24 : 4 }}
-                            />
-                            <span className="vtx-parent-bar-value">{day.count}</span>
-                            <span className="vtx-parent-bar-label">{day.label}</span>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </motion.div>
-
                   {/* Focus trend */}
                   <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={6}>
                     <h2 className="vtx-parent-card-title" style={{ marginBottom: 4 }}>Focus score trend</h2>
@@ -591,6 +562,38 @@ export default function ParentDashboardPage() {
                               style={{ minHeight: score > 0 ? 16 : 4 }}
                             />
                             <span className="vtx-parent-bar-value" style={{ fontWeight: 500 }}>{Math.round(score)}%</span>
+                            <span className="vtx-parent-bar-label">S{completedSessions.length - i}</span>
+                          </div>
+                        );
+                      })}
+                      {completedSessions.length === 0 && (
+                        <span className="vtx-parent-muted-text">No completed sessions yet</span>
+                      )}
+                    </div>
+                  </motion.div>
+
+                  {/* Learning comprehension trend */}
+                  <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={7}>
+                    <h2 className="vtx-parent-card-title" style={{ marginBottom: 4 }}>Learning comprehension</h2>
+                    <p className="vtx-parent-muted-text" style={{ marginBottom: 16 }}>Estimated comprehension based on focus and session duration</p>
+                    <div className="vtx-parent-bar-chart" style={{ height: 120 }}>
+                      {completedSessions.slice(0, 10).reverse().map((session, i) => {
+                        const focus = session.focus_score_avg ?? 50;
+                        const durationMin = session.ended_at
+                          ? (new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 60000
+                          : 0;
+                        const durationFactor = Math.min(1, durationMin / 30);
+                        const comprehension = Math.round(focus * 0.6 + durationFactor * 100 * 0.4);
+                        return (
+                          <div key={session.id} className="vtx-parent-bar-col">
+                            <motion.div
+                              className={`vtx-parent-bar${comprehension >= 70 ? " good" : comprehension >= 45 ? " ok" : " low"}`}
+                              initial={{ height: 0 }}
+                              animate={{ height: `${Math.min(100, comprehension)}%` }}
+                              transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }}
+                              style={{ minHeight: comprehension > 0 ? 16 : 4 }}
+                            />
+                            <span className="vtx-parent-bar-value" style={{ fontWeight: 500 }}>{comprehension}%</span>
                             <span className="vtx-parent-bar-label">S{completedSessions.length - i}</span>
                           </div>
                         );

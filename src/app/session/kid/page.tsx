@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Send, ArrowLeft, Sparkles, Lightbulb } from "lucide-react";
+import { Send, ArrowLeft } from "lucide-react";
 import { HeyGenAvatar } from "@/components/session/heygen-avatar";
 import { useAttention } from "@/hooks/use-attention";
 import { getInterventionMessage } from "@/lib/attention";
 import { MathVisual } from "@/components/session/math-visual";
+import { MessageContent } from "@/components/session/message-content";
 import type { AdaptiveState, KidSession } from "@/types";
 import { createInitialAdaptiveState, handleCorrectAnswer, handleIncorrectAnswer, handleDistraction } from "@/lib/adaptive";
 import "@/styles/vertex.css";
@@ -194,22 +195,7 @@ function KidSessionContent() {
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => sendMessage("Give me a hint", "hint")} style={{
-            display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
-            border: "1px solid rgba(158,107,117,0.2)", borderRadius: 8, background: "transparent",
-            color: "#c8416a", fontSize: 11, cursor: "pointer",
-          }}>
-            <Lightbulb size={12} /> Hint
-          </button>
-          <button onClick={() => sendMessage("Quiz me!", "quiz")} style={{
-            display: "flex", alignItems: "center", gap: 4, padding: "6px 12px",
-            border: "1px solid rgba(158,107,117,0.2)", borderRadius: 8, background: "transparent",
-            color: "#c8416a", fontSize: 11, cursor: "pointer",
-          }}>
-            <Sparkles size={12} /> Quiz
-          </button>
-        </div>
+        <div />
       </header>
 
       {/* Chat + Avatar */}
@@ -229,7 +215,7 @@ function KidSessionContent() {
                       ? { background: "rgba(166,124,74,0.08)", border: "1px solid rgba(166,124,74,0.18)", borderBottomLeftRadius: 4 }
                       : { background: "#fff", border: "1px solid rgba(0,0,0,0.06)", borderBottomLeftRadius: 4 }),
                   }}>
-                    <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+                    <MessageContent content={msg.content} />
                     {msg.jsxGraph ? (msg.jsxGraph as MathVisualConfig[]).map((config, i) => (
                       <MathVisual key={i} config={config} />
                     )) : null}
