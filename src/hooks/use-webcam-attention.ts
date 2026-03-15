@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 
+
 /* ─── Exported state shape ─── */
 export interface WebcamAttentionState {
   facePresent: boolean;
@@ -171,7 +172,7 @@ export function useWebcamAttention(
               "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
             delegate: "CPU",
           },
-          runningMode: "IMAGE",
+          runningMode: "VIDEO",
           numFaces: 1,
           outputFaceBlendshapes: false,
           outputFacialTransformationMatrixes: false,
@@ -181,12 +182,12 @@ export function useWebcamAttention(
       }
 
       const landmarker = landmarkerRef.current as {
-        detect?: (image: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement) => {
+        detectForVideo?: (image: HTMLVideoElement, timestamp: number) => {
           faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>>;
         };
       } | null;
 
-      if (!landmarker?.detect) return;
+      if (!landmarker?.detectForVideo) return;
 
       const now = Date.now();
       if (now - landmarkerReadyAtRef.current < 500) return;
@@ -194,24 +195,9 @@ export function useWebcamAttention(
       // Guard: video must be playing and have valid dimensions
       if (video.videoWidth === 0 || video.videoHeight === 0 || video.paused || video.ended) return;
 
-      // Use canvas (already drawn above) so detect() gets a static frame; passing video can throw in some browsers
-      if (canvas.width === 0 || canvas.height === 0) return;
-
       let result: { faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>> };
       try {
-        // MediaPipe WASM logs INFO/WARNING to console.error; suppress them so
-        // the Next.js dev overlay doesn't treat them as real errors.
-        const origError = console.error;
-        console.error = (...args: unknown[]) => {
-          const msg = typeof args[0] === "string" ? args[0] : "";
-          if (msg.startsWith("INFO:") || msg.startsWith("WARNING:")) return;
-          origError.apply(console, args);
-        };
-        try {
-          result = landmarker.detect(canvas);
-        } finally {
-          console.error = origError;
-        }
+        result = landmarker.detectForVideo(video, now);
       } catch {
         return;
       }
