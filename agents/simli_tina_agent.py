@@ -118,14 +118,17 @@ async def tina_tutor(ctx: agents.JobContext):
             avatar_participant_identity=f"simli-avatar-{ctx.room.name[:12]}",
             avatar_participant_name=os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", "Tina"),
         )
-        await avatar_session.start(
-            session,
-            room=ctx.room,
-            livekit_url=livekit_url,
-            livekit_api_key=_required_env("LIVEKIT_API_KEY"),
-            livekit_api_secret=_required_env("LIVEKIT_API_SECRET"),
-        )
-        logger.info("Simli avatar start requested", extra={"room": ctx.room.name})
+        try:
+            await avatar_session.start(
+                session,
+                room=ctx.room,
+                livekit_url=livekit_url,
+                livekit_api_key=_required_env("LIVEKIT_API_KEY"),
+                livekit_api_secret=_required_env("LIVEKIT_API_SECRET"),
+            )
+            logger.info("Simli avatar start requested", extra={"room": ctx.room.name})
+        except Exception as e:
+            logger.exception("Simli avatar failed to start: %s", e, extra={"room": ctx.room.name})
     else:
         logger.warning("Skipping Simli avatar video", extra={"reason": avatar_reason, "livekit_url": livekit_url})
 

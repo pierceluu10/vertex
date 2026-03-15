@@ -554,16 +554,23 @@ export function LiveKitAvatar({
           updateRemotePresence(room);
           if (remotePresenceRef.current.agent || remotePresenceRef.current.avatar) {
             setStatus("connecting");
-            setErrorMsg(`${tutorName} is in the room and warming up the live feed.`);
+            setErrorMsg(
+              remotePresenceRef.current.avatar
+                ? `${tutorName} is in the room; Simli may still be publishing video. Wait a bit longer or check agent logs.`
+                : `${tutorName} is in the room and warming up the live feed.`
+            );
             return;
           }
 
           setStatus("error");
+          const noParticipants = room.remoteParticipants.size === 0;
           setErrorMsg(
-            avatarVideoSupportedRef.current
-              ? `${tutorName} could not join this room yet. Refresh once, and if it keeps happening we need to inspect the Simli worker session.`
-              : avatarVideoReasonRef.current ||
+            !avatarVideoSupportedRef.current
+              ? avatarVideoReasonRef.current ||
                   `${tutorName}'s live face needs a public wss:// LiveKit room to show video.`
+              : noParticipants
+                ? `The tutor agent did not join the room. Make sure the agent worker is running (e.g. \`python agents/simli_tina_agent.py dev\`) and LIVEKIT_AGENT_NAME matches.`
+                : `${tutorName} joined but the video feed did not start. Check the agent terminal for Simli errors, or refresh to retry.`
           );
         }, 12000);
 
