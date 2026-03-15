@@ -122,14 +122,15 @@ export default function SignUpPage() {
 
   return (
     <div className="vtx-auth-page">
+      <div className="vtx-auth-page-logo">
+        <VertexLogo href="/" height={56} className="vtx-auth-logo" />
+      </div>
       <motion.div
         className="vtx-auth-card"
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
       >
-        <VertexLogo href="/" height={28} className="vtx-auth-logo" />
-
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <span style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--vtx-muted, #8a7f6e)" }}>
             Step {step} of 2

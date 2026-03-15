@@ -71,13 +71,15 @@ export default function OnboardingPage() {
 
   return (
     <div className="vtx-auth-page">
+      <div className="vtx-auth-page-logo">
+        <VertexLogo href="/" height={56} className="vtx-auth-logo" />
+      </div>
       <motion.div
         className="vtx-auth-card"
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
       >
-        <VertexLogo href="/" height={28} className="vtx-auth-logo" />
         <h1 style={{ fontSize: 32, fontWeight: 300, textAlign: "center", color: "var(--vtx-ink, #1a1610)", marginBottom: 8 }}>
           {step === "complete" ? (
             <>You&apos;re <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>all set!</em></>

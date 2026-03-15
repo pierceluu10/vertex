@@ -83,6 +83,9 @@ export default function StudentEntryPage() {
 
   return (
     <div className="vtx-auth-page vtx-kid-ui">
+      <div className="vtx-auth-page-logo">
+        <VertexLogo href="/" height={56} className="vtx-auth-logo" />
+      </div>
       <motion.div
         className="vtx-auth-card"
         style={{ textAlign: "center" }}
@@ -90,7 +93,6 @@ export default function StudentEntryPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
       >
-        <VertexLogo href="/" height={28} className="vtx-auth-logo" />
         <h1>Enter Your Code</h1>
         <p className="vtx-auth-sub">Ask your parent for your 6-digit access code</p>
 

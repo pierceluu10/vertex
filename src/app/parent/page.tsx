@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Parent, Child, UploadedDocument, TutoringSession } from "@/types";
+import { VertexLogo } from "@/components/vertex/vertex-logo";
 import "@/styles/vertex.css";
 
 type ViewState = "locked" | "unlocked";
@@ -149,6 +150,9 @@ export default function ParentProfilePage() {
   if (viewState === "locked") {
     return (
       <div className="vtx-auth-page">
+        <div className="vtx-auth-page-logo">
+          <VertexLogo href="/" height={56} className="vtx-auth-logo" />
+        </div>
         <div className="vtx-auth-card">
           <button
             onClick={() => router.push("/dashboard")}
@@ -168,7 +172,6 @@ export default function ParentProfilePage() {
           >
             <ArrowLeft size={14} /> Back to Dashboard
           </button>
-          <div className="vtx-auth-logo">Vertex</div>
           <h1>Parent Access</h1>
           <p className="vtx-auth-sub">Enter your password to continue</p>
 
@@ -241,25 +244,12 @@ export default function ParentProfilePage() {
           >
             <ArrowLeft size={14} /> Dashboard
           </button>
-          <div
-            style={{
-              width: 1,
-              height: 20,
-              background: "rgba(55,45,25,0.10)",
-            }}
-          />
-          <div>
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 700,
-                letterSpacing: "0.22em",
-                textTransform: "uppercase",
-              }}
-            >
-              Vertex
-            </div>
-            <div style={{ fontSize: 12, color: "#8a7f6e", marginTop: 2 }}>
+          <div style={{
+            width: 1, height: 20, background: "rgba(55,45,25,0.10)",
+          }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <VertexLogo height={48} transparentBg={true} />
+            <div style={{ fontSize: 12, color: "#8a7f6e" }}>
               Parent Profile
             </div>
           </div>

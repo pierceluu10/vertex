@@ -368,7 +368,7 @@ export default function KidDashboardPage() {
   return (
     <div className="vtx-kid-page vtx-kid-ui flex h-screen flex-col overflow-hidden">
       <header className="vtx-kid-header">
-        <VertexLogo href="/" height={28} className="vtx-kid-logo" />
+        <VertexLogo href="/" height={52} className="vtx-kid-logo" />
       </header>
 
       {/* Confetti overlay */}

@@ -12,7 +12,7 @@ export function VertexNavbar() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
-      <VertexLogo href="/" height={38} className="vtx-nav-logo" />
+      <VertexLogo href="/" height={52} className="vtx-nav-logo" />
       <ul className="vtx-nav-links">
         {["Login", "Register", "I'm a Student", "Mission", "Dashboard"].map((label, i) => {
           const hrefs = ["/login", "/signup", "/student", "/mission", "/dashboard/parent"];

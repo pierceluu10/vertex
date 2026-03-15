@@ -835,20 +835,30 @@ a.vtx-auth-logo {
   font-family: 'Calibri', 'Trebuchet MS', sans-serif;
   height: 100vh;
   overflow-y: auto;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
 }
+.vtx-auth-page-logo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding: 28px 36px;
+  z-index: 10;
+}
 .vtx-auth-card {
   width: 100%;
   max-width: 440px;
+  border-radius: 20px;
 }
 .vtx-auth-card .vtx-auth-logo {
-  display: block;
-  text-align: center;
-  margin-bottom: 32px;
+  display: inline-block;
+}
+.vtx-auth-page-logo .vtx-auth-logo {
+  display: inline-block;
 }
 .vtx-auth-card h1 {
   font-size: 32px;
@@ -866,7 +876,7 @@ a.vtx-auth-logo {
 .vtx-auth-form {
   background: var(--vtx-cream, #f8f3e8);
   border: 1px solid var(--vtx-border, rgba(55,45,25,0.10));
-  border-radius: 4px;
+  border-radius: 16px;
   padding: 40px 36px;
   box-shadow: 0 4px 24px rgba(30,26,18,.05);
 }
@@ -888,7 +898,7 @@ a.vtx-auth-logo {
   width: 100%;
   padding: 12px 14px;
   border: 1.5px solid var(--vtx-border, rgba(55,45,25,0.10));
-  border-radius: 3px;
+  border-radius: 10px;
   background: var(--vtx-bg, #f4efe5);
   color: var(--vtx-ink, #1a1610);
   font-family: 'Calibri', 'Trebuchet MS', sans-serif;
@@ -912,7 +922,7 @@ a.vtx-auth-logo {
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  border-radius: 3px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.25s;
 }
@@ -928,7 +938,7 @@ a.vtx-auth-logo {
   padding: 10px 14px;
   background: rgba(184,100,96,.08);
   border: 1px solid rgba(184,100,96,.2);
-  border-radius: 3px;
+  border-radius: 10px;
   color: #944040;
   font-size: 12px;
   margin-bottom: 16px;

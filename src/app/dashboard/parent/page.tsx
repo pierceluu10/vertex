@@ -249,7 +249,7 @@ export default function ParentDashboardPage() {
       {/* Sidebar */}
       <aside className="vtx-parent-sidebar">
         <div className="vtx-parent-sidebar-header">
-          <VertexLogo href="/" height={24} className="vtx-parent-sidebar-logo" />
+          <VertexLogo href="/" height={48} className="vtx-parent-sidebar-logo" />
           <div className="vtx-parent-sidebar-name">{parent?.name || "Parent"}</div>
         </div>
         <nav className="vtx-parent-sidebar-nav">
