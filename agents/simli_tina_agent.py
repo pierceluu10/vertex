@@ -74,6 +74,7 @@ async def entrypoint(ctx: JobContext):
         ),
     )
 
+    simli_avatar = None
     try:
         simli_avatar = simli.AvatarSession(
             simli_config=simli.SimliConfig(
@@ -85,10 +86,8 @@ async def entrypoint(ctx: JobContext):
             avatar_participant_identity=f"simli-avatar-{ctx.room.name[:12]}",
             avatar_participant_name=os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", "Tina"),
         )
-        await simli_avatar.start(session, room=ctx.room)
-        logger.info("Simli avatar start requested", extra={"room": ctx.room.name})
     except Exception as e:
-        logger.exception("Simli avatar failed to start: %s", e, extra={"room": ctx.room.name})
+        logger.exception("Simli avatar config failed: %s", e, extra={"room": ctx.room.name})
 
     await session.start(
         room=ctx.room,
@@ -96,7 +95,15 @@ async def entrypoint(ctx: JobContext):
             instructions=_build_instructions(metadata),
         ),
     )
-    await session.say(_build_greeting(metadata), add_to_chat_ctx=False)
+
+    if simli_avatar:
+        try:
+            await simli_avatar.start(session, room=ctx.room)
+            logger.info("Simli avatar start requested", extra={"room": ctx.room.name})
+        except Exception as e:
+            logger.exception("Simli avatar failed to start: %s", e, extra={"room": ctx.room.name})
+
+    await session.generate_reply(instructions=_build_greeting(metadata))
 
 
 if __name__ == "__main__":

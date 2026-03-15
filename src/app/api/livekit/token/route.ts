@@ -75,6 +75,13 @@ export async function POST(request: Request) {
       livekitConfig.apiSecret
     );
 
+    // Delete stale room so a fresh agent dispatch always succeeds on reconnect
+    try {
+      await roomClient.deleteRoom(roomName);
+    } catch {
+      // Room may not exist yet — that's fine
+    }
+
     try {
       await roomClient.createRoom({ name: roomName, emptyTimeout: 10 * 60, departureTimeout: 2 * 60 });
     } catch (error) {
@@ -85,16 +92,9 @@ export async function POST(request: Request) {
     }
 
     try {
-      const existingDispatches = await dispatchClient.listDispatch(roomName);
-      const hasActiveDispatch = existingDispatches.some(
-        (dispatch) => dispatch.agentName === livekitConfig.agentName
-      );
-
-      if (!hasActiveDispatch) {
-        await dispatchClient.createDispatch(roomName, livekitConfig.agentName, {
-          metadata: dispatchMetadata,
-        });
-      }
+      await dispatchClient.createDispatch(roomName, livekitConfig.agentName, {
+        metadata: dispatchMetadata,
+      });
     } catch (error) {
       console.error("LiveKit agent dispatch error:", error);
       return NextResponse.json(
