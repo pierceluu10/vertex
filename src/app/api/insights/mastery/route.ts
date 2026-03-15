@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { computeMasteryDecayFactor } from "@/lib/content-confidence";
 
 /**
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const kidSessionId = searchParams.get("kidSessionId");
 
-    const supabase = await createClient();
+    const supabase = await createServiceClient();
 
     let query = supabase.from("topic_mastery").select("*").order("confidence_score", { ascending: false });
 

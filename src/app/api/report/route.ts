@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { openai, buildReportPrompt } from "@/lib/openai";
 import { Resend } from "resend";
 
@@ -10,7 +10,7 @@ const resend = process.env.RESEND_API_KEY
 export async function POST(request: Request) {
   try {
     const { sessionId } = await request.json();
-    const supabase = await createClient();
+    const supabase = await createServiceClient();
 
     // Fetch session data
     const { data: session } = await supabase

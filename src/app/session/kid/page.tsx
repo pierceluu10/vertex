@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Mic, MicOff, Video, VideoOff, MessageCircle, X, Send } from "lucide-react";
 import {
@@ -75,7 +75,7 @@ function KidSessionContent() {
 
   const childName = kidSession?.child_name?.trim() || "there";
 
-  const [contentConfidence, setContentConfidence] = useState<ContentConfidenceState | null>(null);
+  const [contentConfidence] = useState<ContentConfidenceState | null>(null);
   const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
 
   // Use refs so closures always have the latest value without being deps
@@ -104,25 +104,6 @@ function KidSessionContent() {
   const handlePolicyIntervention = useCallback((text: string) => {
     setAgentPromptRequest({ id: Date.now(), text });
   }, []);
-
-  const handlePolicyEndSession = useCallback(() => {
-    // Auto-end session when policy decides both focus + confidence are critically low
-    void endSessionRef.current?.();
-  }, []);
-
-  const { policyLog } = useAttentionPolicy(
-    attention.score,
-    contentConfidence,
-    {
-      childName,
-      sessionId: tutoringSessionId || "",
-      kidSessionId: kidSessionId || "",
-    },
-    handlePolicyIntervention,
-    handlePolicyEndSession,
-  );
-
-  const endSessionRef = useRef<(() => Promise<void>) | null>(null);
 
   // Attach webcam stream to self-view video element
   useEffect(() => {
@@ -161,7 +142,6 @@ function KidSessionContent() {
     }
     setLessonLoading(false);
     return null;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);  // stable — reads childNameRef at call time
 
   const queueInitialGreeting = useCallback((sessionId: string, name: string, lesson: LessonPlan | null) => {
@@ -182,7 +162,6 @@ function KidSessionContent() {
         text: `Start the session now. Greet ${name} warmly, introduce yourself as ${tName}, and ask what math problem they want to work on first.`,
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);  // stable — reads tutorNameRef at call time
 
   const initSession = useCallback(
@@ -252,7 +231,11 @@ function KidSessionContent() {
     [documentId, parentId, queueInitialGreeting, generateLessonPlan]
   );
 
-  // Hydration-safe: read kid session from localStorage only on client after mount
+  const runInitSession = useEffectEvent((session: KidSession) => {
+    void initSession(session);
+  });
+
+
   useEffect(() => {
     setKidSession(readStoredKidSession());
     setHasCheckedStorage(true);
@@ -265,9 +248,8 @@ function KidSessionContent() {
       return;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void initSession(kidSession);
-  }, [hasCheckedStorage, initSession, kidSession, kidSessionId, router]);
+    runInitSession(kidSession);
+  }, [kidSession, kidSessionId, router]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -442,7 +424,7 @@ function KidSessionContent() {
     chatInputRef.current?.focus();
   }
 
-  async function endSession() {
+  const endSession = useCallback(async () => {
     if (kidSessionId) {
       clearCachedLiveSession(getLiveSessionCacheKey(kidSessionId, documentId));
     }
@@ -468,10 +450,24 @@ function KidSessionContent() {
           messages: String(messages.length),
         }).toString()
     );
-  }
+  }, [attention, documentId, kidSessionId, messages.length, router, tutoringSessionId]);
 
-  // Wire up the ref so the policy engine can call endSession
-  endSessionRef.current = endSession;
+  const handlePolicyEndSession = useCallback(() => {
+    // Auto-end session when policy decides both focus + confidence are critically low
+    void endSession();
+  }, [endSession]);
+
+  const { policyLog } = useAttentionPolicy(
+    attention.score,
+    contentConfidence,
+    {
+      childName,
+      sessionId: tutoringSessionId || "",
+      kidSessionId: kidSessionId || "",
+    },
+    handlePolicyIntervention,
+    handlePolicyEndSession,
+  );
 
   if (!hasCheckedStorage || !kidSession) {
     return (

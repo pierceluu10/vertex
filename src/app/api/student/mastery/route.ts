@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { computeMasteryDecayFactor } from "@/lib/content-confidence";
 
 /**
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ strengths: [], weaknesses: [], hasData: false });
     }
 
-    const supabase = await createClient();
+    const supabase = await createServiceClient();
 
     const { data: topics, error } = await supabase
       .from("topic_mastery")

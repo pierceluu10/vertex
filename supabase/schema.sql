@@ -83,6 +83,7 @@ create table if not exists uploaded_documents (
   file_url text not null,
   extracted_text text,
   chunks jsonb,
+  lesson_plan jsonb default null,
   uploaded_at timestamptz default now()
 );
 
