@@ -166,81 +166,135 @@ export default function KidDashboardPage() {
       </header>
 
       {/* Main content */}
-      <main style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px", maxWidth: 600, margin: "0 auto", width: "100%", paddingBottom: 80 }}>
+      <main className="kid-dashboard-scroll" style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 32px", width: "100%", maxWidth: 1000, margin: "0 auto", paddingBottom: 100 }}>
 
         {/* HOME TAB */}
         {activeTab === "home" && (
           <>
-            <div style={{ textAlign: "center", padding: "32px 0 40px" }}>
-              <h1 style={{ fontSize: 28, fontWeight: 400, marginBottom: 8 }}>
+            <div style={{ marginBottom: 28 }}>
+              <h1 style={{ fontSize: 26, fontWeight: 500, marginBottom: 6, color: "#1a1610" }}>
                 {greeting}, {kidSession.child_name || "friend"}! 👋
               </h1>
-              <p style={{ fontSize: 14, color: "#8a7f6e" }}>
-                Ready to learn something awesome today?
+              <p style={{ fontSize: 14, color: "#8a7f6e", lineHeight: 1.5 }}>
+                Pick something below and let&apos;s make today count.
               </p>
             </div>
 
-            {/* Streak display */}
-            <div style={{
-              padding: "20px 24px", background: "linear-gradient(135deg, #fff5e6 0%, #ffe8cc 100%)",
-              borderRadius: 12, marginBottom: 16, display: "flex", alignItems: "center", gap: 16,
-              border: "1px solid rgba(166,124,74,0.2)",
-            }}>
+            {/* Primary CTA — Start study session */}
+            <button
+              onClick={() => startTutorSession()}
+              style={{
+                width: "100%", padding: "24px 20px", marginBottom: 20,
+                background: "linear-gradient(135deg, #c8416a 0%, #a83355 100%)",
+                border: "none", borderRadius: 16, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 16, textAlign: "left",
+                boxShadow: "0 4px 20px rgba(200,65,106,0.25)",
+              }}
+            >
               <div style={{
-                width: 56, height: 56, borderRadius: 12, background: "rgba(166,124,74,0.12)",
+                width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,0.2)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <Flame size={28} style={{ color: "#c89020" }} />
+                <MessageCircle size={26} style={{ color: "#fff" }} />
               </div>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 600, color: "#c89020" }}>{streak} Day Streak!</div>
-                <div style={{ fontSize: 12, color: "#8a7f6e" }}>Keep it up — you&apos;re on fire!</div>
+                <div style={{ fontSize: 17, fontWeight: 600, color: "#fff" }}>Start a study session</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", marginTop: 2 }}>Chat with your tutor and practice math</div>
+              </div>
+              <ChevronRight size={22} style={{ color: "rgba(255,255,255,0.8)", marginLeft: "auto" }} />
+            </button>
+
+            {/* Stats row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
+              <div style={{
+                padding: "18px 16px", background: "#fff", borderRadius: 14,
+                border: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 12,
+              }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, background: "rgba(200,144,32,0.12)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <Flame size={22} style={{ color: "#c89020" }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: "#c89020" }}>{streak}</div>
+                  <div style={{ fontSize: 11, color: "#8a7f6e" }}>day streak</div>
+                </div>
+              </div>
+              <div style={{
+                padding: "18px 16px", background: "#fff", borderRadius: 14,
+                border: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 12,
+              }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, background: "rgba(200,65,106,0.1)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <Star size={22} style={{ color: "#c8416a" }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: "#c8416a" }}>{xp}</div>
+                  <div style={{ fontSize: 11, color: "#8a7f6e" }}>XP earned</div>
+                </div>
               </div>
             </div>
 
-            {/* XP display */}
-            <div style={{
-              padding: "20px 24px", background: "linear-gradient(135deg, #fef2f5 0%, #fce4ec 100%)",
-              borderRadius: 12, marginBottom: 24, display: "flex", alignItems: "center", gap: 16,
-              border: "1px solid rgba(158,107,117,0.12)",
-            }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: 12, background: "rgba(158,107,117,0.1)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <Star size={28} style={{ color: "#c8416a" }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 22, fontWeight: 600, color: "#c8416a" }}>{xp} XP</div>
-                <div style={{ fontSize: 12, color: "#8a7f6e" }}>Answer questions and take quizzes to earn more!</div>
-              </div>
+            {/* Section: What do you want to do? */}
+            <div style={{ marginBottom: 12 }}>
+              <h2 style={{ fontSize: 13, fontWeight: 600, color: "#8a7f6e", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }}>
+                What do you want to do?
+              </h2>
             </div>
-
-            {/* Quick actions */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <button
                 onClick={() => setActiveTab("homework")}
                 style={{
-                  padding: "24px 16px", background: "#fff", border: "1px solid rgba(0,0,0,0.06)",
-                  borderRadius: 12, cursor: "pointer", textAlign: "center", transition: "transform 0.2s",
+                  padding: "20px 14px", background: "#fff", border: "1px solid rgba(0,0,0,0.07)",
+                  borderRadius: 14, cursor: "pointer", textAlign: "center",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                 }}
               >
-                <Upload size={28} style={{ color: "#c8416a", marginBottom: 8 }} />
-                <div style={{ fontSize: 14, fontWeight: 500 }}>Upload Homework</div>
-                <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>Drop a PDF to study</div>
+                <Upload size={26} style={{ color: "#c8416a", marginBottom: 8 }} />
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1610" }}>Upload homework</div>
+                <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>Add a PDF to study from</div>
               </button>
               <button
                 onClick={startQuiz}
                 disabled={quizLoading}
                 style={{
-                  padding: "24px 16px", background: "#fff", border: "1px solid rgba(0,0,0,0.06)",
-                  borderRadius: 12, cursor: "pointer", textAlign: "center", transition: "transform 0.2s",
+                  padding: "20px 14px", background: "#fff", border: "1px solid rgba(0,0,0,0.07)",
+                  borderRadius: 14, cursor: quizLoading ? "not-allowed" : "pointer", textAlign: "center",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)", opacity: quizLoading ? 0.7 : 1,
                 }}
               >
-                <Sparkles size={28} style={{ color: "#c8416a", marginBottom: 8 }} />
-                <div style={{ fontSize: 14, fontWeight: 500 }}>{quizLoading ? "Loading..." : "Take a Quiz"}</div>
-                <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>Test your skills</div>
+                <Sparkles size={26} style={{ color: "#c8416a", marginBottom: 8 }} />
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1610" }}>{quizLoading ? "Loading..." : "Take a quiz"}</div>
+                <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>Earn XP and test your skills</div>
               </button>
+              <button
+                onClick={() => setActiveTab("tutor")}
+                style={{
+                  padding: "20px 14px", background: "#fff", border: "1px solid rgba(0,0,0,0.07)",
+                  borderRadius: 14, cursor: "pointer", textAlign: "center",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                }}
+              >
+                <MessageCircle size={26} style={{ color: "#c8416a", marginBottom: 8 }} />
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1610" }}>Ask your tutor</div>
+                <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4 }}>Chat and get help with math</div>
+              </button>
+            </div>
+
+            {/* Tip card */}
+            <div style={{
+              marginTop: 28, padding: "18px 20px", background: "rgba(200,65,106,0.06)",
+              borderRadius: 14, border: "1px solid rgba(200,65,106,0.12)",
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#c8416a", marginBottom: 6, letterSpacing: "0.05em" }}>
+                💡 Tip
+              </div>
+              <p style={{ fontSize: 13, color: "#5c5248", lineHeight: 1.55, margin: 0 }}>
+                Come back every day to keep your streak going. Even 10 minutes of practice helps!
+              </p>
             </div>
           </>
         )}
@@ -248,42 +302,77 @@ export default function KidDashboardPage() {
         {/* HOMEWORK TAB */}
         {activeTab === "homework" && (
           <>
-            <h2 style={{ fontSize: 24, fontWeight: 400, marginBottom: 24 }}>My Homework</h2>
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ fontSize: 24, fontWeight: 500, marginBottom: 6, color: "#1a1610" }}>My Homework</h2>
+              <p style={{ fontSize: 14, color: "#8a7f6e" }}>
+                Upload PDFs here. Your tutor can use them to help you practice.
+              </p>
+            </div>
 
             <label style={{
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
-              padding: "40px 24px", border: "2px dashed rgba(158,107,117,0.22)", borderRadius: 12,
-              background: "rgba(255,255,255,0.6)", cursor: "pointer", marginBottom: 24, textAlign: "center",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
+              padding: "44px 24px", border: "2px dashed rgba(200,65,106,0.25)", borderRadius: 16,
+              background: "rgba(255,255,255,0.8)", cursor: "pointer", marginBottom: 28, textAlign: "center",
+              transition: "background 0.2s, border-color 0.2s",
             }}>
-              <Upload size={32} style={{ color: "#c8416a" }} />
-              <div style={{ fontSize: 14, fontWeight: 500, color: "#c8416a" }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: 14, background: "rgba(200,65,106,0.08)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Upload size={28} style={{ color: "#c8416a" }} />
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#c8416a" }}>
                 {uploading ? "Uploading..." : "Drop your homework PDF here"}
               </div>
-              <div style={{ fontSize: 12, color: "#8a7f6e" }}>or click to choose a file</div>
+              <div style={{ fontSize: 12, color: "#8a7f6e" }}>or tap to choose a file</div>
               <input type="file" accept=".pdf" style={{ display: "none" }} onChange={handleHomeworkUpload} disabled={uploading} />
             </label>
 
-            {documents.map((doc) => (
-              <div key={doc.id} style={{
-                padding: "16px 20px", background: "#fff", borderRadius: 12, marginBottom: 12,
-                border: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            {documents.length === 0 ? (
+              <div style={{
+                padding: "32px 24px", background: "#fff", borderRadius: 16,
+                border: "1px solid rgba(0,0,0,0.06)", textAlign: "center",
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <FileText size={20} style={{ color: "#c8416a" }} />
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 500 }}>{doc.file_name}</div>
-                    <div style={{ fontSize: 11, color: "#8a7f6e" }}>{new Date(doc.uploaded_at).toLocaleDateString()}</div>
-                  </div>
-                </div>
-                <button onClick={() => startTutorSession(doc.id)} style={{
-                  display: "flex", alignItems: "center", gap: 4, padding: "8px 16px",
-                  background: "#c8416a", color: "#fff", border: "none", borderRadius: 8,
-                  fontSize: 12, cursor: "pointer",
-                }}>
-                  <Play size={12} /> Study
-                </button>
+                <BookOpen size={40} style={{ color: "rgba(200,65,106,0.4)", marginBottom: 12 }} />
+                <div style={{ fontSize: 15, fontWeight: 500, color: "#1a1610", marginBottom: 6 }}>No homework yet</div>
+                <p style={{ fontSize: 13, color: "#8a7f6e", lineHeight: 1.5, margin: 0 }}>
+                  When you upload a PDF, it will show up here. You can then start a study session and ask your tutor about it.
+                </p>
               </div>
-            ))}
+            ) : (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#8a7f6e", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>
+                  Your files ({documents.length})
+                </div>
+                {documents.map((doc) => (
+                  <div key={doc.id} style={{
+                    padding: "18px 20px", background: "#fff", borderRadius: 14, marginBottom: 12,
+                    border: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <div style={{
+                        width: 44, height: 44, borderRadius: 10, background: "rgba(200,65,106,0.08)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <FileText size={20} style={{ color: "#c8416a" }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1610" }}>{doc.file_name}</div>
+                        <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 2 }}>{new Date(doc.uploaded_at).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                    <button onClick={() => startTutorSession(doc.id)} style={{
+                      display: "flex", alignItems: "center", gap: 6, padding: "10px 18px",
+                      background: "#c8416a", color: "#fff", border: "none", borderRadius: 10,
+                      fontSize: 13, fontWeight: 500, cursor: "pointer",
+                    }}>
+                      <Play size={14} /> Study
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
           </>
         )}
 
@@ -291,34 +380,53 @@ export default function KidDashboardPage() {
         {activeTab === "quiz" && (
           <>
             {!quizData ? (
-              <div style={{ textAlign: "center", padding: "48px 0" }}>
-                <Sparkles size={48} style={{ color: "#c8416a", marginBottom: 16 }} />
-                <h2 style={{ fontSize: 24, fontWeight: 400, marginBottom: 8 }}>Ready for a quiz?</h2>
-                <p style={{ fontSize: 14, color: "#8a7f6e", marginBottom: 24 }}>
-                  Test what you know and earn XP!
+              <div style={{
+                padding: "40px 24px", background: "#fff", borderRadius: 16,
+                border: "1px solid rgba(0,0,0,0.06)", textAlign: "center",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+              }}>
+                <div style={{
+                  width: 72, height: 72, borderRadius: 20, background: "rgba(200,65,106,0.1)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 20px",
+                }}>
+                  <Sparkles size={36} style={{ color: "#c8416a" }} />
+                </div>
+                <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 10, color: "#1a1610" }}>Ready for a quiz?</h2>
+                <p style={{ fontSize: 14, color: "#8a7f6e", lineHeight: 1.55, marginBottom: 12 }}>
+                  You&apos;ll get 5 math questions. Answer correctly to earn 10 XP per question!
+                </p>
+                <p style={{ fontSize: 13, color: "#8a7f6e", marginBottom: 28 }}>
+                  Questions are based on your homework when you have some, or general math practice.
                 </p>
                 <button onClick={startQuiz} disabled={quizLoading} style={{
-                  padding: "14px 32px", background: "#c8416a", color: "#fff",
-                  border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer",
+                  padding: "16px 36px", background: "linear-gradient(135deg, #c8416a 0%, #a83355 100%)",
+                  color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600,
+                  cursor: quizLoading ? "not-allowed" : "pointer", boxShadow: "0 4px 16px rgba(200,65,106,0.3)",
                 }}>
-                  {quizLoading ? "Generating questions..." : "Start Quiz"}
+                  {quizLoading ? "Generating questions..." : "Start quiz"}
                 </button>
               </div>
             ) : quizData.done ? (
-              <div style={{ textAlign: "center", padding: "48px 0" }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-                <h2 style={{ fontSize: 24, fontWeight: 400, marginBottom: 8 }}>Quiz Complete!</h2>
-                <div style={{ fontSize: 32, fontWeight: 300, color: "#c8416a", marginBottom: 8 }}>
+              <div style={{
+                padding: "40px 24px", background: "#fff", borderRadius: 16,
+                border: "1px solid rgba(0,0,0,0.06)", textAlign: "center",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+              }}>
+                <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+                <h2 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8, color: "#1a1610" }}>Quiz complete!</h2>
+                <div style={{ fontSize: 36, fontWeight: 700, color: "#c8416a", marginBottom: 8 }}>
                   {quizData.answers.filter((a) => a.correct).length}/{quizData.questions.length}
                 </div>
-                <p style={{ fontSize: 14, color: "#8a7f6e", marginBottom: 8 }}>
-                  +{quizData.answers.filter((a) => a.correct).length * 10} XP earned!
+                <p style={{ fontSize: 14, color: "#8a7f6e", marginBottom: 24 }}>
+                  +{quizData.answers.filter((a) => a.correct).length * 10} XP earned! Great job.
                 </p>
                 <button onClick={() => { setQuizData(null); startQuiz(); }} style={{
-                  padding: "12px 24px", background: "#c8416a", color: "#fff",
-                  border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer", marginTop: 16,
+                  padding: "14px 28px", background: "linear-gradient(135deg, #c8416a 0%, #a83355 100%)",
+                  color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 600,
+                  cursor: "pointer", boxShadow: "0 4px 16px rgba(200,65,106,0.3)",
                 }}>
-                  Try Another Quiz
+                  Try another quiz
                 </button>
               </div>
             ) : (
@@ -375,39 +483,73 @@ export default function KidDashboardPage() {
 
         {/* ASK TUTOR TAB */}
         {activeTab === "tutor" && (
-          <div style={{ textAlign: "center", padding: "48px 0" }}>
-            <MessageCircle size={48} style={{ color: "#c8416a", marginBottom: 16 }} />
-            <h2 style={{ fontSize: 24, fontWeight: 400, marginBottom: 8 }}>Ask Your Tutor</h2>
-            <p style={{ fontSize: 14, color: "#8a7f6e", marginBottom: 24 }}>
-              Start a chat session with your AI tutor
-            </p>
-            <button onClick={() => startTutorSession()} style={{
-              padding: "14px 32px", background: "#c8416a", color: "#fff",
-              border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer",
-              display: "inline-flex", alignItems: "center", gap: 8,
-            }}>
-              <MessageCircle size={16} /> Start Chatting
+          <>
+            <div style={{ marginBottom: 28 }}>
+              <h2 style={{ fontSize: 24, fontWeight: 500, marginBottom: 8, color: "#1a1610" }}>Ask your tutor</h2>
+              <p style={{ fontSize: 14, color: "#8a7f6e", lineHeight: 1.5 }}>
+                Your tutor can help you with math problems, explain concepts, give hints, and practice with you.
+              </p>
+            </div>
+
+            <button
+              onClick={() => startTutorSession()}
+              style={{
+                width: "100%", padding: "24px 20px", marginBottom: 28,
+                background: "linear-gradient(135deg, #c8416a 0%, #a83355 100%)",
+                border: "none", borderRadius: 16, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 16, textAlign: "left",
+                boxShadow: "0 4px 20px rgba(200,65,106,0.25)",
+              }}
+            >
+              <div style={{
+                width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <MessageCircle size={26} style={{ color: "#fff" }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 600, color: "#fff" }}>Start chatting</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", marginTop: 2 }}>Open a new study session</div>
+              </div>
+              <ChevronRight size={22} style={{ color: "rgba(255,255,255,0.8)", marginLeft: "auto" }} />
             </button>
 
-            {documents.length > 0 && (
-              <div style={{ marginTop: 32, textAlign: "left" }}>
-                <p style={{ fontSize: 12, color: "#8a7f6e", marginBottom: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                  Or study from your homework:
+            {documents.length > 0 ? (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#8a7f6e", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>
+                  Or study with a homework file
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {documents.map((doc) => (
+                    <button key={doc.id} onClick={() => startTutorSession(doc.id)} style={{
+                      display: "flex", alignItems: "center", gap: 14, width: "100%",
+                      padding: "16px 18px", background: "#fff", border: "1px solid rgba(0,0,0,0.07)",
+                      borderRadius: 14, cursor: "pointer", textAlign: "left",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                    }}>
+                      <div style={{
+                        width: 44, height: 44, borderRadius: 10, background: "rgba(200,65,106,0.08)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <FileText size={20} style={{ color: "#c8416a" }} />
+                      </div>
+                      <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: "#1a1610" }}>{doc.file_name}</span>
+                      <ChevronRight size={18} style={{ color: "#8a7f6e" }} />
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{
+                padding: "28px 24px", background: "rgba(255,255,255,0.7)", borderRadius: 16,
+                border: "1px solid rgba(0,0,0,0.06)", textAlign: "center",
+              }}>
+                <p style={{ fontSize: 13, color: "#8a7f6e", lineHeight: 1.55, margin: 0 }}>
+                  Upload homework in the Homework tab to study with a specific file. Or start chatting above for general help!
                 </p>
-                {documents.slice(0, 3).map((doc) => (
-                  <button key={doc.id} onClick={() => startTutorSession(doc.id)} style={{
-                    display: "flex", alignItems: "center", gap: 12, width: "100%",
-                    padding: "14px 16px", background: "#fff", border: "1px solid rgba(0,0,0,0.06)",
-                    borderRadius: 10, cursor: "pointer", marginBottom: 8, textAlign: "left",
-                  }}>
-                    <FileText size={18} style={{ color: "#c8416a" }} />
-                    <span style={{ flex: 1, fontSize: 14 }}>{doc.file_name}</span>
-                    <ChevronRight size={16} style={{ color: "#8a7f6e" }} />
-                  </button>
-                ))}
               </div>
             )}
-          </div>
+          </>
         )}
       </main>
 

@@ -118,3 +118,12 @@
     padding: 0;
   }
 }
+
+/* Hide scrollbar on kid dashboard while keeping scroll behavior */
+.kid-dashboard-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.kid-dashboard-scroll::-webkit-scrollbar {
+  display: none;
+}

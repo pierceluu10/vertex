@@ -19,12 +19,16 @@ create table if not exists parents (
   created_at timestamptz default now()
 );
 
--- Access codes (6-digit codes for kids to enter)
+-- Access codes (6-digit codes for kids to enter; one code per child, child info required)
 create table if not exists access_codes (
   id uuid primary key default gen_random_uuid(),
   parent_id uuid references parents(id) on delete cascade not null,
   code text not null unique,
   child_name text,
+  child_age integer check (child_age is null or (child_age >= 3 and child_age <= 18)),
+  grade_level text,
+  math_topics text[] default '{}',
+  learning_pace text default 'medium' check (learning_pace is null or learning_pace in ('slow', 'medium', 'fast')),
   is_active boolean default true,
   created_at timestamptz default now()
 );
