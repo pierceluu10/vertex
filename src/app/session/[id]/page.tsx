@@ -110,10 +110,13 @@ export default function SessionPage() {
           .single();
         if (parent) {
           setParentName(parent.full_name);
-          // Only use heygen_avatar_id (streaming avatar) for live sessions.
-          // heygen_talking_photo_id is NOT compatible with the streaming API —
-          // it only works for pre-rendered video generation (Studio API).
-          setParentAvatarId(parent.heygen_avatar_id ?? undefined);
+          // Use whichever avatar ID is available:
+          // heygen_avatar_id = full AI avatar from video training
+          // heygen_talking_photo_id = talking photo from uploaded/captured image
+          // Both work with the streaming SDK's createStartAvatar()
+          setParentAvatarId(
+            parent.heygen_avatar_id ?? parent.heygen_talking_photo_id ?? undefined
+          );
         }
       }
 
