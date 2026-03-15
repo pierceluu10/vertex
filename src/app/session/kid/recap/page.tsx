@@ -1,13 +1,11 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  Target, MessageCircle, ArrowRight, Home, Zap,
-  Trophy, CheckCircle, XCircle, Flame, Clock, HelpCircle,
+  Target, Home, Zap, CheckCircle, Flame, HelpCircle,
 } from "lucide-react";
-import { MdAutoGraph, MdSchool, MdLock } from "react-icons/md";
 import "@/styles/vertex.css";
 
 /* ─── Level titles ─── */
@@ -27,20 +25,30 @@ function getLevelFromXP(xp: number) {
 /* ─── Confetti particles ─── */
 function ConfettiEffect() {
   const colors = ["#c8416a", "#f59e0b", "#5a9e76", "#3b82f6", "#8b5cf6", "#ec4899"];
+  const [particles] = useState(() =>
+    Array.from({ length: 40 }, () => ({
+      x: `${Math.random() * 100}vw`,
+      rotate: Math.random() * 720 - 360,
+      duration: 2 + Math.random() * 2,
+      delay: Math.random() * 0.5,
+      size: 8 + Math.random() * 8,
+      round: Math.random() > 0.5,
+    }))
+  );
   return (
     <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 50 }}>
-      {Array.from({ length: 40 }).map((_, i) => (
+      {particles.map((particle, i) => (
         <motion.div
           key={i}
-          initial={{ opacity: 1, y: -20, x: `${Math.random() * 100}vw`, rotate: 0 }}
-          animate={{ opacity: 0, y: "100vh", rotate: Math.random() * 720 - 360 }}
-          transition={{ duration: 2 + Math.random() * 2, delay: Math.random() * 0.5, ease: "easeOut" }}
+          initial={{ opacity: 1, y: -20, x: particle.x, rotate: 0 }}
+          animate={{ opacity: 0, y: "100vh", rotate: particle.rotate }}
+          transition={{ duration: particle.duration, delay: particle.delay, ease: "easeOut" }}
           style={{
             position: "absolute",
-            width: 8 + Math.random() * 8,
-            height: 8 + Math.random() * 8,
+            width: particle.size,
+            height: particle.size,
             background: colors[i % colors.length],
-            borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+            borderRadius: particle.round ? "50%" : "2px",
           }}
         />
       ))}
@@ -70,8 +78,6 @@ function RecapContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const sessionId = searchParams.get("sessionId") || "";
-  const kidSessionId = searchParams.get("kidSessionId") || "";
   const score = parseInt(searchParams.get("score") || "75", 10);
   const messageCount = parseInt(searchParams.get("messages") || "0", 10);
 
@@ -83,27 +89,9 @@ function RecapContent() {
   const leveledUp = level > prevLevel.level;
 
   const [showConfetti, setShowConfetti] = useState(true);
-  const [weakHints, setWeakHints] = useState<Record<string, string>>({});
 
   // Mock topic data (in production, fetch from /api/insights/mastery)
   const strongTopics = score >= 60 ? ["Addition", "Multiplication"] : [];
-  const weakTopics = score < 80 ? ["Fractions", "Word Problems"] : [];
-
-  // Fetch GPT hints for weak topics
-  const fetchHints = useCallback(async () => {
-    if (weakTopics.length === 0 || !sessionId) return;
-    try {
-      const res = await fetch("/api/recap/hints", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, weakTopics }),
-      });
-      const data = await res.json();
-      if (data.hints) setWeakHints(data.hints);
-    } catch { /* ignore */ }
-  }, [sessionId, weakTopics.length]);
-
-  useEffect(() => { fetchHints(); }, [fetchHints]);
   useEffect(() => { setTimeout(() => setShowConfetti(false), 4000); }, []);
 
   const focusDot = score >= 80 ? "#5a9e76" : score >= 50 ? "#c89020" : "#c8416a";
@@ -112,7 +100,6 @@ function RecapContent() {
     "Hey, everyone has off days. Tomorrow will be great!";
 
   const streakDays = 3; // Would come from Supabase
-  const hintsRequested = 2;
   const questionsAsked = messageCount;
 
   return (
@@ -201,20 +188,20 @@ function RecapContent() {
         <div style={{ padding: 16, background: "transparent", borderRadius: 12, border: "2px dashed rgba(0,0,0,0.08)", textAlign: "center" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: focusDot }} />
-            <Target size={16} style={{ color: focusDot }} />
+            <Target size={13} style={{ color: focusDot }} />
           </div>
           <div style={{ fontSize: 24, fontWeight: 600, color: focusDot }}>{score}%</div>
           <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4, fontWeight: 600, textTransform: "uppercase" }}>Focus</div>
         </div>
         {/* Effort */}
         <div style={{ padding: 16, background: "transparent", borderRadius: 12, border: "2px dashed rgba(0,0,0,0.08)", textAlign: "center" }}>
-          <HelpCircle size={16} style={{ color: "#3b82f6", marginBottom: 8 }} />
+          <HelpCircle size={13} style={{ color: "#3b82f6", marginBottom: 8 }} />
           <div style={{ fontSize: 24, fontWeight: 600, color: "#3b82f6" }}>{questionsAsked}</div>
           <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4, fontWeight: 600, textTransform: "uppercase" }}>Questions</div>
         </div>
         {/* Streak */}
         <div style={{ padding: 16, background: "transparent", borderRadius: 12, border: "2px dashed rgba(0,0,0,0.08)", textAlign: "center" }}>
-          <Flame size={16} style={{ color: "#ef4444", marginBottom: 8 }} />
+          <Flame size={13} style={{ color: "#ef4444", marginBottom: 8 }} />
           <div style={{ fontSize: 24, fontWeight: 600, color: "#ef4444" }}>{streakDays}</div>
           <div style={{ fontSize: 11, color: "#8a7f6e", marginTop: 4, fontWeight: 600, textTransform: "uppercase" }}>Day streak</div>
         </div>
@@ -256,41 +243,12 @@ function RecapContent() {
         </motion.div>
       )}
 
-      {/* Level Up These */}
-      {weakTopics.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-          style={{ width: "100%", marginBottom: 24 }}
-        >
-          <div style={{ fontSize: 13, letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a7f6e", marginBottom: 10 }}>
-            Level up these
-          </div>
-          {weakTopics.map((topic) => (
-            <div key={topic} style={{
-              padding: 14, background: "rgba(139,92,246,0.05)",
-              border: "1px solid rgba(139,92,246,0.12)", borderRadius: 10,
-              marginBottom: 8,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <MdAutoGraph size={16} style={{ color: "#8b5cf6" }} />
-                <span style={{ fontSize: 14, fontWeight: 500, color: "#8b5cf6" }}>{topic}</span>
-              </div>
-              <p style={{ fontSize: 12, color: "#5c5347", lineHeight: 1.5, margin: 0 }}>
-                {weakHints[topic] || `Keep practicing ${topic} — you're getting closer every day!`}
-              </p>
-            </div>
-          ))}
-        </motion.div>
-      )}
-
       {/* Buttons */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1 }}
-        style={{ display: "flex", gap: 12, width: "100%" }}
+        style={{ display: "flex", width: "100%" }}
       >
         <motion.button
           onClick={() => router.push("/dashboard/kid")}
@@ -303,22 +261,6 @@ function RecapContent() {
           }}
         >
           <Home size={16} /> Go Home
-        </motion.button>
-        <motion.button
-          onClick={() => {
-            const params = new URLSearchParams();
-            if (kidSessionId) params.set("kidSessionId", kidSessionId);
-            router.push(`/session/kid?${params.toString()}`);
-          }}
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.97 }}
-          style={{
-            flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            padding: "14px 20px", background: "transparent", color: "#c8416a",
-            border: "2px solid rgba(200,65,106,0.2)", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: "pointer",
-          }}
-        >
-          <MessageCircle size={16} /> Ask Tutor Again
         </motion.button>
       </motion.div>
     </div>

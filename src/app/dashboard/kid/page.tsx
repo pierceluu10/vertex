@@ -24,7 +24,6 @@ import {
   Lock,
   Clock,
   Trophy,
-  ArrowRight,
   Sun,
   CloudSun,
   MoonStar,
@@ -39,7 +38,7 @@ import "@/styles/vertex.css";
 
 const TODO_STORAGE_KEY = "vertex_kid_todos";
 
-type Tab = "home" | "study" | "profile";
+type Tab = "home" | "profile";
 type HomeView = "main" | "homework" | "quiz";
 
 const stagger = {
@@ -265,7 +264,6 @@ export default function KidDashboardPage() {
   })();
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "study", label: "Study", icon: <MessageCircle size={18} /> },
     { id: "home", label: "Home", icon: <Home size={18} /> },
     { id: "profile", label: "Profile", icon: <User size={18} /> },
   ];
@@ -629,43 +627,6 @@ export default function KidDashboardPage() {
                     ) : (
                       <QuizOpenInput onSubmit={answerQuiz} />
                     )}
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {activeTab === "study" && (
-              <motion.div key="study" {...tabTransition}>
-                <span className="vtx-kid-section-num">Study</span>
-                <h2 className="vtx-kid-section-title">Start <em>Studying</em>, {childName}</h2>
-                <p className="vtx-kid-subtitle">Your tutor can help you with math problems, explain concepts, give hints, and practice with you.</p>
-
-                <button type="button" className="vtx-kid-cta" onClick={() => startTutorSession()}>
-                  <div className="vtx-kid-cta-icon"><MessageCircle size={20} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
-                  <div className="vtx-kid-cta-text">
-                    <div className="vtx-kid-cta-title">Start chatting</div>
-                    <div className="vtx-kid-cta-desc">Open a new study session</div>
-                  </div>
-                  <ChevronRight size={18} style={{ color: "var(--vtx-muted, #8a7f6e)" }} />
-                </button>
-
-                {documents.length > 0 ? (
-                  <div style={{ marginTop: 40 }}>
-                    <div className="vtx-kid-doc-list-label">Or study with a homework file</div>
-                    {documents.map((doc) => (
-                      <button key={doc.id} type="button" className="vtx-kid-cta" onClick={() => startTutorSession(doc.id)} style={{ marginTop: 10 }}>
-                        <div className="vtx-kid-doc-icon"><FileText size={18} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
-                        <div className="vtx-kid-cta-text">
-                          <div className="vtx-kid-cta-title">{doc.file_name}</div>
-                          {doc.lesson_plan && <div className="vtx-kid-cta-desc" style={{ color: "#4aaa6a" }}>Lesson ready — start learning!</div>}
-                        </div>
-                        <ChevronRight size={18} style={{ color: "var(--vtx-muted, #8a7f6e)" }} />
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="vtx-kid-empty" style={{ marginTop: 40 }}>
-                    <p>Upload homework on Home to study with a specific file. Or start chatting above for general help!</p>
                   </div>
                 )}
               </motion.div>

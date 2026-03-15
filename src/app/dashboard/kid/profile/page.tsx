@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Home,
-  MessageCircle,
   User,
   ArrowLeft,
   Trophy,
@@ -15,7 +14,6 @@ import {
   GraduationCap,
   Zap,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { VertexLogo } from "@/components/vertex/vertex-logo";
 import type { KidSession } from "@/types";
 import "@/styles/vertex.css";
@@ -39,7 +37,7 @@ const stagger = {
   }),
 };
 
-type Tab = "home" | "study" | "profile";
+type Tab = "home" | "profile";
 
 export default function KidProfilePage() {
   const router = useRouter();
@@ -123,7 +121,6 @@ export default function KidProfilePage() {
   const childName = kidSession.child_name?.trim() || "there";
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "study", label: "Study", icon: <MessageCircle size={18} /> },
     { id: "home", label: "Home", icon: <Home size={18} /> },
     { id: "profile", label: "Profile", icon: <User size={18} /> },
   ];
