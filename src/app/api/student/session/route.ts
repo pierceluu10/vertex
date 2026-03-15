@@ -77,44 +77,82 @@ export async function POST(request: Request) {
     }
 
     let session: { id: string } | null = null;
+    let hasKidSessionIdColumn = true;
 
-    const existingSessionQuery = supabase
+    // Try to find an existing active session for this kid session
+    const baseQuery = supabase
       .from("tutoring_sessions")
-      .select("*")
+      .select("id, status")
+      .eq("status", "active")
+      .order("started_at", { ascending: false })
+      .limit(1);
+
+    const existingQuery = supabase
+      .from("tutoring_sessions")
+      .select("id, status")
       .eq("kid_session_id", kidSessionId)
       .eq("status", "active")
       .order("started_at", { ascending: false })
       .limit(1);
 
     const { data: existingSessions, error: existingSessionError } = documentId
-      ? await existingSessionQuery.eq("document_id", documentId)
-      : await existingSessionQuery.is("document_id", null);
+      ? await existingQuery.eq("document_id", documentId)
+      : await existingQuery.is("document_id", null);
 
     if (existingSessionError) {
-      console.error("Session reuse lookup error:", existingSessionError);
+      if (existingSessionError.message?.includes("kid_session_id")) {
+        hasKidSessionIdColumn = false;
+      } else {
+        console.error("Session reuse lookup error:", existingSessionError);
+      }
     }
 
     session = existingSessions?.[0] || null;
 
     if (!session) {
+      // Try insert with kid_session_id first; fall back without if column missing
+      const insertPayload: Record<string, unknown> = {
+        child_id: childId || null,
+        document_id: documentId || null,
+        status: "active",
+      };
+
+      if (hasKidSessionIdColumn) {
+        insertPayload.kid_session_id = kidSessionId;
+      }
+
       const { data: createdSession, error } = await supabase
         .from("tutoring_sessions")
-        .insert({
-          child_id: childId || null,
-          kid_session_id: kidSessionId,
-          document_id: documentId || null,
-          status: "active",
-        })
-        .select()
+        .insert(insertPayload)
+        .select("id")
         .single();
 
       if (error) {
-        console.error("Session creation error:", error);
-        return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
-      }
+        if (error.message?.includes("kid_session_id")) {
+          // Column doesn't exist yet — retry without it
+          hasKidSessionIdColumn = false;
+          delete insertPayload.kid_session_id;
+          const { data: retrySession, error: retryError } = await supabase
+            .from("tutoring_sessions")
+            .insert(insertPayload)
+            .select("id")
+            .single();
 
-      session = createdSession;
+          if (retryError) {
+            console.error("Session creation error (retry):", retryError);
+            return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+          }
+          session = retrySession;
+        } else {
+          console.error("Session creation error:", error);
+          return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+        }
+      } else {
+        session = createdSession;
+      }
     }
+
+    void baseQuery; // suppress unused warning
 
     const tutorContext = await loadTutorContext(supabase, {
       sessionId: session.id,

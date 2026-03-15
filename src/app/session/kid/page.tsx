@@ -42,7 +42,8 @@ function KidSessionContent() {
   const parentId = searchParams.get("parentId");
   const documentId = searchParams.get("documentId");
 
-  const [kidSession] = useState<KidSession | null>(() => readStoredKidSession());
+  const [kidSession, setKidSession] = useState<KidSession | null>(null);
+  const [hasCheckedStorage, setHasCheckedStorage] = useState(false);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [tutoringSessionId, setTutoringSessionId] = useState<string | null>(null);
@@ -251,7 +252,14 @@ function KidSessionContent() {
     [documentId, parentId, queueInitialGreeting, generateLessonPlan]
   );
 
+  // Hydration-safe: read kid session from localStorage only on client after mount
   useEffect(() => {
+    setKidSession(readStoredKidSession());
+    setHasCheckedStorage(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hasCheckedStorage) return;
     if (!kidSessionId || !kidSession) {
       router.push("/dashboard/kid");
       return;
@@ -259,7 +267,7 @@ function KidSessionContent() {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void initSession(kidSession);
-  }, [initSession, kidSession, kidSessionId, router]);
+  }, [hasCheckedStorage, initSession, kidSession, kidSessionId, router]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -464,6 +472,14 @@ function KidSessionContent() {
 
   // Wire up the ref so the policy engine can call endSession
   endSessionRef.current = endSession;
+
+  if (!hasCheckedStorage || !kidSession) {
+    return (
+      <div className="vtx-auth-page">
+        <p className="vtx-kid-subtitle" style={{ margin: 0 }}>Loading…</p>
+      </div>
+    );
+  }
 
   const focusColor =
     attention.focusLevel === "high"
@@ -711,6 +727,7 @@ function KidSessionContent() {
                         }}
                       >
                         <div
+                          suppressHydrationWarning
                           style={{
                             width: 42,
                             height: 42,
