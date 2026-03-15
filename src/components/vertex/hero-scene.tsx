@@ -22,17 +22,6 @@ export function HeroScene() {
       >
         <svg className="vtx-scene-svg" viewBox="0 0 860 460" xmlns="http://www.w3.org/2000/svg" fill="none">
           <defs>
-            <filter id="brainGlow" x="-60%" y="-60%" width="220%" height="220%">
-              <feGaussianBlur stdDeviation="12" result="blur"/>
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <filter id="figShadow" x="-20%" y="-10%" width="140%" height="130%">
-              <feDropShadow dx="0" dy="10" stdDeviation="18" floodColor="rgba(26,22,14,.13)"/>
-            </filter>
-            <filter id="lineGlow" x="-20%" y="-80%" width="140%" height="260%">
-              <feGaussianBlur stdDeviation="3" result="blur"/>
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
             <radialGradient id="brainAura" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="rgba(200,65,106,.18)"/>
               <stop offset="100%" stopColor="rgba(200,65,106,0)"/>
@@ -89,7 +78,7 @@ export function HeroScene() {
           </g>
 
           {/* Connection lines (drawn under logo): parent → logo → student — paths meet the triangle */}
-          <path d="M262 210 Q318 208 378 207" stroke="url(#connL)" strokeWidth="1.5" filter="url(#lineGlow)">
+          <path d="M262 210 Q318 208 378 207" stroke="url(#connL)" strokeWidth="1.5">
             <animate attributeName="opacity" values=".3;.85;.3" dur="2.6s" repeatCount="indefinite"/>
           </path>
           <circle r="3.5" fill="#c8416a">
@@ -100,7 +89,7 @@ export function HeroScene() {
             <animateMotion dur="2s" begin=".65s" repeatCount="indefinite" path="M262 210 Q318 208 378 207"/>
             <animate attributeName="opacity" values="0;.7;0" dur="2s" begin=".65s" repeatCount="indefinite"/>
           </circle>
-          <path d="M482 207 Q546 208 598 210" stroke="url(#connR)" strokeWidth="1.5" filter="url(#lineGlow)">
+          <path d="M482 207 Q546 208 598 210" stroke="url(#connR)" strokeWidth="1.5">
             <animate attributeName="opacity" values=".3;.85;.3" dur="2.6s" begin=".35s" repeatCount="indefinite"/>
           </path>
           <circle r="3.5" fill="#c8416a">

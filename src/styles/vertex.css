@@ -54,34 +54,35 @@
   cursor: none;
   min-height: 100vh;
 }
-/* Force custom cursor only: no system pointer/hand anywhere under .vertex-page */
+/* Hide system cursor everywhere when custom cursor is used */
 .vertex-page,
 .vertex-page * {
   cursor: none !important;
 }
 
-/* Cursor */
+/* Custom cursor: pink dot + ring (no system pointer) */
 .vtx-cursor {
   position: fixed;
-  width: 10px;
-  height: 10px;
-  background: var(--vtx-pink);
+  width: 8px;
+  height: 8px;
+  background: #c8416a;
   border-radius: 50%;
   pointer-events: none;
   z-index: 9999;
   transform: translate(-50%, -50%);
-  mix-blend-mode: multiply;
-  transition: width 0.25s, height 0.25s;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.4);
+  transition: width 0.2s, height 0.2s;
 }
 .vtx-cursor-ring {
   position: fixed;
-  width: 32px;
-  height: 32px;
-  border: 1.5px solid rgba(200,65,106,0.3);
+  width: 36px;
+  height: 36px;
+  border: 2px solid rgba(200,65,106,0.55);
   border-radius: 50%;
   pointer-events: none;
   z-index: 9998;
   transform: translate(-50%, -50%);
+  transition: width 0.15s, height 0.15s, border-color 0.15s;
 }
 
 /* Nav */

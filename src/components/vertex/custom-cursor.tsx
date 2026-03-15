@@ -7,6 +7,8 @@ export function CustomCursor() {
   const ringRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    document.body.style.cursor = "none";
+
     let cx = 0, cy = 0, rx = 0, ry = 0;
     let animId: number;
 
@@ -33,6 +35,7 @@ export function CustomCursor() {
     animId = requestAnimationFrame(loop);
 
     return () => {
+      document.body.style.cursor = "";
       document.removeEventListener("mousemove", onMove);
       cancelAnimationFrame(animId);
     };
