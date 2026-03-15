@@ -89,7 +89,7 @@ export function MathQuiz() {
     <div className="vtx-section-wrap">
       <section className="vtx-math-section">
         <div className="vtx-section-header">
-          <h2>Practice,<br/><em>perfected</em></h2>
+          <h2>Practice, <em>perfected</em></h2>
           <p>Adaptive exercises that adjust to your child&apos;s pace. Instant feedback, zero frustration.</p>
         </div>
         <div className="vtx-math-arena">
