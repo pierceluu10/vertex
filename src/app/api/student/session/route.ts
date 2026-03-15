@@ -76,19 +76,11 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!childId) {
-      return NextResponse.json(
-        { error: "No child record found for this tutoring session" },
-        { status: 400 }
-      );
-    }
-
-    let session = null;
+    let session: { id: string } | null = null;
 
     const existingSessionQuery = supabase
       .from("tutoring_sessions")
       .select("*")
-      .eq("child_id", childId)
       .eq("kid_session_id", kidSessionId)
       .eq("status", "active")
       .order("started_at", { ascending: false })
@@ -108,7 +100,7 @@ export async function POST(request: Request) {
       const { data: createdSession, error } = await supabase
         .from("tutoring_sessions")
         .insert({
-          child_id: childId,
+          child_id: childId || null,
           kid_session_id: kidSessionId,
           document_id: documentId || null,
           status: "active",

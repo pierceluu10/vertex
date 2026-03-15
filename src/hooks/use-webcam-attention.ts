@@ -80,6 +80,7 @@ export function useWebcamAttention(
   const streamRef = useRef<MediaStream | null>(null);
   const landmarkerRef = useRef<unknown>(null);
   const landmarkerReadyAtRef = useRef<number>(0);
+  const processFrameInFlightRef = useRef<boolean>(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastFaceEventRef = useRef<string>("FACE_PRESENT");
 
@@ -112,6 +113,7 @@ export function useWebcamAttention(
       intervalRef.current = null;
     }
     videoRef.current = null;
+    processFrameInFlightRef.current = false;
     setState((prev) => ({ ...prev, webcamEnabled: false, stream: null }));
   }, []);
 
@@ -146,6 +148,7 @@ export function useWebcamAttention(
   }, []);
 
   const processFrame = useCallback(async () => {
+    if (processFrameInFlightRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || video.readyState < 2) return;
@@ -154,6 +157,7 @@ export function useWebcamAttention(
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, 320, 240);
 
+    processFrameInFlightRef.current = true;
     try {
       const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
 
@@ -177,10 +181,7 @@ export function useWebcamAttention(
       }
 
       const landmarker = landmarkerRef.current as {
-        detect?: (image: HTMLVideoElement | HTMLImageElement) => {
-          faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>>;
-        };
-        detectForVideo?: (image: HTMLVideoElement, timestamp: number) => {
+        detect?: (image: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement) => {
           faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>>;
         };
       } | null;
@@ -188,14 +189,29 @@ export function useWebcamAttention(
       if (!landmarker?.detect) return;
 
       const now = Date.now();
-      if (now - landmarkerReadyAtRef.current < 300) return;
+      if (now - landmarkerReadyAtRef.current < 500) return;
 
       // Guard: video must be playing and have valid dimensions
       if (video.videoWidth === 0 || video.videoHeight === 0 || video.paused || video.ended) return;
 
+      // Use canvas (already drawn above) so detect() gets a static frame; passing video can throw in some browsers
+      if (canvas.width === 0 || canvas.height === 0) return;
+
       let result: { faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>> };
       try {
-        result = landmarker.detect(video);
+        // MediaPipe WASM logs INFO/WARNING to console.error; suppress them so
+        // the Next.js dev overlay doesn't treat them as real errors.
+        const origError = console.error;
+        console.error = (...args: unknown[]) => {
+          const msg = typeof args[0] === "string" ? args[0] : "";
+          if (msg.startsWith("INFO:") || msg.startsWith("WARNING:")) return;
+          origError.apply(console, args);
+        };
+        try {
+          result = landmarker.detect(canvas);
+        } finally {
+          console.error = origError;
+        }
       } catch {
         return;
       }
@@ -285,7 +301,9 @@ export function useWebcamAttention(
         onSignals?.(avg);
       }
     } catch {
-      // FaceLandmarker unavailable; degrade gracefully
+      // FaceLandmarker / TensorFlow unavailable or error; degrade gracefully
+    } finally {
+      processFrameInFlightRef.current = false;
     }
   }, [onFaceEvent, onSignals]);
 

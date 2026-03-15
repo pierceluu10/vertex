@@ -141,6 +141,19 @@ export default function KidDashboardPage() {
     } catch { /* ignore */ }
   }, [mounted, kidSession, loadDocuments, loadSessions, loadTutor, loadMastery, router]);
 
+  // Refetch sessions and documents when user returns to the tab so "How you're doing" stays up to date
+  useEffect(() => {
+    if (!kidSession) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        loadSessions(kidSession!.id);
+        loadDocuments(kidSession!.parent_id);
+      }
+    };
+    window.addEventListener("visibilitychange", onVisible);
+    return () => window.removeEventListener("visibilitychange", onVisible);
+  }, [kidSession, loadSessions, loadDocuments]);
+
   function saveTodos(next: { id: string; label: string; done: boolean }[]) {
     setTodos(next);
     if (kidSession) {

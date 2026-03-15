@@ -70,6 +70,7 @@ function KidSessionContent() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const lastVisualRequestRef = useRef<string | null>(null);
+  const selfVideoRef = useRef<HTMLVideoElement>(null);
 
   const childName = kidSession?.child_name?.trim() || "there";
 
@@ -121,6 +122,19 @@ function KidSessionContent() {
   );
 
   const endSessionRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Attach webcam stream to self-view video element
+  useEffect(() => {
+    const video = selfVideoRef.current;
+    if (!video) return;
+    const stream = attention.webcam?.stream ?? null;
+    if (stream) {
+      video.srcObject = stream;
+      video.play().catch(() => {});
+    } else {
+      video.srcObject = null;
+    }
+  }, [attention.webcam?.stream]);
 
   // Generate lesson plan from document - stable ref ensures no re-render chain
   const generateLessonPlan = useCallback(async (docText: string) => {
@@ -176,12 +190,12 @@ function KidSessionContent() {
         const cacheKey = getLiveSessionCacheKey(session.id, documentId);
         const cachedSession = readCachedLiveSession(cacheKey);
 
-        if (cachedSession) {
+        if (cachedSession && cachedSession.liveTutorEnabled) {
           transcriptHistoryRef.current = [];
           setMessages([]);
           setTutoringSessionId(cachedSession.sessionId);
           setDocumentContext(cachedSession.documentContext);
-          setLiveTutorEnabled(Boolean(cachedSession.liveTutorEnabled));
+          setLiveTutorEnabled(true);
           setMicEnabled(false);
 
           // Generate lesson if document present
@@ -620,6 +634,7 @@ function KidSessionContent() {
                   style={{
                     height: "100%",
                     minHeight: 400,
+                    position: "relative",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
@@ -649,6 +664,87 @@ function KidSessionContent() {
                   <div style={{ fontSize: 18, fontWeight: 700 }}>{tutorName} is offline</div>
                   <div style={{ maxWidth: 380, fontSize: 13, lineHeight: 1.6, color: "rgba(255,244,230,0.76)" }}>
                     Add the Simli and LiveKit environment variables to bring {tutorName} online as a live call tutor.
+                  </div>
+
+                  {/* Self-view box — bottom-right, visible whenever camera is on */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 16,
+                      bottom: 16,
+                      width: 150,
+                      aspectRatio: "3 / 4",
+                      borderRadius: 18,
+                      overflow: "hidden",
+                      background: "rgba(9,13,19,0.92)",
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      boxShadow: "0 18px 30px rgba(0,0,0,0.24)",
+                    }}
+                  >
+                    {cameraEnabled && attention.webcam?.stream ? (
+                      <video
+                        ref={selfVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          transform: "scaleX(-1)",
+                          display: "block",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 8,
+                          padding: 14,
+                          color: "#f8ecdc",
+                          textAlign: "center",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 42,
+                            height: 42,
+                            borderRadius: "50%",
+                            display: "grid",
+                            placeItems: "center",
+                            background: "rgba(255,255,255,0.08)",
+                            fontSize: 18,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {(childName?.trim() || "K").slice(0, 1).toUpperCase()}
+                        </div>
+                        <div style={{ fontSize: 11, fontWeight: 600 }}>Camera off</div>
+                      </div>
+                    )}
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 10,
+                        bottom: 10,
+                        padding: "6px 8px",
+                        borderRadius: 999,
+                        background: "rgba(8,12,18,0.58)",
+                        color: "#fff6eb",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      You
+                    </div>
                   </div>
                 </div>
               )}
