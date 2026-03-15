@@ -13,6 +13,7 @@ import type {
   FocusEvent,
 } from "@/types";
 import { Card } from "@/components/ui/card";
+import { VertexLogo } from "@/components/vertex/vertex-logo";
 import "@/styles/vertex.css";
 
 type Tab = "overview" | "progress" | "homework" | "analytics" | "settings";
@@ -248,7 +249,7 @@ export default function ParentDashboardPage() {
       {/* Sidebar */}
       <aside className="vtx-parent-sidebar">
         <div className="vtx-parent-sidebar-header">
-          <div className="vtx-parent-sidebar-logo">Vertex</div>
+          <VertexLogo href="/" height={24} className="vtx-parent-sidebar-logo" />
           <div className="vtx-parent-sidebar-name">{parent?.name || "Parent"}</div>
         </div>
         <nav className="vtx-parent-sidebar-nav">

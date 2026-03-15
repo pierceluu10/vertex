@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ParentAvatar } from "@/components/session/parent-avatar";
+import { VertexLogo } from "@/components/vertex/vertex-logo";
 import type { KidSession, UploadedDocument, Quiz, TutoringSession } from "@/types";
 import "@/styles/vertex.css";
 
@@ -367,7 +368,7 @@ export default function KidDashboardPage() {
   return (
     <div className="vtx-kid-page vtx-kid-ui flex h-screen flex-col overflow-hidden">
       <header className="vtx-kid-header">
-        <div className="vtx-kid-logo">Vertex</div>
+        <VertexLogo href="/" height={28} className="vtx-kid-logo" />
       </header>
 
       {/* Confetti overlay */}

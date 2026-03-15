@@ -116,6 +116,22 @@
 a.vtx-auth-logo {
   text-decoration: none;
 }
+
+/* Vertex logo image (PNG); use mix-blend-mode to drop white background on light pages */
+.vtx-logo-img {
+  display: block;
+  object-fit: contain;
+}
+/* Screen drops black so white logo lines show on light backgrounds */
+.vtx-logo-img.vtx-logo-no-bg {
+  mix-blend-mode: screen;
+}
+.vtx-logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
 .vtx-nav-links {
   display: flex;
   gap: 44px;
