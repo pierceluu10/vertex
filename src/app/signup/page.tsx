@@ -131,7 +131,9 @@ export default function SignUpPage() {
 
         {step === 1 && (
           <>
-            <h1>Create your account</h1>
+            <h1 style={{ fontSize: 32, fontWeight: 300, textAlign: "center", color: "var(--vtx-ink, #1a1610)", marginBottom: 8 }}>
+              Create your <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>account</em>
+            </h1>
             <p className="vtx-auth-sub">Your name, email, and password</p>
             <div className="vtx-auth-form">
               <form onSubmit={handleStep1}>
@@ -156,7 +158,9 @@ export default function SignUpPage() {
 
         {step === 2 && (
           <>
-            <h1>About your child</h1>
+            <h1 style={{ fontSize: 32, fontWeight: 300, textAlign: "center", color: "var(--vtx-ink, #1a1610)", marginBottom: 8 }}>
+              About your <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>child</em>
+            </h1>
             <p className="vtx-auth-sub">We&apos;ll use this to personalize their experience</p>
             <div className="vtx-auth-form">
               <form onSubmit={handleStep2Submit}>

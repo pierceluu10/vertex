@@ -35,7 +35,9 @@ export default function LoginPage() {
     <div className="vtx-auth-page">
       <div className="vtx-auth-card">
         <Link href="/" className="vtx-auth-logo">Vertex</Link>
-        <h1>Welcome back</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 300, textAlign: "center", color: "var(--vtx-ink, #1a1610)", marginBottom: 8 }}>
+          Welcome <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>back</em>
+        </h1>
         <p className="vtx-auth-sub">Sign in to your parent account</p>
 
         <div className="vtx-auth-form">

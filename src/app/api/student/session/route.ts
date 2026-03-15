@@ -53,21 +53,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Award XP for starting a session
-    try {
-      const { data: ks } = await supabase
-        .from("kids_sessions")
-        .select("xp_points")
-        .eq("id", kidSessionId)
-        .single();
-      if (ks) {
-        await supabase
-          .from("kids_sessions")
-          .update({ xp_points: (ks.xp_points || 0) + 5 })
-          .eq("id", kidSessionId);
-      }
-    } catch { /* non-blocking */ }
-
     return NextResponse.json({
       sessionId: session.id,
       documentContext,
@@ -80,9 +65,34 @@ export async function POST(request: Request) {
   }
 }
 
+/** Compute focus score from logged events (server-authoritative when events exist). */
+function computeFocusScoreFromEvents(events: { event_type: string; duration_ms?: number | null }[]): number {
+  let score = 100;
+  for (const e of events) {
+    switch (e.event_type) {
+      case "tab_blur":
+        score -= 15;
+        if (e.duration_ms && e.duration_ms > 60_000) score -= 10;
+        break;
+      case "face_absent":
+        score -= 8;
+        break;
+      case "inactive":
+        score -= 10;
+        break;
+      case "no_response":
+        score -= 5;
+        break;
+      default:
+        score -= 5;
+    }
+  }
+  return Math.max(0, Math.min(100, score));
+}
+
 export async function PATCH(request: Request) {
   try {
-    const { sessionId, focusScore } = await request.json();
+    const { sessionId, focusScore: clientFocusScore } = await request.json();
 
     if (!sessionId) {
       return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
@@ -90,12 +100,24 @@ export async function PATCH(request: Request) {
 
     const supabase = await createServiceClient();
 
+    let focusScoreToStore = clientFocusScore != null ? Number(clientFocusScore) : null;
+
+    const { data: focusEvents } = await supabase
+      .from("focus_events")
+      .select("event_type, duration_ms")
+      .eq("session_id", sessionId);
+
+    if (focusEvents && focusEvents.length > 0) {
+      const serverComputed = computeFocusScoreFromEvents(focusEvents);
+      focusScoreToStore = serverComputed;
+    }
+
     await supabase
       .from("tutoring_sessions")
       .update({
         status: "completed",
         ended_at: new Date().toISOString(),
-        focus_score_avg: focusScore || null,
+        focus_score_avg: focusScoreToStore,
       })
       .eq("id", sessionId);
 

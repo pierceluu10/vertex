@@ -69,7 +69,13 @@ export default function OnboardingPage() {
     <div className="vtx-auth-page">
       <div className="vtx-auth-card">
         <div className="vtx-auth-logo">Vertex</div>
-        <h1>{step === "complete" ? "You\u2019re all set!" : "Set up your child\u2019s profile"}</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 300, textAlign: "center", color: "var(--vtx-ink, #1a1610)", marginBottom: 8 }}>
+          {step === "complete" ? (
+            <>You&apos;re <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>all set!</em></>
+          ) : (
+            <>Set up your child&apos;s <em style={{ fontStyle: "italic", color: "var(--vtx-pink, #c8416a)" }}>profile</em></>
+          )}
+        </h1>
 
         {step !== "complete" && (
           <div style={{ display: "flex", justifyContent: "center", gap: 8, margin: "16px 0 32px" }}>

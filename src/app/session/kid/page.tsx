@@ -146,19 +146,20 @@ function KidSessionContent() {
   }
 
   async function endSession() {
+    const sessionAverageScore = attention.getSessionAverageScore();
     if (tutoringSessionId) {
       try {
         await fetch("/api/student/session", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: tutoringSessionId, focusScore: attention.score }),
+          body: JSON.stringify({ sessionId: tutoringSessionId, focusScore: sessionAverageScore }),
         });
       } catch { /* ignore */ }
     }
     router.push("/session/kid/recap?" + new URLSearchParams({
       sessionId: tutoringSessionId || "",
       kidSessionId: kidSessionId || "",
-      score: String(attention.score),
+      score: String(sessionAverageScore),
       messages: String(messages.length),
     }).toString());
   }
@@ -175,7 +176,7 @@ function KidSessionContent() {
       {/* Header */}
       <header style={{
         padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: "rgba(255,255,255,0.7)", borderBottom: "1px solid rgba(0,0,0,0.05)",
+        background: "rgba(244,239,229,0.97)", borderBottom: "1px solid rgba(0,0,0,0.05)",
         backdropFilter: "blur(10px)", flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
