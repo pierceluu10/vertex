@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 const openai = new OpenAI();
 
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ hints: {} });
     }
 
-    const supabase = await createClient();
+    const supabase = await createServiceClient();
 
     // Check cache first
     const { data: session } = await supabase

@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { extractTextFromPdf } from "@/lib/pdf";
+import { uploadProcessedDocument } from "@/lib/document-upload";
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,52 +37,63 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createServiceClient();
+    const childContext = kidSessionId
+      ? await loadKidContext(supabase, kidSessionId)
+      : { childName: null, childAge: null, gradeLevel: null };
 
-    const fileName = `kid/${kidSessionId || "anon"}/${Date.now()}-${file.name}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const { document, extractedText } = await uploadProcessedDocument({
+      supabase,
+      file,
+      storagePath: `kid/${kidSessionId || "anon"}/${Date.now()}-${file.name}`,
+      parentId,
+      kidSessionId: kidSessionId || null,
+      childName: childContext.childName,
+      childAge: childContext.childAge,
+      gradeLevel: childContext.gradeLevel,
+    });
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("documents")
-      .upload(fileName, buffer, { contentType: "application/pdf" });
-
-    if (uploadError) {
-      return NextResponse.json({ error: "Upload failed: " + uploadError.message }, { status: 500 });
-    }
-
-    const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(uploadData.path);
-
-    let extractedText = "";
-    let chunks = null;
-    try {
-      const result = await extractTextFromPdf(buffer);
-      extractedText = result.text;
-      chunks = result.chunks;
-    } catch { /* ignore */ }
-
-    const { data: doc } = await supabase
-      .from("uploaded_documents")
-      .insert({
-        parent_id: parentId,
-        kid_session_id: kidSessionId || null,
-        file_name: file.name,
-        file_url: publicUrl,
-        extracted_text: extractedText,
-        chunks,
-      })
-      .select()
-      .single();
-
-    // Also insert into homework table
     await supabase.from("homework").insert({
       parent_id: parentId,
       kid_session_id: kidSessionId || null,
-      file_url: publicUrl,
+      file_url: document.file_url,
       parsed_text: extractedText,
     });
 
-    return NextResponse.json({ document: doc });
+    return NextResponse.json({ document });
   } catch (error) {
     console.error("Student homework POST error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
+}
+
+async function loadKidContext(supabase: Awaited<ReturnType<typeof createServiceClient>>, kidSessionId: string) {
+  const { data: kidSession } = await supabase
+    .from("kids_sessions")
+    .select("child_name, code_used")
+    .eq("id", kidSessionId)
+    .maybeSingle();
+
+  if (!kidSession) {
+    return { childName: null, childAge: null, gradeLevel: null };
+  }
+
+  let childAge: number | null = null;
+  let gradeLevel: string | null = null;
+
+  if (kidSession.code_used) {
+    const { data: accessCode } = await supabase
+      .from("access_codes")
+      .select("child_age, grade_level")
+      .eq("code", kidSession.code_used)
+      .maybeSingle();
+
+    childAge = accessCode?.child_age ?? null;
+    gradeLevel = accessCode?.grade_level ?? null;
+  }
+
+  return {
+    childName: kidSession.child_name ?? null,
+    childAge,
+    gradeLevel,
+  };
 }

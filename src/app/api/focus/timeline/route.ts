@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 /**
  * POST /api/focus/timeline
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ skipped: true });
     }
 
-    const supabase = await createClient();
+    const supabase = await createServiceClient();
 
     // Read existing timeline, append new entries
     const { data: session } = await supabase

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { openai, buildQuizPrompt } from "@/lib/openai";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const { sessionId, childId, topic, childAge, difficulty, documentContext } =
       body;
 
-    const supabase = await createClient();
+    const supabase = await createServiceClient();
 
     const prompt = buildQuizPrompt({
       topic: topic || "general math",

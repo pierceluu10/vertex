@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { extractTextFromPdf } from "@/lib/pdf";
-import { openai } from "@/lib/openai";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { uploadProcessedDocument } from "@/lib/document-upload";
 
 export async function POST(request: Request) {
   try {
@@ -14,16 +13,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    // Auth check via cookies
+    const authClient = await createClient();
+    const { data: { user } } = await authClient.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Service client bypasses RLS for storage + DB writes
+    const supabase = await createServiceClient();
+    let childContext: { childName?: string | null; childAge?: number | null; gradeLevel?: string | null } = {};
     let resolvedChildId = childId || null;
 
     if (!resolvedChildId && accessCodeId) {
@@ -68,97 +67,65 @@ export async function POST(request: Request) {
       }
     }
 
-    const fileName = `${user.id}/${Date.now()}-${file.name}`;
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // Ensure parent row exists (catches users who signed up before the column-name fix)
+    const { data: existingParent } = await supabase
+      .from("parents")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
 
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("documents")
-      .upload(fileName, buffer, {
-        contentType: file.type || "application/octet-stream",
+    if (!existingParent) {
+      const { error: parentError } = await supabase.from("parents").insert({
+        id: user.id,
+        email: user.email ?? "",
+        name: (user.user_metadata?.full_name as string) || user.email?.split("@")[0] || "Parent",
+      });
+      if (parentError) {
+        console.error("Parent auto-create error:", parentError);
+        return NextResponse.json(
+          { error: "Could not verify parent profile. Please try again." },
+          { status: 500 }
+        );
+      }
+    }
+
+    if (resolvedChildId) {
+      const { data: child } = await supabase
+        .from("children")
+        .select("name, age, grade")
+        .eq("id", resolvedChildId)
+        .eq("parent_id", user.id)
+        .maybeSingle();
+
+      if (child) {
+        childContext = {
+          childName: child.name,
+          childAge: child.age,
+          gradeLevel: child.grade,
+        };
+      }
+    }
+
+    try {
+      const { document } = await uploadProcessedDocument({
+        supabase,
+        file,
+        storagePath: `${user.id}/${Date.now()}-${file.name}`,
+        parentId: user.id,
+        childId: resolvedChildId,
+        childName: childContext.childName,
+        childAge: childContext.childAge,
+        gradeLevel: childContext.gradeLevel,
       });
 
-    if (uploadError) {
-      console.error("Storage upload error:", uploadError);
+      return NextResponse.json({ document });
+    } catch (error) {
+      console.error("Document upload pipeline error:", error);
       return NextResponse.json(
-        { error: "Failed to upload file" },
+        { error: error instanceof Error ? error.message : "Failed to upload file" },
         { status: 500 }
       );
     }
-
-    // Get public URL
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("documents").getPublicUrl(uploadData.path);
-
-    // Extract text from PDF, Text, or Image
-    let extractedText = "";
-    let chunks = null;
-    try {
-      if (file.type === "application/pdf") {
-        const result = await extractTextFromPdf(buffer);
-        extractedText = result.text;
-        chunks = result.chunks;
-      } else if (file.type.startsWith("text/")) {
-        extractedText = buffer.toString("utf-8");
-      } else if (file.type.startsWith("image/")) {
-        // Use GPT-4o Vision to extract text from images
-        const base64Image = buffer.toString("base64");
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          max_tokens: 1500,
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Please extract all math problems, instructions, and text from this image exactly as written. If it's a worksheet, preserve the structure. Only output the extracted text, no conversational filler.",
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:${file.type};base64,${base64Image}`,
-                  },
-                },
-              ],
-            },
-          ],
-        });
-        extractedText = completion.choices[0]?.message?.content?.trim() || "";
-      } else {
-        // Fallback for other files (Word, etc) - in MVP we might just get a summary if we can't parse it
-        extractedText = `File uploaded: ${file.name} (${file.type})`;
-      }
-    } catch (err) {
-      console.error("File parsing error:", err);
-      extractedText = `Failed to parse file: ${file.name}`;
-    }
-
-    // Store document record
-    const { data: doc, error: docError } = await supabase
-      .from("uploaded_documents")
-      .insert({
-        parent_id: user.id,
-        child_id: resolvedChildId,
-        file_name: file.name,
-        file_url: publicUrl,
-        extracted_text: extractedText,
-        chunks,
-      })
-      .select()
-      .single();
-
-    if (docError) {
-      console.error("Document insert error:", docError);
-      return NextResponse.json(
-        { error: "Failed to save document" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ document: doc });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(

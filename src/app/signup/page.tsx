@@ -34,6 +34,7 @@ export default function SignUpPage() {
 
   // Step 2: child info
   const [childName, setChildName] = useState("");
+  const [childAge, setChildAge] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
   const [mathTopics, setMathTopics] = useState<string[]>([]);
   const [learningPace, setLearningPace] = useState<"slow" | "medium" | "fast">("medium");
@@ -110,7 +111,13 @@ export default function SignUpPage() {
       await fetch("/api/access-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ childName: childName || null }),
+        body: JSON.stringify({
+          childName: childName || null,
+          childAge: childAge ? parseInt(childAge) : null,
+          gradeLevel: gradeLevel || null,
+          mathTopics,
+          learningPace,
+        }),
       });
     } catch {
       // Non-blocking
@@ -178,8 +185,12 @@ export default function SignUpPage() {
                   <input id="childName" type="text" placeholder="Your child's name" value={childName} onChange={(e) => setChildName(e.target.value)} required minLength={1} />
                 </div>
                 <div className="vtx-field">
-                  <label htmlFor="grade">Grade Level</label>
-                  <input id="grade" type="text" placeholder="e.g. 3rd grade" value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)} />
+                  <label htmlFor="childAge">Child&apos;s Age <span style={{ color: "#c8416a" }}>*</span></label>
+                  <input id="childAge" type="number" min={3} max={18} placeholder="e.g. 8" value={childAge} onChange={(e) => setChildAge(e.target.value)} required />
+                </div>
+                <div className="vtx-field">
+                  <label htmlFor="grade">Grade Level <span style={{ color: "#c8416a" }}>*</span></label>
+                  <input id="grade" type="text" placeholder="e.g. 3rd grade" value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)} required />
                 </div>
                 <div className="vtx-field">
                   <label>Math Topics They Struggle With</label>

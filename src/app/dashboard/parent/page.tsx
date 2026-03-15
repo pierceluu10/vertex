@@ -45,6 +45,8 @@ export default function ParentDashboardPage() {
   const [focusEvents, setFocusEvents] = useState<FocusEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [showCodeForm, setShowCodeForm] = useState(false);
@@ -561,7 +563,6 @@ export default function ParentDashboardPage() {
                   </div>
                 </motion.div>
               )}
-
               {sessions.length === 0 ? (
                 <div className="vtx-parent-card">
                   <p className="vtx-parent-muted-text">No activity yet. Statistics will appear once study sessions begin.</p>

@@ -64,6 +64,7 @@ export default function KidDashboardPage() {
   const [homeView, setHomeView] = useState<HomeView>("main");
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizData, setQuizData] = useState<{
     questions: Quiz["questions"];
@@ -182,15 +183,24 @@ export default function KidDashboardPage() {
   async function handleHomeworkUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files?.[0] || !kidSession) return;
     setUploading(true);
+    setUploadError(null);
     const formData = new FormData();
     formData.append("file", e.target.files[0]);
     formData.append("kidSessionId", kidSession.id);
     formData.append("parentId", kidSession.parent_id);
     try {
       const res = await fetch("/api/student/homework", { method: "POST", body: formData });
-      if (res.ok) await loadDocuments(kidSession.parent_id);
-    } catch { /* ignore */ }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setUploadError(data.error || "Upload failed");
+      } else {
+        await loadDocuments(kidSession.parent_id);
+      }
+    } catch {
+      setUploadError("Upload failed. Please try again.");
+    }
     setUploading(false);
+    e.target.value = "";
   }
 
   async function startQuiz() {
@@ -541,8 +551,13 @@ export default function KidDashboardPage() {
                   <div className="vtx-kid-upload-icon"><Upload size={24} style={{ color: "var(--vtx-pink, #c8416a)" }} /></div>
                   <div className="vtx-kid-upload-title">{uploading ? "Uploading…" : "Drop your homework PDF here"}</div>
                   <div className="vtx-kid-upload-hint">or tap to choose a file</div>
-                  <input type="file" accept=".pdf" style={{ display: "none" }} onChange={handleHomeworkUpload} disabled={uploading} />
+                  <input type="file" accept=".pdf,application/pdf" style={{ display: "none" }} onChange={handleHomeworkUpload} disabled={uploading} />
                 </label>
+                {uploadError && (
+                  <div className="vtx-kid-empty" style={{ marginTop: 16, padding: "14px 16px", color: "#b42318", background: "rgba(212,68,68,0.08)", border: "1px solid rgba(212,68,68,0.16)" }}>
+                    <p style={{ margin: 0 }}>{uploadError}</p>
+                  </div>
+                )}
 
                 {documents.length === 0 ? (
                   <div className="vtx-kid-empty">
