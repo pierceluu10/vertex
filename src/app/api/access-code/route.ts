@@ -135,11 +135,27 @@ export async function DELETE(request: Request) {
 
     const { codeId } = await request.json();
     const supabase = await createServiceClient();
-    await supabase
+    const { data: accessCode } = await supabase
+      .from("access_codes")
+      .select("id")
+      .eq("id", codeId)
+      .eq("parent_id", user.id)
+      .maybeSingle();
+
+    if (!accessCode) {
+      return NextResponse.json({ error: "Access code not found" }, { status: 404 });
+    }
+
+    const { error } = await supabase
       .from("access_codes")
       .update({ is_active: false })
       .eq("id", codeId)
       .eq("parent_id", user.id);
+
+    if (error) {
+      console.error("Access code DELETE error:", error);
+      return NextResponse.json({ error: error.message || "Failed to deactivate access code" }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -297,8 +297,16 @@ export default function ParentDashboardPage() {
     router.push("/login");
   }
 
-  const completedSessions = sessions.filter((s) => s.status === "completed");
-  const todaySessions = sessions.filter((s) => {
+  const activeAccessCodes = accessCodes.filter((code) => code.is_active);
+  const hasActiveStudents = activeAccessCodes.length > 0;
+  const visibleDocuments = hasActiveStudents ? documents : [];
+  const visibleSessions = hasActiveStudents ? sessions : [];
+  const visibleFocusEvents = hasActiveStudents ? focusEvents : [];
+  const visibleInsightSessions = hasActiveStudents ? insightSessions : [];
+  const visibleInsightMastery = hasActiveStudents ? insightMastery : [];
+
+  const completedSessions = visibleSessions.filter((s) => s.status === "completed");
+  const todaySessions = visibleSessions.filter((s) => {
     const d = new Date(s.started_at);
     return d.toDateString() === new Date().toDateString();
   });
@@ -390,8 +398,8 @@ export default function ParentDashboardPage() {
                 {[
                   { label: "Study today", value: todaySessions.length, unit: "sessions" },
                   { label: "Avg focus", value: `${avgFocus}%`, unit: "across sessions" },
-                  { label: "Homework", value: documents.length, unit: "uploaded" },
-                  { label: "Distractions", value: focusEvents.length, unit: "events logged" },
+                  { label: "Homework", value: visibleDocuments.length, unit: "uploaded" },
+                  { label: "Distractions", value: visibleFocusEvents.length, unit: "events logged" },
                 ].map((stat, i) => (
                   <motion.div key={stat.label} className="vtx-parent-stat-card" variants={fadeUp} initial="hidden" animate="show" custom={i + 3}>
                     <div className="vtx-parent-stat-label">{stat.label}</div>
@@ -470,11 +478,11 @@ export default function ParentDashboardPage() {
 
                 {codeError && !showCodeForm && <p className="vtx-parent-error">{codeError}</p>}
 
-                {accessCodes.filter((c) => c.is_active).length === 0 && !showCodeForm ? (
+                {activeAccessCodes.length === 0 && !showCodeForm ? (
                   <p className="vtx-parent-muted-text">No active codes. Create one for your child to start learning.</p>
                 ) : !showCodeForm ? (
                   <div className="vtx-parent-code-list">
-                    {accessCodes.filter((c) => c.is_active).map((ac, i) => (
+                    {activeAccessCodes.map((ac, i) => (
                       <motion.div key={ac.id} className="vtx-parent-code-item" variants={fadeUp} initial="hidden" animate="show" custom={i}>
                         <div className="vtx-parent-code-left">
                           <span className="vtx-parent-code-value">{ac.code}</span>
@@ -527,8 +535,8 @@ export default function ParentDashboardPage() {
                 {[
                   { label: "Total sessions", value: completedSessions.length, unit: "completed" },
                   { label: "Avg focus", value: `${avgFocus}%`, unit: "across sessions" },
-                  { label: "Study this week", value: sessions.filter((s) => { const d = new Date(s.started_at); const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); return d >= weekAgo; }).length, unit: "sessions" },
-                  { label: "Distraction events", value: focusEvents.length, unit: "logged" },
+                  { label: "Study this week", value: visibleSessions.filter((s) => { const d = new Date(s.started_at); const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); return d >= weekAgo; }).length, unit: "sessions" },
+                  { label: "Distraction events", value: visibleFocusEvents.length, unit: "logged" },
                 ].map((stat, i) => (
                   <motion.div key={stat.label} className="vtx-parent-stat-card" variants={fadeUp} initial="hidden" animate="show" custom={i}>
                     <div className="vtx-parent-stat-label">{stat.label}</div>
@@ -538,11 +546,11 @@ export default function ParentDashboardPage() {
                 ))}
               </div>
 
-              {sessions.length > 0 && (
+              {visibleSessions.length > 0 && (
                 <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={5}>
                   <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Recent Sessions</h2>
                   <div className="vtx-parent-session-list">
-                    {sessions.slice(0, 8).map((session, i) => (
+                    {visibleSessions.slice(0, 8).map((session, i) => (
                       <motion.div key={session.id} className="vtx-parent-session-item" variants={fadeUp} initial="hidden" animate="show" custom={i}>
                         <div className="vtx-parent-session-left">
                           <div className={`vtx-parent-session-dot${session.status === "active" ? " live" : ""}`} />
@@ -563,7 +571,7 @@ export default function ParentDashboardPage() {
                   </div>
                 </motion.div>
               )}
-              {sessions.length === 0 ? (
+              {visibleSessions.length === 0 ? (
                 <div className="vtx-parent-card">
                   <p className="vtx-parent-muted-text">No activity yet. Statistics will appear once study sessions begin.</p>
                 </div>
@@ -606,12 +614,12 @@ export default function ParentDashboardPage() {
                     </div>
                   </motion.div>
 
-                  {focusEvents.length > 0 && (
+                  {visibleFocusEvents.length > 0 && (
                     <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={8}>
                       <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Distraction breakdown</h2>
                       <div className="vtx-parent-distraction-grid">
                         {["tab_blur", "inactive", "face_absent", "no_response"].map((eventType, i) => {
-                          const count = focusEvents.filter((e) => e.event_type === eventType).length;
+                          const count = visibleFocusEvents.filter((e) => e.event_type === eventType).length;
                           return (
                             <motion.div key={eventType} className="vtx-parent-distraction-card" variants={fadeUp} initial="hidden" animate="show" custom={i}>
                               <Activity size={16} style={{ color: "#c8416a" }} />
@@ -630,7 +638,7 @@ export default function ParentDashboardPage() {
                     <h2 className="vtx-parent-card-title" style={{ marginBottom: 12 }}>Focus Timeline</h2>
                     <div style={{ marginBottom: 16 }}>
                       <select value={selectedInsightSession || ""} onChange={(e) => setSelectedInsightSession(e.target.value)} className="vtx-parent-input" style={{ maxWidth: 320 }}>
-                        {insightSessions.map((s) => (
+                        {visibleInsightSessions.map((s) => (
                           <option key={s.id} value={s.id}>
                             {new Date(s.started_at).toLocaleDateString()} — {new Date(s.started_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                             {s.focus_score != null ? ` (${Math.round(s.focus_score as number)}% avg)` : ""}
@@ -639,7 +647,7 @@ export default function ParentDashboardPage() {
                       </select>
                     </div>
                     {(() => {
-                      const selected = insightSessions.find((s) => s.id === selectedInsightSession);
+                      const selected = visibleInsightSessions.find((s) => s.id === selectedInsightSession);
                       const timeline = (selected?.focus_timeline || []) as { timestamp: number; score: number }[];
                       if (timeline.length === 0) return <p className="vtx-parent-muted-text">No focus timeline data for this session.</p>;
                       const startTime = timeline[0].timestamp;
@@ -662,10 +670,10 @@ export default function ParentDashboardPage() {
                     })()}
                   </motion.div>
 
-                  {insightMastery.length > 0 && (
+                  {visibleInsightMastery.length > 0 && (
                     <motion.div className="vtx-parent-card" variants={fadeUp} initial="hidden" animate="show" custom={10}>
                       <h2 className="vtx-parent-card-title" style={{ marginBottom: 16 }}>Topic Mastery</h2>
-                      {insightMastery.map((t, i) => (
+                      {visibleInsightMastery.map((t, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                           <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#1a1610" }}>{t.topic}</span>
                           <div style={{ width: 120, height: 6, background: "rgba(0,0,0,0.04)", borderRadius: 3, overflow: "hidden" }}>

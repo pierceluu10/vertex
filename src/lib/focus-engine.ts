@@ -1,9 +1,9 @@
 /**
  * Focus Engine — 6-signal weighted formula with EMA smoothing.
  *
- * FocusScore = (Gaze×0.30 + HeadPose×0.20 + TabVis×0.15 +
- *               ResponseLatency×0.15 + BlinkHealth×0.10 +
- *               Interaction×0.10) × PersonalBaselineMultiplier
+ * FocusScore = (Gaze×0.22 + HeadPose×0.14 + TabVis×0.22 +
+ *               ResponseLatency×0.12 + BlinkHealth×0.06 +
+ *               Interaction×0.24) × PersonalBaselineMultiplier
  *
  * All signals are 0–100. No raw video/frames leave the device.
  */
@@ -12,12 +12,12 @@ import type { FocusSignals, FocusLevel } from "@/types";
 
 /* ─── Weights ─── */
 const W = {
-  gaze: 0.30,
-  headPose: 0.20,
-  tabVisibility: 0.15,
-  responseLatency: 0.15,
-  blinkHealth: 0.10,
-  interaction: 0.10,
+  gaze: 0.22,
+  headPose: 0.14,
+  tabVisibility: 0.22,
+  responseLatency: 0.12,
+  blinkHealth: 0.06,
+  interaction: 0.24,
 } as const;
 
 /* ─── EMA parameters ─── */
@@ -40,8 +40,8 @@ export function computeTabVisibilityScore(
 }
 
 /**
- * Response latency score: 100 within 5s, −10/s after, 0 after 15s.
- * Holds last value with slow decay between questions.
+ * Response latency score: forgiving for normal thinking time.
+ * 100 within 8s, then decays gradually and floors instead of crashing to 0.
  */
 export function computeResponseLatencyScore(
   lastQuestionAt: number | null,
@@ -51,29 +51,30 @@ export function computeResponseLatencyScore(
   if (lastQuestionAt === null) return 100; // No question asked yet
 
   if (lastResponseAt !== null && lastResponseAt > lastQuestionAt) {
-    // Already responded — hold at the score they earned, decay slowly
+    // Already responded — hold at the score they earned, decay slowly.
     const responseDelta = (lastResponseAt - lastQuestionAt) / 1000;
-    const scoreAtResponse = Math.max(0, Math.round(100 - Math.max(0, responseDelta - 5) * 10));
-    // Slow decay: 2 points per 10 seconds since response
+    const scoreAtResponse = Math.max(75, Math.round(100 - Math.max(0, responseDelta - 8) * 4));
     const sinceThen = (now - lastResponseAt) / 1000;
-    return Math.max(scoreAtResponse - Math.floor(sinceThen / 10) * 2, 50);
+    return Math.max(scoreAtResponse - Math.floor(sinceThen / 15) * 1, 75);
   }
 
   // Waiting for response
   const elapsed = (now - lastQuestionAt) / 1000;
-  if (elapsed <= 5) return 100;
-  if (elapsed >= 15) return 0;
-  return Math.max(0, Math.round(100 - (elapsed - 5) * 10));
+  if (elapsed <= 8) return 100;
+  if (elapsed <= 20) return Math.max(70, Math.round(100 - (elapsed - 8) * 2.5));
+  if (elapsed <= 30) return Math.max(55, Math.round(70 - (elapsed - 20) * 1.5));
+  return 55;
 }
 
 /**
- * Interaction score: 100 if input in last 30s, 60 if 30–60s, 20 after 60s.
+ * Interaction score: listening/working quietly should not tank the score.
  */
 export function computeInteractionScore(lastInputAt: number, now: number): number {
   const elapsed = (now - lastInputAt) / 1000;
-  if (elapsed <= 30) return 100;
-  if (elapsed <= 60) return 60;
-  return 20;
+  if (elapsed <= 45) return 100;
+  if (elapsed <= 90) return 85;
+  if (elapsed <= 150) return 70;
+  return 55;
 }
 
 /* ─── Main computation ─── */

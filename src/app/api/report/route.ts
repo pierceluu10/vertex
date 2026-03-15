@@ -64,6 +64,9 @@ export async function POST(request: Request) {
       (sum: number, e: { duration_ms?: number }) => sum + (e.duration_ms || 0),
       0
     );
+    const focusScore = session.focus_score_avg != null
+      ? Math.round(session.focus_score_avg)
+      : Math.max(60, 100 - focusEvents.length * 4);
 
     const quizCorrect = quizAttempts.filter(
       (q: { is_correct?: boolean }) => q.is_correct
@@ -100,6 +103,8 @@ export async function POST(request: Request) {
     });
 
     const summary = completion.choices[0]?.message?.content || "Session completed.";
+    const topicsCovered = extractTopics(topicsMentioned);
+    const briefContentNote = buildBriefContentNote(topicsCovered, messages);
 
     // Save report
     const { data: report } = await supabase
@@ -108,7 +113,7 @@ export async function POST(request: Request) {
         session_id: sessionId,
         parent_id: child.parent_id,
         summary,
-        topics_covered: extractTopics(topicsMentioned),
+        topics_covered: topicsCovered,
         struggles,
         focus_summary: {
           total_focus_events: focusEvents.length,
@@ -140,18 +145,20 @@ export async function POST(request: Request) {
         await resend.emails.send({
           from: "Vertex <onboarding@resend.dev>",
           to: parent.email,
-          subject: `${child.name}'s Study Session Report`,
+          subject: `${child.name}'s lesson recap`,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #7c3aed; padding: 24px; border-radius: 16px 16px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">Vertex Study Report</h1>
-                <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0;">Session for ${child.name}</p>
+              <div style="background: #1f6feb; padding: 20px; border-radius: 16px 16px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 22px;">Vertex lesson recap</h1>
+                <p style="color: rgba(255,255,255,0.82); margin: 8px 0 0;">${child.name}'s session summary</p>
               </div>
-              <div style="padding: 24px; background: #faf5ff; border-radius: 0 0 16px 16px; border: 1px solid #e9d5ff;">
-                <p style="white-space: pre-wrap; line-height: 1.6; color: #374151;">${summary}</p>
-                <hr style="border: none; border-top: 1px solid #e9d5ff; margin: 16px 0;">
-                <p style="font-size: 14px; color: #6b7280;">
-                  Duration: ${durationMins} min | Messages: ${messages.length} | Focus events: ${focusEvents.length}
+              <div style="padding: 24px; background: #f8fbff; border-radius: 0 0 16px 16px; border: 1px solid #dbeafe;">
+                <div style="display: inline-block; padding: 8px 14px; border-radius: 999px; background: #e0f2fe; color: #0c4a6e; font-weight: 700; font-size: 14px; margin-bottom: 16px;">
+                  Focus meter: ${focusScore}%
+                </div>
+                <p style="margin: 0 0 12px; line-height: 1.6; color: #334155;">${briefContentNote}</p>
+                <p style="margin: 0; font-size: 13px; color: #64748b;">
+                  ${durationMins} min lesson${topicsCovered.length ? ` • Topics: ${topicsCovered.join(", ")}` : ""}
                 </p>
               </div>
             </div>
@@ -186,4 +193,31 @@ function extractTopics(text: string): string[] {
   return mathTopics.filter((topic) =>
     text.toLowerCase().includes(topic)
   );
+}
+
+function buildBriefContentNote(topics: string[], messages: Array<{ role?: string; content?: string }>) {
+  if (topics.length > 0) {
+    const formattedTopics = topics.slice(0, 3).map((topic) => toTitleCase(topic));
+    if (formattedTopics.length === 1) {
+      return `We worked on ${formattedTopics[0]} today and kept the lesson focused on the main homework concepts.`;
+    }
+
+    return `We covered ${formattedTopics.join(", ")} today and reviewed the main ideas from the lesson together.`;
+  }
+
+  const assistantText = messages
+    .filter((message) => message.role === "assistant")
+    .map((message) => message.content?.trim())
+    .filter(Boolean)
+    .join(" ");
+
+  if (assistantText) {
+    return "We reviewed the lesson material together and practiced the main problems discussed during the session.";
+  }
+
+  return "We completed a short lesson and reviewed the key material covered in the session.";
+}
+
+function toTitleCase(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
