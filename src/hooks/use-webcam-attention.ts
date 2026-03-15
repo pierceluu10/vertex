@@ -79,6 +79,7 @@ export function useWebcamAttention(
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const landmarkerRef = useRef<unknown>(null);
+  const landmarkerReadyAtRef = useRef<number>(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastFaceEventRef = useRef<string>("FACE_PRESENT");
 
@@ -172,24 +173,28 @@ export function useWebcamAttention(
           outputFacialTransformationMatrixes: false,
         });
         landmarkerRef.current = landmarker;
+        landmarkerReadyAtRef.current = Date.now();
       }
 
       const landmarker = landmarkerRef.current as {
-        detect?: (image: HTMLCanvasElement) => {
+        detect?: (image: HTMLCanvasElement | ImageData) => {
           faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>>;
         };
       } | null;
 
       if (!landmarker?.detect) return;
 
+      const now = Date.now();
+      if (now - landmarkerReadyAtRef.current < 300) return;
+
       let result: { faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>> };
       try {
-        result = landmarker.detect(canvas);
+        const imageData = ctx.getImageData(0, 0, 320, 240);
+        result = landmarker.detect(imageData);
       } catch {
         return;
       }
       const faces = result?.faceLandmarks ?? [];
-      const now = Date.now();
 
       if (faces.length === 0) {
         if (!noFaceSinceRef.current) {
