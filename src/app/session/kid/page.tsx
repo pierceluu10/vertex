@@ -91,7 +91,7 @@ function KidSessionContent() {
     [childName]
   );
 
-  const attention = useAttention(tutoringSessionId || "none", handleIntervention, true);
+  const attention = useAttention(tutoringSessionId || "none", handleIntervention, cameraEnabled);
 
   const handlePolicyIntervention = useCallback((text: string) => {
     setAgentPromptRequest({ id: Date.now(), text });

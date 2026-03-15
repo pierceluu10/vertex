@@ -164,7 +164,7 @@ export function useWebcamAttention(
           baseOptions: {
             modelAssetPath:
               "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-            delegate: "GPU",
+            delegate: "CPU",
           },
           runningMode: "IMAGE",
           numFaces: 1,
@@ -175,13 +175,20 @@ export function useWebcamAttention(
       }
 
       const landmarker = landmarkerRef.current as {
-        detect: (image: HTMLCanvasElement) => {
-          faceLandmarks: Array<Array<{ x: number; y: number; z: number }>>;
+        detect?: (image: HTMLCanvasElement) => {
+          faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>>;
         };
-      };
+      } | null;
 
-      const result = landmarker.detect(canvas);
-      const faces = result.faceLandmarks || [];
+      if (!landmarker?.detect) return;
+
+      let result: { faceLandmarks?: Array<Array<{ x: number; y: number; z: number }>> };
+      try {
+        result = landmarker.detect(canvas);
+      } catch {
+        return;
+      }
+      const faces = result?.faceLandmarks ?? [];
       const now = Date.now();
 
       if (faces.length === 0) {
