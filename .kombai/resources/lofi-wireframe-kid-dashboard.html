@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vertex Kid Dashboard — Reimagined Wireframe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Comic Sans MS', 'Chalkboard SE', cursive; background: #fff; color: #333; }
+  .page { max-width: 1060px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 18px; margin-bottom: 6px; }
+  h2 { font-size: 15px; margin-bottom: 4px; }
+  h3 { font-size: 13px; margin-bottom: 4px; }
+  p, span, label { font-size: 12px; color: #666; }
+  .desc { font-size: 11px; color: #999; margin-bottom: 16px; padding: 8px 12px; background: #f0f0f0; border-radius: 4px; }
+  .wireframe { border: 2px solid #333; border-radius: 6px; overflow: hidden; margin-bottom: 24px; }
+
+  /* Header */
+  .wf-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; border-bottom: 1px solid #ccc; background: #f5f5f5; }
+  .wf-logo { font-size: 16px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase; }
+  .wf-stats { display: flex; gap: 20px; font-size: 11px; }
+  .wf-stats span { display: flex; align-items: center; gap: 4px; }
+
+  /* Main */
+  .wf-main { padding: 28px 32px 80px; background: #fafafa; min-height: 500px; }
+
+  /* Section labels */
+  .wf-section-num { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: #999; margin-bottom: 4px; display: block; }
+  .wf-title { font-size: 28px; font-weight: normal; margin-bottom: 6px; }
+  .wf-title em { font-style: italic; color: #999; }
+  .wf-subtitle { font-size: 12px; color: #999; margin-bottom: 24px; }
+
+  /* CTA card */
+  .wf-cta { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border: 1px solid #ccc; border-radius: 4px; background: #fff; margin-bottom: 24px; }
+  .wf-cta-icon { width: 36px; height: 36px; border-radius: 4px; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .wf-cta-text { flex: 1; }
+  .wf-cta-text strong { font-size: 13px; }
+  .wf-cta-text span { font-size: 11px; color: #999; }
+  .wf-chevron { color: #ccc; font-size: 16px; }
+
+  /* Stat grid */
+  .wf-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+  .wf-stat-card { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+  .wf-stat-card .icon { width: 32px; height: 32px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+  .wf-stat-card .num { font-size: 24px; font-weight: normal; }
+  .wf-stat-card .meta { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #999; }
+
+  /* Action grid */
+  .wf-actions-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: #999; margin-bottom: 12px; }
+  .wf-action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+  .wf-action-card { padding: 20px 14px; border: 1px solid #ccc; border-radius: 4px; background: #fff; text-align: center; }
+  .wf-action-card .icon { font-size: 20px; margin-bottom: 8px; }
+  .wf-action-card strong { font-size: 12px; display: block; margin-bottom: 2px; }
+  .wf-action-card span { font-size: 10px; color: #999; }
+
+  /* Tip */
+  .wf-tip { padding: 14px 18px; border: 1px dashed #ccc; border-radius: 4px; background: #fafafa; }
+  .wf-tip strong { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #999; display: block; margin-bottom: 4px; }
+  .wf-tip p { font-size: 11px; color: #666; }
+
+  /* Upload */
+  .wf-upload { padding: 32px; border: 2px dashed #ccc; border-radius: 4px; text-align: center; margin-bottom: 20px; background: #fff; }
+  .wf-upload .icon { font-size: 24px; margin-bottom: 8px; }
+
+  /* Doc list */
+  .wf-doc-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px; background: #fff; }
+  .wf-doc-item .left { display: flex; align-items: center; gap: 10px; }
+  .wf-doc-item .file-icon { width: 28px; height: 28px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .wf-doc-item button { padding: 6px 14px; border: 1px solid #999; border-radius: 3px; background: transparent; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; }
+
+  /* Quiz */
+  .wf-quiz-card { padding: 32px; border: 1px solid #ccc; border-radius: 4px; text-align: center; background: #fff; }
+  .wf-quiz-card .icon { font-size: 28px; margin-bottom: 12px; }
+  .wf-quiz-card h2 { font-size: 20px; font-weight: normal; margin-bottom: 8px; }
+  .wf-quiz-card p { font-size: 11px; color: #999; margin-bottom: 6px; }
+  .wf-quiz-btn { margin-top: 16px; padding: 10px 24px; background: #333; color: #fff; border: none; border-radius: 3px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
+
+  .wf-progress { display: flex; justify-content: space-between; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #999; margin-bottom: 12px; }
+  .wf-progress-bar { height: 2px; background: #eee; margin-bottom: 24px; border-radius: 1px; overflow: hidden; }
+  .wf-progress-fill { height: 100%; width: 40%; background: #666; }
+  .wf-question { padding: 24px; border: 1px solid #ccc; border-radius: 4px; background: #fff; margin-bottom: 16px; font-size: 16px; font-weight: normal; }
+  .wf-options { display: flex; flex-direction: column; gap: 8px; }
+  .wf-option { padding: 12px 16px; border: 1px solid #ccc; border-radius: 3px; background: #fff; text-align: left; font-size: 12px; cursor: pointer; }
+
+  /* Bottom nav */
+  .wf-nav { display: flex; border-top: 1px solid #ccc; background: #f5f5f5; }
+  .wf-nav-item { flex: 1; padding: 10px 0; text-align: center; font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: #999; }
+  .wf-nav-item.active { color: #333; font-weight: bold; }
+  .wf-nav-item .icon { font-size: 16px; display: block; margin-bottom: 2px; }
+
+  /* Component badges */
+  .badge { position: absolute; top: -6px; right: -6px; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-family: Arial, sans-serif; font-weight: bold; z-index: 10; white-space: nowrap; }
+  .badge-reuse { background: #4CAF50; color: white; }
+  .badge-new { background: #FF9800; color: white; }
+  .rel { position: relative; display: inline-block; }
+  .rel-block { position: relative; }
+
+  .tabs { display: flex; gap: 32px; margin-top: 20px; }
+  .tab-section { margin-top: 20px; }
+  .tab-label { font-size: 11px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; padding: 6px 0; border-bottom: 2px solid #333; display: inline-block; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Vertex Kid Dashboard — Reimagined Wireframe</h1>
+  <p class="desc">Editorial, magazine-like layout matching the Vertex landing page. Cream/off-white palette, tracked uppercase micro-labels, thin 1px borders, pink accent. <strong>No AI references.</strong> Uses existing vertex.css design tokens and Lucide icons.</p>
+
+  <div class="wireframe">
+    <!-- HEADER -->
+    <!-- REUSABLE: Lucide icons from lucide-react -->
+    <div class="wf-header">
+      <div class="wf-logo">VERTEX</div>
+      <div class="wf-stats">
+        <span>🔥 2 <small>DAY STREAK</small></span>
+        <span>⭐ 42 <small>XP</small></span>
+      </div>
+    </div>
+
+    <div class="wf-main">
+
+      <!-- ═══════ HOME TAB ═══════ -->
+      <div class="tab-label">Home Tab</div>
+
+      <div class="rel-block">
+        <span class="badge badge-new" title="New CSS classes in vertex.css">[NEW] vtx-kid-section-title</span>
+      </div>
+      <span class="wf-section-num">DASHBOARD</span>
+      <div class="wf-title">Good evening, <em>Alex</em></div>
+      <div class="wf-subtitle">Pick something below and let's make today count.</div>
+
+      <!-- Primary CTA -->
+      <div class="rel-block" style="margin-bottom:4px;">
+        <span class="badge badge-new" title="src/styles/vertex.css">[NEW] vtx-kid-cta</span>
+      </div>
+      <div class="wf-cta">
+        <div class="wf-cta-icon">💬</div>
+        <div class="wf-cta-text">
+          <strong>Start a study session</strong><br/>
+          <span>Practice math with your tutor</span>
+        </div>
+        <div class="wf-chevron">›</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="rel-block" style="margin-bottom:4px;">
+        <span class="badge badge-new" title="src/styles/vertex.css">[NEW] vtx-kid-stat-card</span>
+      </div>
+      <div class="wf-stat-grid">
+        <div class="wf-stat-card">
+          <div class="icon">🔥</div>
+          <div><div class="num">2</div><div class="meta">DAY STREAK</div></div>
+        </div>
+        <div class="wf-stat-card">
+          <div class="icon">⭐</div>
+          <div><div class="num">42</div><div class="meta">XP EARNED</div></div>
+        </div>
+      </div>
+
+      <!-- Action grid -->
+      <div class="wf-actions-label">WHAT DO YOU WANT TO DO?</div>
+      <div class="rel-block" style="margin-bottom:4px;">
+        <span class="badge badge-new" title="src/styles/vertex.css">[NEW] vtx-kid-action-card</span>
+      </div>
+      <div class="wf-action-grid">
+        <div class="wf-action-card"><div class="icon">📤</div><strong>Upload homework</strong><span>Add a PDF to study from</span></div>
+        <div class="wf-action-card"><div class="icon">✨</div><strong>Take a quiz</strong><span>Earn XP and test your skills</span></div>
+        <div class="wf-action-card"><div class="icon">💬</div><strong>Start studying</strong><span>Chat and get help with math</span></div>
+      </div>
+
+      <!-- Tip -->
+      <div class="rel-block" style="margin-bottom:4px;">
+        <span class="badge badge-new" title="src/styles/vertex.css">[NEW] vtx-kid-tip</span>
+      </div>
+      <div class="wf-tip">
+        <strong>TIP</strong>
+        <p>Come back every day to keep your streak going. Even 10 minutes of practice helps!</p>
+      </div>
+
+      <!-- ═══════ HOMEWORK TAB ═══════ -->
+      <div style="margin-top:40px;"><div class="tab-label">Homework Tab</div></div>
+
+      <span class="wf-section-num">HOMEWORK</span>
+      <div class="wf-title">My <em>Homework</em></div>
+      <div class="wf-subtitle">Upload PDFs here. Your tutor can use them to help you practice.</div>
+
+      <div class="rel-block" style="margin-bottom:4px;">
+        <span class="badge badge-new" title="src/styles/vertex.css">[NEW] vtx-kid-upload-area</span>
+      </div>
+      <div class="wf-upload">
+        <div class="icon">📤</div>
+        <strong>Drop your homework PDF here</strong><br/>
+        <span style="font-size:10px;color:#999;">or tap to choose a file</span>
+      </div>
+
+      <div class="rel-block" style="margin-bottom:4px;">
+        <span class="badge badge-new" title="src/styles/vertex.css">[NEW] vtx-kid-doc-item</span>
+      </div>
+      <div class="wf-actions-label">YOUR FILES (2)</div>
+      <div class="wf-doc-item">
+        <div class="left"><div class="file-icon">📄</div><div><strong>Chapter 5 Fractions.pdf</strong><br/><span style="font-size:10px;color:#999;">3/14/2026</span></div></div>
+        <button>▶ STUDY</button>
+      </div>
+      <div class="wf-doc-item">
+        <div class="left"><div class="file-icon">📄</div><div><strong>Geometry Worksheet.pdf</strong><br/><span style="font-size:10px;color:#999;">3/12/2026</span></div></div>
+        <button>▶ STUDY</button>
+      </div>
+
+      <!-- ═══════ QUIZ TAB ═══════ -->
+      <div style="margin-top:40px;"><div class="tab-label">Quiz Tab — Start State</div></div>
+
+      <div class="rel-block" style="margin-bottom:4px;">
+        <span class="badge badge-new" title="src/styles/vertex.css">[NEW] vtx-kid-quiz-card</span>
+      </div>
+      <div class="wf-quiz-card">
+        <div class="icon">✨</div>
+        <h2>Ready for a quiz?</h2>
+        <p>You'll get 5 math questions. Answer correctly to earn 10 XP per question!</p>
+        <p>Questions are based on your homework or general math practice.</p>
+        <button class="wf-quiz-btn">START QUIZ</button>
+      </div>
+
+      <div style="margin-top:32px;"><div class="tab-label">Quiz Tab — In Progress</div></div>
+
+      <div class="wf-progress">
+        <span>QUESTION 2 OF 5</span>
+        <span>1 CORRECT</span>
+      </div>
+      <div class="wf-progress-bar"><div class="wf-progress-fill"></div></div>
+      <div class="wf-question">What is 3/4 + 1/2?</div>
+      <div class="wf-options">
+        <div class="wf-option"><strong style="margin-right:8px;">A.</strong> 1 1/4</div>
+        <div class="wf-option"><strong style="margin-right:8px;">B.</strong> 1</div>
+        <div class="wf-option"><strong style="margin-right:8px;">C.</strong> 5/4</div>
+        <div class="wf-option"><strong style="margin-right:8px;">D.</strong> 4/6</div>
+      </div>
+
+      <!-- ═══════ STUDY TAB ═══════ -->
+      <div style="margin-top:40px;"><div class="tab-label">Study Tab</div></div>
+
+      <span class="wf-section-num">STUDY</span>
+      <div class="wf-title">Start <em>Studying</em></div>
+      <div class="wf-subtitle">Your tutor can help you with math problems, explain concepts, give hints, and practice with you.</div>
+
+      <div class="wf-cta">
+        <div class="wf-cta-icon">💬</div>
+        <div class="wf-cta-text">
+          <strong>Start chatting</strong><br/>
+          <span>Open a new study session</span>
+        </div>
+        <div class="wf-chevron">›</div>
+      </div>
+
+      <div class="wf-actions-label" style="margin-top:20px;">OR STUDY WITH A HOMEWORK FILE</div>
+      <div class="wf-cta" style="margin-bottom:8px;">
+        <div class="wf-cta-icon">📄</div>
+        <div class="wf-cta-text"><strong>Chapter 5 Fractions.pdf</strong></div>
+        <div class="wf-chevron">›</div>
+      </div>
+      <div class="wf-cta">
+        <div class="wf-cta-icon">📄</div>
+        <div class="wf-cta-text"><strong>Geometry Worksheet.pdf</strong></div>
+        <div class="wf-chevron">›</div>
+      </div>
+
+    </div>
+
+    <!-- Bottom nav -->
+    <div class="wf-nav">
+      <div class="wf-nav-item active"><span class="icon">🏠</span>HOME</div>
+      <div class="wf-nav-item"><span class="icon">📖</span>HOMEWORK</div>
+      <div class="wf-nav-item"><span class="icon">✨</span>QUIZ</div>
+      <div class="wf-nav-item"><span class="icon">💬</span>STUDY</div>
+    </div>
+  </div>
+
+  <h2>Design Notes</h2>
+  <ul style="font-size:12px; line-height:1.8; color:#666; padding-left:20px;">
+    <li><strong>No AI references</strong> — removed HeyGen avatar, TutorPreviewCard, AvatarErrorBoundary</li>
+    <li><strong>Landing page aesthetic</strong> — cream off-white (#f4efe5), thin 1px borders, tracked uppercase labels, 300 font-weight headings, pink accent (#c8416a)</li>
+    <li><strong>Editorial typography</strong> — italic accent in headings, section numbers in pink, uppercase metadata labels</li>
+    <li><strong>3-column action grid</strong> (was 2-column) — better use of horizontal space on desktop</li>
+    <li><strong>Consistent card style</strong> — all cards use same border-radius (4px), same border, same background</li>
+    <li><strong>Bottom nav updated</strong> — backdrop-blur matching the landing page header style, renamed "Ask Tutor" to "Study"</li>
+    <li><strong>All new CSS classes</strong> added to vertex.css with vtx-kid-* prefix for clean separation</li>
+  </ul>
+</div>
+</body>
+</html>
