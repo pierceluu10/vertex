@@ -23,10 +23,17 @@ export function FeaturesSection() {
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
-          <button className="vtx-play-btn">
-            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          </button>
-          <div className="vtx-demo-label">Product Demo &mdash; 2:47</div>
+          <video
+            className="vtx-demo-video"
+            src="/landing-demo.mov"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            aria-label="Vertex product demo"
+          />
+          <div className="vtx-demo-label">Live Demo</div>
         </motion.div>
         <motion.div
           className="vtx-demo-copy"

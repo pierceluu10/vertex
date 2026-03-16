@@ -14,65 +14,27 @@ export async function POST(request: Request) {
     const supabase = await createServiceClient();
     let childId: string | null = null;
     let kidSessionName: string | null = null;
-    let accessCodeUsed: string | null = null;
 
     if (parentId) {
       const { data: kidSession } = await supabase
         .from("kids_sessions")
-        .select("child_name, code_used")
+        .select("child_id, child_name")
         .eq("id", kidSessionId)
         .maybeSingle();
 
       kidSessionName = kidSession?.child_name?.trim() || null;
-      accessCodeUsed = kidSession?.code_used || null;
+      childId = kidSession?.child_id ?? null;
 
-      const { data: children } = await supabase
-        .from("children")
-        .select("id, name")
-        .eq("parent_id", parentId)
-        .order("created_at", { ascending: true });
-
-      if (children?.length) {
-        const childName = kidSessionName?.toLowerCase();
-        const matchedChild =
-          (childName
-            ? children.find((child) => child.name?.trim().toLowerCase() === childName)
-            : null) || children[0];
-
-        childId = matchedChild.id;
-      }
-
-      if (!childId && kidSessionName) {
-        let fallbackAge = 10;
-        let fallbackGrade: string | null = null;
-
-        if (accessCodeUsed) {
-          const { data: accessCode } = await supabase
-            .from("access_codes")
-            .select("child_age, grade_level")
-            .eq("code", accessCodeUsed)
-            .maybeSingle();
-
-          fallbackAge = accessCode?.child_age ?? fallbackAge;
-          fallbackGrade = accessCode?.grade_level ?? null;
-        }
-
-        const { data: createdChild, error: createChildError } = await supabase
-          .from("children")
-          .insert({
-            parent_id: parentId,
-            name: kidSessionName,
-            age: fallbackAge,
-            grade: fallbackGrade,
-          })
-          .select("id")
-          .single();
-
-        if (createChildError) {
-          console.error("Child auto-create error:", createChildError);
-        } else {
-          childId = createdChild.id;
-        }
+      if (!childId) {
+        console.error("Student session error: kids_sessions.child_id is missing", {
+          kidSessionId,
+          parentId,
+          kidSessionName,
+        });
+        return NextResponse.json(
+          { error: "Student profile is not linked correctly. Please re-enter the access code." },
+          { status: 400 }
+        );
       }
     }
 
@@ -112,7 +74,7 @@ export async function POST(request: Request) {
     if (!session) {
       // Try insert with kid_session_id first; fall back without if column missing
       const insertPayload: Record<string, unknown> = {
-        child_id: childId || null,
+        child_id: childId,
         document_id: documentId || null,
         status: "active",
       };
@@ -161,7 +123,6 @@ export async function POST(request: Request) {
       documentId,
     });
     const simliConfig = getSimliAvatarConfig();
-
     // Award XP for starting a session
     if (!existingSessions?.[0]) {
       try {

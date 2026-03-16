@@ -54,6 +54,84 @@ export async function POST(request: Request) {
       );
     }
 
+    let childId: string | null = null;
+
+    const normalizedChildName = accessCode.child_name?.trim() || "Student";
+    const fallbackChildAge =
+      typeof accessCode.child_age === "number" && !Number.isNaN(accessCode.child_age)
+        ? accessCode.child_age
+        : 10;
+    const fallbackGradeLevel =
+      typeof accessCode.grade_level === "string" ? accessCode.grade_level.trim() || null : null;
+
+    const { data: existingChild, error: childLookupError } = await supabase
+      .from("children")
+      .select("id")
+      .eq("parent_id", accessCode.parent_id)
+      .eq("name", normalizedChildName)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (childLookupError) {
+      console.error("Child lookup error during student validate:", childLookupError);
+      const isDev = process.env.NODE_ENV === "development";
+      return NextResponse.json(
+        {
+          success: false,
+          error: isDev
+            ? `Could not resolve child: ${childLookupError.message}`
+            : "Something went wrong. Please try again.",
+          ...(isDev && {
+            debug: {
+              message: childLookupError.message,
+              code: childLookupError.code,
+              details: childLookupError.details,
+            },
+          }),
+        },
+        { status: 500 }
+      );
+    }
+
+    if (existingChild?.id) {
+      childId = existingChild.id;
+    } else {
+      const { data: createdChild, error: childCreateError } = await supabase
+        .from("children")
+        .insert({
+          parent_id: accessCode.parent_id,
+          name: normalizedChildName,
+          age: fallbackChildAge,
+          grade: fallbackGradeLevel,
+        })
+        .select("id")
+        .single();
+
+      if (childCreateError || !createdChild) {
+        console.error("Child create error during student validate:", childCreateError);
+        const isDev = process.env.NODE_ENV === "development";
+        return NextResponse.json(
+          {
+            success: false,
+            error: isDev && childCreateError
+              ? `Could not create child: ${childCreateError.message}`
+              : "Something went wrong. Please try again.",
+            ...(isDev && childCreateError && {
+              debug: {
+                message: childCreateError.message,
+                code: childCreateError.code,
+                details: childCreateError.details,
+              },
+            }),
+          },
+          { status: 500 }
+        );
+      }
+
+      childId = createdChild.id;
+    }
+
     // Check if a kid session already exists for this code
     const { data: existingSession } = await supabase
       .from("kids_sessions")
@@ -64,6 +142,37 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (existingSession) {
+      if (!existingSession.child_id || existingSession.child_id !== childId) {
+        const { error: repairError } = await supabase
+          .from("kids_sessions")
+          .update({ child_id: childId, child_name: normalizedChildName })
+          .eq("id", existingSession.id);
+
+        if (repairError) {
+          console.error("Kid session repair error:", repairError);
+          const isDev = process.env.NODE_ENV === "development";
+          return NextResponse.json(
+            {
+              success: false,
+              error: isDev
+                ? `Could not repair student session: ${repairError.message}`
+                : "Something went wrong. Please try again.",
+              ...(isDev && {
+                debug: {
+                  message: repairError.message,
+                  code: repairError.code,
+                  details: repairError.details,
+                },
+              }),
+            },
+            { status: 500 }
+          );
+        }
+
+        existingSession.child_id = childId;
+        existingSession.child_name = normalizedChildName;
+      }
+
       // Update streak
       const today = new Date().toISOString().split("T")[0];
       const lastActive = existingSession.last_active_date;
@@ -93,6 +202,7 @@ export async function POST(request: Request) {
     const { data: kidSession, error: sessionError } = await supabase
       .from("kids_sessions")
       .insert({
+        child_id: childId,
         parent_id: accessCode.parent_id,
         code_used: code,
         child_name: accessCode.child_name,

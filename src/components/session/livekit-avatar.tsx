@@ -88,6 +88,7 @@ export function LiveKitAvatar({
   const localElementsRef = useRef<Map<string, HTMLElement>>(new Map());
   const connectionTimeoutRef = useRef<number | null>(null);
   const remoteScanIntervalRef = useRef<number | null>(null);
+  const remoteVideoLossTimeoutRef = useRef<number | null>(null);
 
   const remoteVideoHostRef = useRef<HTMLDivElement>(null);
   const remoteAudioHostRef = useRef<HTMLDivElement>(null);
@@ -97,7 +98,8 @@ export function LiveKitAvatar({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
-  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
+  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Pierce";
+  const tutorInitial = tutorName.trim().slice(0, 1).toUpperCase() || "P";
 
   useEffect(() => {
     micEnabledRef.current = micEnabled;
@@ -144,6 +146,15 @@ export function LiveKitAvatar({
     if (element) {
       element.remove();
       store.delete(key);
+    }
+  }, []);
+
+  const detachVideoElements = useCallback((store: Map<string, HTMLElement>) => {
+    for (const [key, element] of store.entries()) {
+      if (element instanceof HTMLVideoElement) {
+        element.remove();
+        store.delete(key);
+      }
     }
   }, []);
 
@@ -221,8 +232,18 @@ export function LiveKitAvatar({
 
   const attachRemoteTrack = useCallback(
     (track: Track, key: string) => {
+      if (track.kind === Track.Kind.Video && remoteVideoLossTimeoutRef.current) {
+        window.clearTimeout(remoteVideoLossTimeoutRef.current);
+        remoteVideoLossTimeoutRef.current = null;
+      }
+
       const host =
         track.kind === Track.Kind.Video ? remoteVideoHostRef.current : remoteAudioHostRef.current;
+
+      if (track.kind === Track.Kind.Video) {
+        detachVideoElements(remoteElementsRef.current);
+      }
+
       attachTrackElement(track, key, host, remoteElementsRef.current);
 
       if (track.kind === Track.Kind.Video) {
@@ -235,7 +256,7 @@ export function LiveKitAvatar({
 
       updateStatusFromTracks();
     },
-    [attachTrackElement, updateStatusFromTracks]
+    [attachTrackElement, detachVideoElements, updateStatusFromTracks]
   );
 
   const attachLocalTrack = useCallback(
@@ -250,19 +271,28 @@ export function LiveKitAvatar({
 
   const detachRemoteTrack = useCallback(
     (track: Track, key: string) => {
-      detachElement(remoteElementsRef.current, key);
-
       if (track.kind === Track.Kind.Video) {
-        remoteTrackStateRef.current.video = false;
+        if (remoteVideoLossTimeoutRef.current) {
+          window.clearTimeout(remoteVideoLossTimeoutRef.current);
+        }
+
+        remoteVideoLossTimeoutRef.current = window.setTimeout(() => {
+          detachVideoElements(remoteElementsRef.current);
+          remoteTrackStateRef.current.video = false;
+          remoteVideoLossTimeoutRef.current = null;
+          updateStatusFromTracks();
+        }, 1500);
+        return;
       }
+
+      detachElement(remoteElementsRef.current, key);
 
       if (track.kind === Track.Kind.Audio) {
         remoteTrackStateRef.current.audio = false;
+        updateStatusFromTracks();
       }
-
-      updateStatusFromTracks();
     },
-    [detachElement, updateStatusFromTracks]
+    [detachElement, detachVideoElements, updateStatusFromTracks]
   );
 
   const detachLocalTrack = useCallback(
@@ -552,12 +582,18 @@ export function LiveKitAvatar({
           }
 
           updateRemotePresence(room);
-          if (remotePresenceRef.current.agent || remotePresenceRef.current.avatar) {
+          if (remotePresenceRef.current.avatar) {
             setStatus("connecting");
             setErrorMsg(
-              remotePresenceRef.current.avatar
-                ? `${tutorName} is in the room; Simli may still be publishing video. Wait a bit longer or check agent logs.`
-                : `${tutorName} is in the room and warming up the live feed.`
+              `${tutorName} is in the room; Simli may still be publishing video. Wait a bit longer or check agent logs.`
+            );
+            return;
+          }
+
+          if (remotePresenceRef.current.agent) {
+            setStatus("error");
+            setErrorMsg(
+              `${tutorName}'s agent joined, but the Simli avatar did not publish media. Check SIMLI_API_KEY, SIMLI_FACE_ID, and the worker logs.`
             );
             return;
           }
@@ -569,7 +605,7 @@ export function LiveKitAvatar({
               ? avatarVideoReasonRef.current ||
                   `${tutorName}'s live face needs a public wss:// LiveKit room to show video.`
               : noParticipants
-                ? `The tutor agent did not join the room. Make sure the agent worker is running (e.g. \`python agents/simli_tina_agent.py dev\`) and LIVEKIT_AGENT_NAME matches.`
+                ? `The tutor agent did not join the room. Make sure the agent worker is running (e.g. \`npm run agent:simli\`) and LIVEKIT_AGENT_NAME matches.`
                 : `${tutorName} joined but the video feed did not start. Check the agent terminal for Simli errors, or refresh to retry.`
           );
         }, 12000);
@@ -608,6 +644,10 @@ export function LiveKitAvatar({
       if (remoteScanIntervalRef.current) {
         window.clearInterval(remoteScanIntervalRef.current);
         remoteScanIntervalRef.current = null;
+      }
+      if (remoteVideoLossTimeoutRef.current) {
+        window.clearTimeout(remoteVideoLossTimeoutRef.current);
+        remoteVideoLossTimeoutRef.current = null;
       }
 
       remoteElements.forEach((element) => element.remove());
@@ -738,7 +778,7 @@ export function LiveKitAvatar({
               fontWeight: 700,
             }}
           >
-            T
+            {tutorInitial}
           </div>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{overlayTitle}</div>
           <div

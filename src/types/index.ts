@@ -30,6 +30,7 @@ export interface AccessCode {
 export interface KidSession {
   id: string;
   parent_id: string;
+  child_id: string;
   code_used: string;
   child_name: string | null;
   avatar_choice: string | null;

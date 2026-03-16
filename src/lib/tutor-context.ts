@@ -39,6 +39,7 @@ export async function loadTutorContext(
 
   let resolvedKidSessionId = params.kidSessionId ?? null;
   let resolvedDocumentId = params.documentId ?? null;
+  let resolvedChildId: string | null = null;
 
   if (params.sessionId) {
     let tutoringSession:
@@ -83,6 +84,7 @@ export async function loadTutorContext(
     }
 
     if (tutoringSession?.child_id) {
+      resolvedChildId = tutoringSession.child_id;
       const { data: child } = await supabase
         .from("children")
         .select("parent_id, name, age, grade")
@@ -101,12 +103,13 @@ export async function loadTutorContext(
   if (resolvedKidSessionId) {
     const { data: kidSession } = await supabase
       .from("kids_sessions")
-      .select("parent_id, child_name, code_used")
+      .select("parent_id, child_id, child_name, code_used")
       .eq("id", resolvedKidSessionId)
       .maybeSingle();
 
     if (kidSession) {
       context.parentId = context.parentId ?? kidSession.parent_id;
+      resolvedChildId = resolvedChildId ?? kidSession.child_id ?? null;
       context.childName = context.childName ?? kidSession.child_name ?? null;
 
       if (kidSession.code_used) {
@@ -155,6 +158,41 @@ export async function loadTutorContext(
           context.learningGoals = context.learningGoals ?? accessCode.learning_goals ?? null;
           context.mathTopics = accessCode.math_topics?.length ? accessCode.math_topics : context.mathTopics;
         }
+      }
+    }
+  }
+
+  if (!context.childName && resolvedChildId) {
+    const { data: child } = await supabase
+      .from("children")
+      .select("name, age, grade, parent_id")
+      .eq("id", resolvedChildId)
+      .maybeSingle();
+
+    if (child) {
+      context.parentId = context.parentId ?? child.parent_id;
+      context.childName = child.name;
+      context.childAge = context.childAge ?? child.age;
+      context.gradeLevel = context.gradeLevel ?? child.grade ?? null;
+    }
+  }
+
+  if (!resolvedDocumentId && resolvedChildId) {
+    const { data: latestDocument } = await supabase
+      .from("uploaded_documents")
+      .select("id, extracted_text, lesson_plan")
+      .eq("child_id", resolvedChildId)
+      .order("uploaded_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestDocument) {
+      resolvedDocumentId = latestDocument.id;
+      if (latestDocument.extracted_text) {
+        context.documentContext = latestDocument.extracted_text.slice(0, 4000);
+      }
+      if (latestDocument.lesson_plan) {
+        context.lessonPlan = latestDocument.lesson_plan as Record<string, unknown>;
       }
     }
   }

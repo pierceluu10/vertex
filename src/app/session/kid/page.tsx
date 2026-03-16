@@ -76,7 +76,8 @@ function KidSessionContent() {
   const childName = kidSession?.child_name?.trim() || "there";
 
   const [contentConfidence] = useState<ContentConfidenceState | null>(null);
-  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
+  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Pierce";
+  const tutorInitial = tutorName.trim().slice(0, 1).toUpperCase() || "P";
 
   // Use refs so closures always have the latest value without being deps
   const childNameRef = useRef(childName);
@@ -271,22 +272,29 @@ function KidSessionContent() {
     return { cleanContent: clean.trim(), graphs };
   }
 
+  function ensureGraphMention(content: string) {
+    const trimmed = content.trim();
+    if (!trimmed) {
+      return "Yes, I put the graph in chat. Let's look at it together.";
+    }
+
+    if (/(shown|see|look|put).*chat|in chat/i.test(trimmed)) {
+      return trimmed.startsWith("Yes,") ? trimmed : `Yes, ${trimmed}`;
+    }
+
+    return `Yes, I put the graph in chat. ${trimmed}`;
+  }
+
+  function promptForGraphSpeech(content: string) {
+    const spoken = ensureGraphMention(content);
+    return `Say exactly one short response to the student. Tell them you put the graph in chat, then briefly explain what they should look at on the graph. Keep it under two sentences.\n\nResponse to say:\n${spoken}`;
+  }
+
   const appendTranscriptMessage = useCallback((entry: LiveTranscriptEntry) => {
     transcriptHistoryRef.current = [...transcriptHistoryRef.current.slice(-19), entry];
 
-    if (entry.role !== "assistant") {
-      return;
-    }
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `${entry.role}-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`,
-        role: entry.role,
-        content: entry.text,
-        type: "chat",
-      },
-    ]);
+    // For the demo, live assistant speech should not spam the chat panel.
+    // Chat is reserved for graph output and typed-chat responses.
   }, []);
 
   const requestVisualAid = useCallback(async (text: string) => {
@@ -307,10 +315,7 @@ function KidSessionContent() {
           childName: kidSession?.child_name || "student",
           documentContext,
           adaptiveState,
-          recentMessages: transcriptHistoryRef.current.slice(-10).map((entry) => ({
-            role: entry.role,
-            content: entry.text,
-          })),
+          recentMessages: [],
           persistMessages: false,
         }),
       });
@@ -320,16 +325,21 @@ function KidSessionContent() {
         const { cleanContent, graphs } = parseJsxGraph(data.content);
 
         if (graphs.length > 0) {
+          const graphMessage = ensureGraphMention(cleanContent);
           setMessages((prev) => [
             ...prev,
             {
               id: `visual-${Date.now()}`,
               role: "assistant",
-              content: cleanContent || "Visual",
+              content: graphMessage,
               type: "chat",
               jsxGraph: graphs,
             },
           ]);
+          setAgentPromptRequest({
+            id: Date.now(),
+            text: promptForGraphSpeech(cleanContent),
+          });
         }
       }
     } catch {
@@ -404,13 +414,25 @@ function KidSessionContent() {
       const data = await res.json();
       if (data.content) {
         const { cleanContent, graphs } = parseJsxGraph(data.content);
+        const graphMessage =
+          graphs.length > 0
+            ? ensureGraphMention(cleanContent)
+            : cleanContent;
         setMessages((prev) => [...prev, {
           id: `assistant-typed-${Date.now()}`,
           role: "assistant",
-          content: cleanContent,
+          content:
+            graphMessage ||
+            (graphs.length > 0 ? "I've shown the graph in chat. Let's look at it together." : ""),
           type: "chat",
           jsxGraph: graphs.length > 0 ? graphs : undefined,
         }]);
+        if (graphs.length > 0) {
+          setAgentPromptRequest({
+            id: Date.now(),
+            text: promptForGraphSpeech(cleanContent),
+          });
+        }
       }
     } catch {
       setMessages((prev) => [...prev, {
@@ -477,13 +499,6 @@ function KidSessionContent() {
     );
   }
 
-  const focusColor =
-    attention.focusLevel === "high"
-      ? "#5c7c6a"
-      : attention.focusLevel === "medium"
-      ? "#c89020"
-      : "#c8416a";
-
   type MathVisualConfig = { type: string; [key: string]: unknown };
 
   const unreadCount = messages.filter((m) => m.role === "assistant").length;
@@ -538,51 +553,6 @@ function KidSessionContent() {
               {lessonPlan.title}
             </span>
           )}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 16px",
-              borderRadius: 999,
-              background: "rgba(255, 247, 240, 0.92)",
-              border: "1px solid rgba(120, 91, 63, 0.12)",
-            }}
-          >
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                background: focusColor,
-                boxShadow: `0 0 0 4px ${focusColor}22`,
-                flexShrink: 0,
-              }}
-            />
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: "0.14em",
-                  textTransform: "uppercase",
-                  color: "#8a7f6e",
-                }}
-              >
-                Focus
-              </span>
-              <span
-                style={{
-                  fontSize: 22,
-                  lineHeight: 1,
-                  fontWeight: 800,
-                  color: "#2a2018",
-                }}
-              >
-                {attention.score}%
-              </span>
-            </div>
-          </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -671,7 +641,7 @@ function KidSessionContent() {
                       fontWeight: 700,
                     }}
                   >
-                    T
+                    {tutorInitial}
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>{tutorName} is offline</div>
                   <div style={{ maxWidth: 380, fontSize: 13, lineHeight: 1.6, color: "rgba(255,244,230,0.76)" }}>

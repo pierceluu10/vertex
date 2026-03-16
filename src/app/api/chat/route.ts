@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       learningPace: learningConfig.learningPace || undefined,
       mathTopics: learningConfig.mathTopics,
       learningGoals: learningConfig.learningGoals || undefined,
-      documentContext: documentContext || undefined,
+      documentContext: learningConfig.documentContext || documentContext || undefined,
       adaptiveState,
     });
 

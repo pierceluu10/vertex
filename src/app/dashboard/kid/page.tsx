@@ -82,9 +82,14 @@ export default function KidDashboardPage() {
   } | null>(null);
   const [masteryLoading, setMasteryLoading] = useState(true);
 
-  const loadDocuments = useCallback(async (parentId: string) => {
+  const loadDocuments = useCallback(async () => {
     try {
-      const res = await fetch(`/api/student/homework?parentId=${parentId}`);
+      const childId = readStoredKidSession()?.child_id;
+      if (!childId) {
+        setDocuments([]);
+        return;
+      }
+      const res = await fetch(`/api/student/homework?childId=${encodeURIComponent(childId)}`);
       const data = await res.json();
       if (data.documents) setDocuments(data.documents);
     } catch { /* ignore */ }
@@ -121,7 +126,7 @@ export default function KidDashboardPage() {
       router.push("/student");
       return;
     }
-    void loadDocuments(kidSession.parent_id);
+    void loadDocuments();
     void loadSessions(kidSession.id);
     void loadMastery(kidSession.id);
     try {
@@ -136,7 +141,7 @@ export default function KidDashboardPage() {
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         loadSessions(kidSession!.id);
-        loadDocuments(kidSession!.parent_id);
+        loadDocuments();
       }
     };
     window.addEventListener("visibilitychange", onVisible);

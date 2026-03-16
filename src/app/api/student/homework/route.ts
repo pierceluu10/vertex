@@ -3,9 +3,9 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const parentId = request.nextUrl.searchParams.get("parentId");
-    if (!parentId) {
-      return NextResponse.json({ error: "Missing parentId" }, { status: 400 });
+    const childId = request.nextUrl.searchParams.get("childId");
+    if (!childId) {
+      return NextResponse.json({ error: "Missing childId" }, { status: 400 });
     }
 
     const supabase = await createServiceClient();
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const { data: documents } = await supabase
       .from("uploaded_documents")
       .select("*")
-      .eq("parent_id", parentId)
+      .eq("child_id", childId)
       .order("uploaded_at", { ascending: false })
       .limit(20);
 

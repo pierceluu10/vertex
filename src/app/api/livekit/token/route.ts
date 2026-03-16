@@ -9,6 +9,8 @@ import { buildRealtimeTutorInstructions } from "@/lib/openai";
 import { createServiceClient } from "@/lib/supabase/server";
 import { loadTutorContext } from "@/lib/tutor-context";
 
+const dispatchInFlight = new Map<string, Promise<void>>();
+
 export async function POST(request: Request) {
   try {
     const { sessionId, kidSessionId, parentId, documentId } = await request.json();
@@ -21,9 +23,10 @@ export async function POST(request: Request) {
     }
 
     const simliConfig = getSimliAvatarConfig();
+    const tutorName = simliConfig.displayName;
     if (!simliConfig.ready) {
       return NextResponse.json(
-        { error: "Simli is not configured yet. Add the Simli API key before starting Tina." },
+        { error: `Simli is not configured yet. Add the Simli API key before starting ${tutorName}.` },
         { status: 503 }
       );
     }
@@ -91,14 +94,34 @@ export async function POST(request: Request) {
       );
 
       if (!hasActiveDispatch) {
-        await dispatchClient.createDispatch(roomName, livekitConfig.agentName, {
-          metadata: dispatchMetadata,
-        });
+        const dispatchKey = `${roomName}:${livekitConfig.agentName}`;
+        let inFlight = dispatchInFlight.get(dispatchKey);
+
+        if (!inFlight) {
+          inFlight = (async () => {
+            const freshDispatches = await dispatchClient.listDispatch(roomName);
+            const stillMissing = !freshDispatches.some(
+              (dispatch) => dispatch.agentName === livekitConfig.agentName
+            );
+
+            if (stillMissing) {
+              await dispatchClient.createDispatch(roomName, livekitConfig.agentName, {
+                metadata: dispatchMetadata,
+              });
+            }
+          })().finally(() => {
+            dispatchInFlight.delete(dispatchKey);
+          });
+
+          dispatchInFlight.set(dispatchKey, inFlight);
+        }
+
+        await inFlight;
       }
     } catch (error) {
       console.error("LiveKit agent dispatch error:", error);
       return NextResponse.json(
-        { error: "Failed to dispatch Tina into the room" },
+        { error: `Failed to dispatch ${tutorName} into the room` },
         { status: 500 }
       );
     }

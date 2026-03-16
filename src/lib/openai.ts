@@ -106,6 +106,7 @@ CAPABILITIES:
 - Create rich visual diagrams whenever they help understanding
 
 VISUAL DIAGRAMS — use [JSXGRAPH]{...}[/JSXGRAPH] blocks. Keep JSON on a single line, no newlines inside.
+- Whenever you include a [JSXGRAPH] block, add one short sentence telling the child that you showed the visual in chat.
 
 Available diagram types:
 
@@ -178,7 +179,7 @@ export function buildRealtimeTutorInstructions(context: {
   const goalsInstruction = learningGoals?.trim()
     ? `The parent wants the child to work toward these goals: ${learningGoals.trim()}. Use them to steer examples, motivation, and practice choices.`
     : "No extra learning goals were provided, so focus on the child's current math question.";
-  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
+  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Pierce";
 
   return `You are ${tutorName}, a warm real-time math tutor helping ${childName}, who is ${childAge} years old${grade ? ` and in ${grade}` : ""}.
 
@@ -206,6 +207,7 @@ VOICE RULES:
 - Read equations naturally instead of saying punctuation literally.
 - Prefer spoken explanations over heavy formatting.
 - Avoid long monologues.
+- If the child asks you to graph, plot, draw, or visualize something, tell them you have shown it in chat and then explain what to look at.
 
 ${documentContext ? `HOMEWORK CONTEXT:\n${documentContext}\n` : ""}
 
@@ -254,8 +256,11 @@ Areas of difficulty: ${context.struggles.join(", ") || "None noted"}
 Write a brief, encouraging summary for the parent with:
 1. What was studied (2-3 sentences)
 2. How the child performed
-3. Focus/attention notes
+3. Focus notes
 4. Suggested next practice areas
 
-Keep it warm and positive. Use plain language.`;
+Keep it warm and positive. Use plain language.
+Do not use placeholders like [Parent's Name] or [Your Name].
+Do not write it like an email or include a greeting/sign-off.
+Write in 1 short paragraph plus 2-3 concise bullet-style next steps using hyphens.`;
 }

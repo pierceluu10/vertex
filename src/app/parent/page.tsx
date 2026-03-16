@@ -13,7 +13,7 @@ export default function ParentProfilePage() {
   const supabase = createClient();
   const [parent, setParent] = useState<Parent | null>(null);
   const [tutorReady, setTutorReady] = useState(false);
-  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tutor";
+  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Pierce";
 
   const loadData = useCallback(async () => {
     const {

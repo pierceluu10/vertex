@@ -6,6 +6,7 @@ import { Resend } from "resend";
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
+const resendFrom = process.env.RESEND_FROM_EMAIL || "Vertex <onboarding@resend.dev>";
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
 
     let childName = "Your child";
     let parentId: string | null = null;
+    let childId: string | null = session.child_id ?? null;
 
     if (session.kid_session_id) {
       const { data: kidSession } = await supabase
@@ -39,6 +41,19 @@ export async function POST(request: Request) {
       }
     }
 
+    if (!childId && session.document_id) {
+      const { data: document } = await supabase
+        .from("uploaded_documents")
+        .select("child_id, parent_id")
+        .eq("id", session.document_id)
+        .maybeSingle();
+
+      if (document) {
+        childId = document.child_id ?? null;
+        parentId = parentId ?? document.parent_id ?? null;
+      }
+    }
+
     if (!parentId && session.child_id) {
       const { data: child } = await supabase
         .from("children")
@@ -49,6 +64,32 @@ export async function POST(request: Request) {
       if (child) {
         parentId = child.parent_id;
         childName = child.name?.trim() || childName;
+      }
+    }
+
+    if (!parentId && childId) {
+      const { data: child } = await supabase
+        .from("children")
+        .select("id, parent_id, name")
+        .eq("id", childId)
+        .maybeSingle();
+
+      if (child) {
+        parentId = child.parent_id;
+        childName = child.name?.trim() || childName;
+      }
+    }
+
+    if (!parentId && session.kid_session_id) {
+      const { data: fallbackKidSession } = await supabase
+        .from("kids_sessions")
+        .select("parent_id, child_name")
+        .eq("id", session.kid_session_id)
+        .maybeSingle();
+
+      if (fallbackKidSession) {
+        parentId = fallbackKidSession.parent_id;
+        childName = fallbackKidSession.child_name?.trim() || childName;
       }
     }
 
@@ -102,6 +143,9 @@ export async function POST(request: Request) {
     const quizCorrect = quizAttempts.filter(
       (q: { is_correct?: boolean }) => q.is_correct
     ).length;
+    const quizAccuracy = quizAttempts.length > 0
+      ? Math.round((quizCorrect / quizAttempts.length) * 100)
+      : null;
 
     const topicsMentioned = messages
       .filter((m: { role: string }) => m.role === "assistant")
@@ -136,7 +180,7 @@ export async function POST(request: Request) {
     const summary = completion.choices[0]?.message?.content || "Session completed.";
     const topicsCovered = extractTopics(topicsMentioned);
     const briefContentNote = buildBriefContentNote(topicsCovered, messages);
-
+    const learnedHighlights = extractLearnedHighlights(messages, topicsCovered);
     // Save report
     const { data: report } = await supabase
       .from("parent_reports")
@@ -149,6 +193,7 @@ export async function POST(request: Request) {
         focus_summary: {
           total_focus_events: focusEvents.length,
           total_distraction_time_ms: totalDistractionMs,
+          focus_score: focusScore,
           tab_blur_count: focusEvents.filter(
             (e: { event_type: string }) => e.event_type === "tab_blur"
           ).length,
@@ -163,6 +208,7 @@ export async function POST(request: Request) {
           total_questions: quizAttempts.length,
           correct: quizCorrect,
           incorrect: quizAttempts.length - quizCorrect,
+          accuracy: quizAccuracy,
           topics: [...new Set(quizAttempts.map((q: { topic?: string }) => q.topic).filter(Boolean))],
         },
         suggestions: summary,
@@ -174,7 +220,7 @@ export async function POST(request: Request) {
     if (resend && parent?.email) {
       try {
         await resend.emails.send({
-          from: "Vertex <hello@vertextutor.com>",
+          from: resendFrom,
           to: parent.email,
           subject: `${childName}'s lesson recap`,
           html: `
@@ -188,6 +234,28 @@ export async function POST(request: Request) {
                   Focus meter: ${focusScore}%
                 </div>
                 <p style="margin: 0 0 12px; line-height: 1.6; color: #334155;">${briefContentNote}</p>
+                <div style="margin: 0 0 16px; padding: 16px; border-radius: 14px; background: white; border: 1px solid #dbeafe;">
+                  <p style="margin: 0 0 8px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; font-weight: 700;">
+                    What was learned
+                  </p>
+                  <ul style="margin: 0; padding-left: 18px; color: #334155; line-height: 1.7;">
+                    ${learnedHighlights.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+                  </ul>
+                </div>
+                ${struggles.length > 0 ? `
+                  <div style="margin: 0 0 16px; padding: 16px; border-radius: 14px; background: #fff7ed; border: 1px solid #fed7aa;">
+                    <p style="margin: 0 0 8px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #9a3412; font-weight: 700;">
+                      Keep practicing
+                    </p>
+                    <p style="margin: 0; color: #7c2d12; line-height: 1.6;">${escapeHtml([...new Set(struggles)].slice(0, 3).map(toTitleCase).join(", "))}</p>
+                  </div>
+                ` : ""}
+                <div style="padding: 16px; border-radius: 14px; background: #eff6ff; border: 1px solid #bfdbfe;">
+                  <p style="margin: 0 0 8px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #1d4ed8; font-weight: 700;">
+                    Parent summary
+                  </p>
+                  <p style="margin: 0; color: #1e3a8a; line-height: 1.7;">${escapeHtml(summary)}</p>
+                </div>
                 <p style="margin: 0; font-size: 13px; color: #64748b;">
                   ${durationMins} min lesson${topicsCovered.length ? ` • Topics: ${topicsCovered.join(", ")}` : ""}
                 </p>
@@ -251,4 +319,37 @@ function buildBriefContentNote(topics: string[], messages: Array<{ role?: string
 
 function toTitleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function extractLearnedHighlights(messages: Array<{ role?: string; content?: string }>, topics: string[]) {
+  const assistantMessages = messages
+    .filter((message) => message.role === "assistant")
+    .map((message) => message.content?.replace(/\s+/g, " ").trim())
+    .filter(Boolean) as string[];
+
+  const highlights = assistantMessages
+    .flatMap((message) => message.split(/(?<=[.!?])\s+/))
+    .map((sentence) => sentence.replace(/\$[^$]+\$/g, "").trim())
+    .filter((sentence) => sentence.length > 24)
+    .filter((sentence) => !sentence.toLowerCase().includes("quiz"))
+    .slice(0, 3);
+
+  if (highlights.length > 0) {
+    return highlights;
+  }
+
+  if (topics.length > 0) {
+    return topics.slice(0, 3).map((topic) => `Practiced ${toTitleCase(topic)} during the lesson.`);
+  }
+
+  return ["Worked through the key homework ideas discussed during the session."];
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }

@@ -3,7 +3,7 @@ const LOCAL_LIVEKIT_API_KEY = "devkey";
 const LOCAL_LIVEKIT_API_SECRET = "secret";
 
 export const DEFAULT_SIMLI_FACE_ID = "cace3ef7-a4c4-425d-a8cf-a5358eb0c427";
-export const DEFAULT_TUTOR_AVATAR_NAME = "Tina";
+export const DEFAULT_TUTOR_AVATAR_NAME = "Pierce";
 
 export interface LiveAvatarSupport {
   supported: boolean;
@@ -34,7 +34,7 @@ export function getLiveKitConfig() {
     url,
     apiKey: process.env.LIVEKIT_API_KEY?.trim() || LOCAL_LIVEKIT_API_KEY,
     apiSecret: process.env.LIVEKIT_API_SECRET?.trim() || LOCAL_LIVEKIT_API_SECRET,
-    agentName: process.env.LIVEKIT_AGENT_NAME?.trim() || "vertex-tina-tutor",
+    agentName: process.env.LIVEKIT_AGENT_NAME?.trim() || "vertex-pierce-tutor",
   };
 }
 
@@ -52,7 +52,7 @@ export function getLiveAvatarSupport(url: string): LiveAvatarSupport {
       return {
         supported: false,
         reason:
-          "Tina's live face needs a public LiveKit room URL over wss:// so Simli can join and publish video.",
+          "Pierce's live face needs a public LiveKit room URL over wss:// so Simli can join and publish video.",
       };
     }
 
@@ -60,7 +60,7 @@ export function getLiveAvatarSupport(url: string): LiveAvatarSupport {
       return {
         supported: false,
         reason:
-          "Tina's live face cannot join a local LiveKit room. Point LiveKit to a public wss:// endpoint to show the avatar video.",
+          "Pierce's live face cannot join a local LiveKit room. Point LiveKit to a public wss:// endpoint to show the avatar video.",
       };
     }
 

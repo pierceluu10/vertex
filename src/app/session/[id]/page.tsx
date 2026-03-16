@@ -22,7 +22,7 @@ interface DisplayMessage {
 }
 
 export default function SessionPage() {
-  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Tina";
+  const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Pierce";
   const params = useParams();
   const router = useRouter();
   const sessionId = params.id as string;
