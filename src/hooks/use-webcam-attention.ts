@@ -214,8 +214,8 @@ export function useWebcamAttention(
           }
         }
 
-        // Push zero signals when no face
-        signalSamplesRef.current.push({ gazeScore: 0, headPoseScore: 0, blinkHealthScore: 0 });
+        // Push neutral signals when no face (within grace period, don't tank the score)
+        signalSamplesRef.current.push({ gazeScore: 70, headPoseScore: 70, blinkHealthScore: 70 });
       } else {
         noFaceSinceRef.current = null;
         const lm = faces[0];
@@ -338,9 +338,11 @@ function computeGazeScore(lm: Array<{ x: number; y: number; z: number }>): numbe
   const rightDeviation = Math.abs(rightIrisPos - 0.5) * 2; // 0–1
   const avgDeviation = (leftDeviation + rightDeviation) / 2;
 
-  // Every degree of deviation reduces score; map 0–1 deviation to 0–90 degrees approximately
+  // Map deviation to score — lenient for small deviations (kids look around naturally)
   const degreesOff = avgDeviation * 90;
-  return Math.max(0, Math.round(100 - degreesOff * (100 / 90)));
+  if (degreesOff < 15) return 100;
+  if (degreesOff < 35) return Math.round(100 - (degreesOff - 15) * 2);
+  return Math.max(30, Math.round(60 - (degreesOff - 35) * 1.5));
 }
 
 /* ─── Head Pose Score ─── */
@@ -369,11 +371,11 @@ function computeHeadPoseScore(lm: Array<{ x: number; y: number; z: number }>): n
   const pitchDegrees = pitchDeviation * 45; // rough mapping
 
   let score = 100;
-  if (pitchDegrees > 20) score = Math.min(score, 20);
-  else if (pitchDegrees > 10) score = Math.min(score, 60);
+  if (pitchDegrees > 25) score = Math.min(score, 50);
+  else if (pitchDegrees > 15) score = Math.min(score, 75);
 
-  if (yawDegrees > 30) score = Math.min(score, 30);
-  else if (yawDegrees > 15) score = Math.min(score, 60);
+  if (yawDegrees > 35) score = Math.min(score, 55);
+  else if (yawDegrees > 20) score = Math.min(score, 75);
 
   return score;
 }

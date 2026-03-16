@@ -281,6 +281,14 @@ a.vtx-auth-logo {
   justify-content: center;
   box-shadow: 0 2px 28px rgba(30,26,18,.07);
 }
+.vtx-demo-video {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 .vtx-demo-video-box::before {
   content: '';
   position: absolute;

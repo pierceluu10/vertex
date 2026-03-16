@@ -321,11 +321,13 @@ export function LiveKitAvatar({
 
   const scanRemoteParticipant = useCallback(
     (participant: RemoteParticipant) => {
+      // Only pull in tracks from the AI agent/avatar participant
+      if (!isAgentParticipant(participant)) return;
       participant.trackPublications.forEach((publication) => {
         ensureRemotePublication(publication as RemoteTrackPublication);
       });
     },
-    [ensureRemotePublication]
+    [ensureRemotePublication, isAgentParticipant]
   );
 
   const syncMicState = useCallback(async (room: Room, nextMicEnabled: boolean) => {
@@ -464,7 +466,9 @@ export function LiveKitAvatar({
     setStatus("connecting");
     setErrorMsg(null);
 
-    room.on(RoomEvent.TrackSubscribed, (track, publication) => {
+    room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+      // Only accept video tracks from the AI agent/avatar — never the student's own camera
+      if (track.kind === Track.Kind.Video && !isAgentParticipant(participant)) return;
       const key = publication.trackSid || track.sid || publication.kind;
       attachRemoteTrack(track, key);
     });
@@ -477,7 +481,10 @@ export function LiveKitAvatar({
     room.on(RoomEvent.TrackPublished, (publication, participant) => {
       if (participant instanceof RemoteParticipant) {
         updateRemotePresence(room);
-        ensureRemotePublication(publication as RemoteTrackPublication);
+        // Only subscribe to video/audio from the AI agent, not from other participants
+        if (isAgentParticipant(participant)) {
+          ensureRemotePublication(publication as RemoteTrackPublication);
+        }
       }
     });
 

@@ -44,11 +44,16 @@ ssl._create_default_https_context = _create_default_context_with_certifi
 aiohttp.TCPConnector.__init__ = _tcp_connector_init_with_certifi
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("vertex.simli_tina_agent")
+logger = logging.getLogger("vertex.simli_agent")
 
 
-DEFAULT_TUTOR_NAME = "Pierce"
 ELEVENLABS_PROBE_CACHE: tuple[bool, str | None] | None = None
+
+
+def _tutor_name() -> str:
+    """Return the tutor avatar name from the environment, never hardcoded."""
+    return os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", "Tutor").strip() or "Tutor"
+
 
 def _required_env(name: str) -> str:
     value = os.getenv(name, "").strip()
@@ -58,12 +63,19 @@ def _required_env(name: str) -> str:
 
 
 def _build_instructions(metadata: dict[str, object]) -> str:
-    tutor_name = os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", DEFAULT_TUTOR_NAME).strip() or DEFAULT_TUTOR_NAME
+    tutor_name = _tutor_name()
+    child_name = str(metadata.get("childName") or "friend").strip() or "friend"
     instructions = str(metadata.get("instructions") or "").strip()
-    if instructions:
-        return instructions
+    greeting = (
+        f"Begin the session by immediately greeting {child_name} warmly. "
+        f"Say something like: \"Hi {child_name}! I'm {tutor_name}. I'm happy to work on math with you today. "
+        "What math problem would you like to start with?\""
+    )
+    lang_rule = "IMPORTANT: Always respond in English only, regardless of what language the student speaks."
 
-    child_name = str(metadata.get("childName") or "friend")
+    if instructions:
+        return instructions + "\n\n" + lang_rule + "\n\n" + greeting
+
     return (
         f"You are {tutor_name}, a warm and encouraging live math tutor helping {child_name}. "
         "Only discuss math. If the child asks about unrelated topics, gently bring the conversation back to math help."
@@ -71,7 +83,7 @@ def _build_instructions(metadata: dict[str, object]) -> str:
 
 
 def _build_greeting(metadata: dict[str, object]) -> str:
-    tutor_name = os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", DEFAULT_TUTOR_NAME).strip() or DEFAULT_TUTOR_NAME
+    tutor_name = _tutor_name()
     child_name = str(metadata.get("childName") or "friend").strip() or "friend"
     return (
         f"Hi {child_name}! I'm {tutor_name}. I'm happy to work on math with you today. "
@@ -210,14 +222,18 @@ def _build_tts() -> elevenlabs.TTS:
 
 
 async def entrypoint(ctx: JobContext):
+    await ctx.connect()
     metadata = json.loads(ctx.job.metadata or "{}")
     logger.info("Starting live tutor", extra={"metadata": metadata})
 
+    tutor_name = _tutor_name()
+
+    # --- Build session: ElevenLabs TTS (preferred) or OpenAI Realtime voice (fallback) ---
     elevenlabs_ready, elevenlabs_reason = await _probe_elevenlabs_custom_voice()
     uses_external_tts = elevenlabs_ready
 
     if uses_external_tts:
-        logger.info("Using ElevenLabs custom voice for Pierce")
+        logger.info("Using ElevenLabs custom voice for %s", tutor_name)
         session = AgentSession(
             llm=_build_realtime_model(audio_output=False),
             tts=_build_tts(),
@@ -225,7 +241,8 @@ async def entrypoint(ctx: JobContext):
         )
     else:
         logger.warning(
-            "Falling back to OpenAI Realtime voice for Pierce because ElevenLabs custom voice is unavailable",
+            "Falling back to OpenAI Realtime voice for %s because ElevenLabs custom voice is unavailable",
+            tutor_name,
             extra={"reason": elevenlabs_reason},
         )
         session = AgentSession(
@@ -233,9 +250,7 @@ async def entrypoint(ctx: JobContext):
             use_tts_aligned_transcript=True,
         )
 
-    await ctx.connect()
-
-    tutor_name = os.getenv("NEXT_PUBLIC_TUTOR_AVATAR_NAME", DEFAULT_TUTOR_NAME).strip() or DEFAULT_TUTOR_NAME
+    # --- Start Simli avatar with retries ---
     simli_config = simli.SimliConfig(
         api_key=_required_env("SIMLI_API_KEY"),
         face_id=os.getenv("SIMLI_FACE_ID", "cace3ef7-a4c4-425d-a8cf-a5358eb0c427"),
@@ -278,19 +293,22 @@ async def entrypoint(ctx: JobContext):
 
     logger.info("Simli avatar is configured for realtime session", extra={"room": ctx.room.name})
 
+    # --- Start the agent ---
     await session.start(
         room=ctx.room,
         agent=Agent(
             instructions=_build_instructions(metadata),
         ),
     )
+
+    # --- Initial greeting ---
     if uses_external_tts:
         await session.say(_build_greeting(metadata), add_to_chat_ctx=False)
     else:
         await session.generate_reply(
             instructions=(
                 f"Start the session now. Greet {metadata.get('childName', 'the child')} warmly by name, "
-                "introduce yourself as Pierce, and ask what math problem they want to work on first. "
+                f"introduce yourself as {tutor_name}, and ask what math problem they want to work on first. "
                 "Mention that if they ask for a graph or visual, you will show it in chat."
             ),
             input_modality="text",
@@ -302,6 +320,6 @@ if __name__ == "__main__":
         WorkerOptions(
             entrypoint_fnc=entrypoint,
             worker_type=WorkerType.ROOM,
-            agent_name=os.getenv("LIVEKIT_AGENT_NAME", "vertex-pierce-tutor"),
+            agent_name=os.getenv("LIVEKIT_AGENT_NAME", "vertex-tutor"),
         )
     )

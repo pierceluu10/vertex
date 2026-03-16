@@ -78,6 +78,13 @@ export async function POST(request: Request) {
       livekitConfig.apiSecret
     );
 
+    // Delete stale room so a fresh agent dispatch always succeeds on reconnect
+    try {
+      await roomClient.deleteRoom(roomName);
+    } catch {
+      // Room may not exist yet — that's fine
+    }
+
     try {
       await roomClient.createRoom({ name: roomName, emptyTimeout: 10 * 60, departureTimeout: 2 * 60 });
     } catch (error) {

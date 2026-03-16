@@ -155,14 +155,10 @@ function KidSessionContent() {
       const lessonScript = buildLessonScript(lesson);
       setAgentPromptRequest({
         id: Date.now(),
-        text: `You have a prepared lesson plan for ${name} based on their homework. Here is the lesson plan:\n\n${lessonScript}\n\nStart by greeting ${name} warmly, introduce yourself as ${tName}, and then ask: "I've prepared a lesson based on your homework about ${lesson.title}. Would you like me to walk you through it step by step, or do you have a specific question you'd like help with first?" Then follow their choice. If they want the lesson, teach it section by section in a conversational way, using the examples from the plan. If they have a question, answer it using the lesson content as context.`,
-      });
-    } else {
-      setAgentPromptRequest({
-        id: Date.now(),
-        text: `Start the session now. Greet ${name} warmly, introduce yourself as ${tName}, and ask what math problem they want to work on first.`,
+        text: `You have a prepared lesson plan for ${name} based on their homework. Here is the lesson plan:\n\n${lessonScript}\n\nAfter your opening greeting, let ${name} know you have a prepared lesson and ask: "I've prepared a lesson based on your homework about ${lesson.title}. Would you like me to walk you through it step by step, or do you have a specific question you'd like help with first?" Then follow their choice. If they want the lesson, teach it section by section in a conversational way, using the examples from the plan. If they have a question, answer it using the lesson content as context.`,
       });
     }
+    // No lesson: agent greets via generate_reply() based on its instructions — no extra prompt needed
   }, []);  // stable — reads tutorNameRef at call time
 
   const initSession = useCallback(
