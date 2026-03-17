@@ -810,7 +810,7 @@ function KidSessionContent() {
                 <div style={{ marginTop: 4, fontSize: 12, color: "#8a7f6e" }}>
                   {lessonPlan
                     ? "Lesson transcript and typed messages. Ask questions anytime!"
-                    : `${tutorName}'s live speech shows up here, and graphs appear when you ask to see one.`}
+                    : "Graphs and visuals appear here"}
                 </div>
               </div>
               <button
@@ -845,7 +845,7 @@ function KidSessionContent() {
                 gap: 12,
               }}
             >
-              {messages.map((message) => (
+              {messages.filter((message) => message.role === "user" || !!message.jsxGraph).map((message) => (
                 <div
                   key={message.id}
                   style={{
@@ -882,12 +882,11 @@ function KidSessionContent() {
                           }),
                     }}
                   >
-                    <MessageContent content={message.content} />
                     {message.jsxGraph
                       ? (message.jsxGraph as MathVisualConfig[]).map((config, index) => (
                           <MathVisual key={index} config={config} />
                         ))
-                      : null}
+                      : <MessageContent content={message.content} />}
                   </div>
                 </div>
               ))}

@@ -98,6 +98,8 @@ export function LiveKitAvatar({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [subtitleText, setSubtitleText] = useState("");
+  const subtitleTimeoutRef = useRef<number | null>(null);
   const tutorName = process.env.NEXT_PUBLIC_TUTOR_AVATAR_NAME || "Pierce";
   const tutorInitial = tutorName.trim().slice(0, 1).toUpperCase() || "P";
 
@@ -240,13 +242,18 @@ export function LiveKitAvatar({
       const host =
         track.kind === Track.Kind.Video ? remoteVideoHostRef.current : remoteAudioHostRef.current;
 
-      if (track.kind === Track.Kind.Video) {
-        detachVideoElements(remoteElementsRef.current);
-      }
-
+      // Attach new track BEFORE detaching old ones to prevent blank flash
       attachTrackElement(track, key, host, remoteElementsRef.current);
 
       if (track.kind === Track.Kind.Video) {
+        // Clean up any stale video elements (not the one we just attached)
+        const justAttached = remoteElementsRef.current.get(key);
+        remoteElementsRef.current.forEach((element, elementKey) => {
+          if (element instanceof HTMLVideoElement && element !== justAttached) {
+            element.remove();
+            remoteElementsRef.current.delete(elementKey);
+          }
+        });
         remoteTrackStateRef.current.video = true;
       }
 
@@ -256,7 +263,7 @@ export function LiveKitAvatar({
 
       updateStatusFromTracks();
     },
-    [attachTrackElement, detachVideoElements, updateStatusFromTracks]
+    [attachTrackElement, updateStatusFromTracks]
   );
 
   const attachLocalTrack = useCallback(
@@ -385,6 +392,29 @@ export function LiveKitAvatar({
 
   const handleTranscription = useCallback(
     (segments: TranscriptionSegment[], participant?: Participant) => {
+      const isAgent =
+        Boolean(participant?.attributes?.lkAgentName) ||
+        participant?.identity?.startsWith("agent-");
+
+      // Update subtitles for assistant speech (interim + final)
+      if (isAgent) {
+        const subtitleContent = segments
+          .map((segment) => segment.text.trim())
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+
+        if (subtitleContent) {
+          setSubtitleText(subtitleContent);
+          if (subtitleTimeoutRef.current) window.clearTimeout(subtitleTimeoutRef.current);
+          subtitleTimeoutRef.current = window.setTimeout(() => {
+            setSubtitleText("");
+            subtitleTimeoutRef.current = null;
+          }, 3000);
+        }
+      }
+
+      // Emit final segments via onTranscript (existing behavior)
       const freshFinalSegments = segments.filter((segment) => {
         if (!segment.final || seenTranscriptIdsRef.current.has(segment.id)) {
           return false;
@@ -403,10 +433,6 @@ export function LiveKitAvatar({
         .trim();
 
       if (!text) return;
-
-      const isAgent =
-        Boolean(participant?.attributes?.lkAgentName) ||
-        participant?.identity?.startsWith("agent-");
 
       if (isAgent && Date.now() < suppressedAgentTranscriptUntilRef.current) {
         return;
@@ -656,6 +682,10 @@ export function LiveKitAvatar({
         window.clearTimeout(remoteVideoLossTimeoutRef.current);
         remoteVideoLossTimeoutRef.current = null;
       }
+      if (subtitleTimeoutRef.current) {
+        window.clearTimeout(subtitleTimeoutRef.current);
+        subtitleTimeoutRef.current = null;
+      }
 
       remoteElements.forEach((element) => element.remove());
       remoteElements.clear();
@@ -841,6 +871,28 @@ export function LiveKitAvatar({
         />
         {status === "ready" ? `Live with ${tutorName}` : status === "audio-only" ? "Voice only" : "Connecting"}
       </div>
+
+      {subtitleText && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "clamp(228px, 35%, 300px)",
+            left: 16,
+            right: 180,
+            padding: "8px 14px",
+            borderRadius: 12,
+            background: "rgba(0, 0, 0, 0.65)",
+            color: "#fff",
+            fontSize: 15,
+            lineHeight: 1.5,
+            backdropFilter: "blur(6px)",
+            pointerEvents: "none",
+            maxWidth: "70%",
+          }}
+        >
+          {subtitleText}
+        </div>
+      )}
 
       <div
         style={{

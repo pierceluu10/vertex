@@ -66,8 +66,9 @@ export function useAttention(
   // Input tracking
   const lastInputRef = useRef(Date.now());
 
-  // Latest face mesh signals
-  const meshSignalsRef = useRef<FaceMeshSignals>({ gazeScore: 100, headPoseScore: 100, blinkHealthScore: 100 });
+  // Latest face mesh signals — neutral (50) until real camera data arrives
+  const meshSignalsRef = useRef<FaceMeshSignals>({ gazeScore: 50, headPoseScore: 50, blinkHealthScore: 50 });
+  const hasCameraDataRef = useRef(false);
 
   useEffect(() => { stateRef.current = attention; }, [attention]);
   useEffect(() => { signalsRef.current = signals; }, [signals]);
@@ -76,6 +77,7 @@ export function useAttention(
   /* ─── Face mesh signal callback ─── */
   const handleMeshSignals = useCallback((s: FaceMeshSignals) => {
     meshSignalsRef.current = s;
+    hasCameraDataRef.current = true;
 
     // Feed calibration
     setCalibration((prev) => {
@@ -90,6 +92,14 @@ export function useAttention(
   }, []);
 
   const webcam = useWebcamAttention(webcamEnabled, handleFaceEvent, handleMeshSignals);
+
+  // Reset camera data flag when webcam is toggled off
+  useEffect(() => {
+    if (!webcamEnabled) {
+      hasCameraDataRef.current = false;
+      meshSignalsRef.current = { gazeScore: 50, headPoseScore: 50, blinkHealthScore: 50 };
+    }
+  }, [webcamEnabled]);
 
   /* ─── Tab visibility ─── */
   useEffect(() => {
@@ -124,7 +134,8 @@ export function useAttention(
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
-      const mesh = meshSignalsRef.current;
+      const hasCam = hasCameraDataRef.current;
+      const mesh = hasCam ? meshSignalsRef.current : { gazeScore: 50, headPoseScore: 50, blinkHealthScore: 50 };
       const cal = calibrationRef.current;
 
       const currentSignals: FocusSignals = {

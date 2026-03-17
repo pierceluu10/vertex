@@ -214,8 +214,10 @@ export function useWebcamAttention(
           }
         }
 
-        // Push neutral signals when no face (within grace period, don't tank the score)
-        signalSamplesRef.current.push({ gazeScore: 70, headPoseScore: 70, blinkHealthScore: 70 });
+        // Within grace period: neutral signals; after grace: low signals (face is gone)
+        const pastGrace = noFaceSinceRef.current != null && now - noFaceSinceRef.current > FACE_ABSENT_GRACE_MS;
+        const noFaceScore = pastGrace ? 15 : 70;
+        signalSamplesRef.current.push({ gazeScore: noFaceScore, headPoseScore: noFaceScore, blinkHealthScore: noFaceScore });
       } else {
         noFaceSinceRef.current = null;
         const lm = faces[0];
