@@ -122,7 +122,7 @@ export default function KidProfilePage() {
 
   const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "home", label: "Home", icon: <Home size={18} /> },
-    { id: "profile", label: "Sign Up", icon: <User size={18} /> },
+    { id: "profile", label: "Profile", icon: <User size={18} /> },
   ];
 
   return (
