@@ -1,6 +1,6 @@
-# Vertex — AI Math Tutoring
+# Vertex
 
-A full-stack AI math tutoring web app built with Next.js. Parents set up accounts and configure learning preferences; kids enter a 6-digit access code to start learning with an AI tutor powered by OpenAI and a Simli avatar delivered through LiveKit.
+A full-stack AI math tutoring web app built with Next.js. Parents set up accounts and configure learning preferences; kids enter a 6-digit access code to start learning with an AI tutor powered by OpenAI and a personalized Simli avatar delivered through LiveKit
 
 ## Tech Stack
 
@@ -12,7 +12,7 @@ A full-stack AI math tutoring web app built with Next.js. Parents set up account
 - **Email:** Resend for parent notifications
 - **Attention:** Real-time focus tracking (tab visibility, mouse activity, webcam face detection)
 
-## Getting Started
+## Running it locally
 
 ### 1. Install dependencies
 
