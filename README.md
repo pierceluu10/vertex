@@ -2,6 +2,26 @@
 
 A full-stack AI math tutoring web app built with Next.js. Parents set up accounts and configure learning preferences; kids enter a 6-digit access code to start learning with an AI tutor powered by OpenAI and a personalized Simli avatar delivered through LiveKit
 
+## Screenshots
+
+### Landing page
+
+The parent and student entry points.
+
+<img width="1200" alt="Vertex landing page with parent and student entry points" src="docs/screenshots/landing.jpg" />
+
+### Interactive grapher
+
+Plot multiple functions and adjust the visible range.
+
+<img width="1200" alt="Vertex grapher plotting a heart, cosine and quadratic function" src="docs/screenshots/grapher.jpg" />
+
+### Math practice
+
+Answer a question and continue to the next round with your score.
+
+<img width="1200" alt="Vertex math practice showing an arithmetic question and score" src="docs/screenshots/practice.jpg" />
+
 ## Tech Stack
 
 - **Framework:** Next.js 16 App Router, TypeScript, Tailwind CSS
